@@ -1,15 +1,18 @@
 function eggers1
 % EGGERS1
 %
-% The influence of unknown COVARIANCE on the brute-force estimation of
-% the VARIANCE of a realization of the isotropic Matern process.
-% You must open up MATLABPOOL to do multiple simulations per processor!
+% Makes FIGURE 2 of Olhede et al. (2017), illustrating, by simulation, and
+% predicting, via three different analytical approximations, the biasing
+% influence that unknown spatial covariance (primarily via the
+% differentiability and range parameters nu and rho) has on the brute-force
+% estimation of the variance (sigma^2) of an isotropic Matern process.
 %
 % SEE ALSO:
 %
-% SIMULOSL('demo4')
+% SIMULOSL('demo4'), EGGERS4, VARBIAS
 %
-% Last modified by fjsimons-at-alum.mit.edu 05/08/2016
+% Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
+% Last modified by fjsimons-at-alum.mit.edu 09/13/2016
 
 % Metric conversion
 mfromkm=1000;
@@ -26,53 +29,56 @@ rho=[50 100 50 100]*mfromkm;
 % Number of simulations per processor, higher is better for small grids
 npr=5;
 
+% Number of processors
+NumWorkers=8;
+
 % Y axis limits
 yls=[-0.1 1.1];
 
-% Sizes of the fields under investigation
-% Must be able to quarter these!
+% Sizes of the fields under investigation (watch if p.quart is on!)
 Ns=8:2:128;
 % Physical unit dimensions
 p.dydx=[10 10]*mfromkm;
-% Quartering OFF for EGGERS1
+% Quartering (off, p.quart=0, for the published figure)
 p.quart=0;
-% Up the blurring! Odds are always good since they turn evens and into
-% evens and keep odds being odds. This works better than before,
-% especially for the low numbers, very noticeably! Hashes saved.
-% p.blurs=3;
-% Actually, use BLUROSY. Hashes saved.
+% Blurring (using BLUROSY, p.blurs=-1, for the published figure)
+% If using the inexact regridded convolutional BLUROS procedure,
+% relatively large, positive, odd numbers are a good choice, since they
+% keep the parity of even- and odd-dimensional grids 
 p.blurs=-1;
 
-% Four panels with different parameters
-clf
-[ah,ha,H]=krijetem(subnum(2,2));
+% Prepare the figure: four panels with different parameters
+clf; [ah,ha,H]=krijetem(subnum(2,2));
 
 % For each of the correlation lengths
 for fndex=1:length(rho)
   % Supply the Matern parameters
   th0=[s2 nu(fndex) rho(fndex)];
-  % Make this a hash, too!
 
-  % For this set of parameters, make a unique hashed filename
-  fname=hash([struct2array(orderfields(p)) th0 Ns npr matlabpool('size')],'SHA-1');
-  fnams=fullfile(getenv('IFILES'),'HASHES',sprintf('EGGERS1_%s.mat',fname));
-
-  if ~exist(fnams,'file') 
+  % For this ordered (!) set of parameters, make a unique hashed filename
+  % so that you can save the results and don't have to redo the computations
+  fname=hash([struct2array(orderfields(p)) th0 Ns npr NumWorkers],'SHA-1');
+  fnams=fullfile(getenv('IFILES'),'HASHES',sprintf('%s_%s.mat',upper(mfilename),fname));
+  
+  % If it hasn't been precomputed and saved ahead of time
+  if ~exist(fnams,'file')
+    % Initialize the pool of workers
+    if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
     % For each of the data sizes
     for lndex=1:length(Ns)
       p.NyNx=[Ns(lndex) Ns(lndex)];
-      % Divide the workload over the processors; note: you must matlabpool!
+      % Divide the workload over the processors
       spmd
         for index=1:npr
           % Perform a simulation
           [Hx,th0p,pp]=simulosl(th0,p); 
-          % Naive estimation of the variance
+          % Naive estimation of variance: this is what we are debunking
           vHx(index)=var(Hx);
         end
       end
       % Combine the results from all the processors
       nvars=cat(2,vHx{:});
-      % The mean of these guys
+      % The mean of all the naive variance estimates
       mvars(lndex)=mean(nvars);
       % Collapse the parameters, keep track of physical lengths
       pp=pp{1}; 
@@ -84,9 +90,12 @@ for fndex=1:length(rho)
       % Bias of the naive estimator using analytical full likelihood 
       b4(lndex)=varbias(th0,pp,4,0);
     end
+    % Close the pool of workers
+    delete(pnw)
+    % Save into the hash so the above won't need to be recalculated next time
     save(fnams,'plen','mvars','th0','b1','b3','b4','yls','mfromkm','p','fndex')
   else
-    disp(sprintf('Loading %s',fnams))
+    disp(sprintf('%s loading %s',upper(mfilename),fnams))
     load(fnams)
   end
         
@@ -124,7 +133,7 @@ for fndex=1:length(rho)
   if fndex==1
     leg=legend(pl,...
                sprintf('mean (%i%s)',...
-                       npr*matlabpool('size'),'\times'),...
+                       npr*NumWorkers,'\times'),...
                'full-covariance',...
                'blurred-likelihood',...
                'full-likelihood',...
@@ -137,15 +146,14 @@ end
 longticks(ah)
 set(pl(:,1),'Color','k','Marker','o','MarkerFaceC','w','MarkerEdgeC','k','MarkerS',4)
 set(ah,'ygrid','on','box','on')
-set(tl,'FontS',12)
+set(tl,'FontSize',12)
 nolabels(ha([3 4]),2); delete(yl([2 4]))
 nolabels(ah([1 2]),1); delete(xl([1 2]))
 serre(H,[],'across'); serre(H',1/3,'down')
-legend
+legend;
 
 % Printo
 fig2print(gcf,'portrait')
 figna=figdisp([],[],[],1);
 system(sprintf('epstopdf %s.eps',figna));
 system(sprintf('rm -f %s.eps',figna));
-

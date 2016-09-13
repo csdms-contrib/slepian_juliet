@@ -43,6 +43,7 @@ function b=varbias(th0,p,calx,calxo)
 %
 % EXAMPLE: See usage in EGGERS1, EGGERS3, and so on 
 %
+% Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 % Last modified by fjsimons-at-alum.mit.edu, 09/13/2016
 
 % Sadly, essentially, you really NEVER want to do option 2
@@ -68,9 +69,9 @@ if calxo==1
 end
 % In case you've done any of this before... ORDER matters
 fname=hash([struct2array(orderfields(p)) th0 calx],'SHA-1');
-fnams=fullfile(getenv('IFILES'),'HASHES',sprintf('%s.mat',fname));
+fnams=fullfile(getenv('IFILES'),'HASHES',sprintf('%s_%s.mat',upper(mfilename),fname));
 
-if ~exist(fnams,'file') 
+if ~exist(fnams,'file')
   t=tic;
   if calx==1
     % All the distances from anywhere to anywhere
@@ -122,6 +123,6 @@ if ~exist(fnams,'file')
   disp(sprintf('%s took %f seconds',upper(mfilename),toc(t)))
   save(fnams,'b','p','th0','calx')
 else
+  disp(sprintf('%s loading %s',upper(mfilename),fnams))
   load(fnams)
-  disp(sprintf('Loading precalculated %s',fnams))
 end
