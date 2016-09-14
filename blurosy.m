@@ -1,0 +1,96 @@
+function Sbar=blurosy(th0,params,xver,method)
+% Sbar=blurosy(th0,params,xver,method)
+%
+% Spectral blurring with periodogram of a boxcar, for univariate cases.
+% This is the exact, fast, explicit way which requires no convolutional
+% grid refinement. Later, will build in other types of windows. 
+%
+% INPUT:
+%
+% th0      The true parameter vector with elements:
+%          th0(1)=s2   The first Matern parameter, aka sigma^2 
+%          th0(2)=nu   The second Matern parameter 
+%          th0(3)=rho  The third Matern parameter 
+% params  Parameters of this experiment, the ones that are needed are:
+%         dydx  sampling interval in the y and x directions [m m]
+%         NyNx  number of samples in the y and x directions
+% xver    1 Extra verification via BLURCHECK
+%         0 No checking at all
+% method  'ef' efficient and fast [default]
+%         'efs' efficient and faster, due to symmetry [not working yet]
+%
+% OUTPUT:
+%
+% Sbar    The blurred spectral matrix, on the original requested
+%         dimension as identified by 'params' from the input
+%
+% SEE ALSO:
+%
+% SIMULOSL, BLUROS
+%
+% Last modified by fjsimons-at-alum.mit.edu, 05/04/2016
+
+if params.blurs>=0
+  error('Are you sure you should be running BLUROSY, not BLUROS?')
+end
+
+% Defaults
+defval('xver','1')
+defval('method','ef')
+
+% Target dimensions, the original ones
+NyNx=params.NyNx;
+dydx=params.dydx;
+
+switch method 
+ case 'ef'
+  % http://blogs.mathworks.com/steve/2010/07/16/complex-surprises-from-fft/
+
+  % Fully exact and not particularly fast, still faster than BLUROS
+  % Distance grid, got to be careful with the incoming parity of the signal
+  ycol=[-NyNx(1)+mod(NyNx(1),2):NyNx(1)-1]';
+  xrow=[-NyNx(2)+mod(NyNx(2),2):NyNx(2)-1] ; 
+  % The triangles coming out of the convolution... normalized?
+  triy=[1-abs(ycol)/NyNx(1)];
+  trix=[1-abs(xrow)/NyNx(2)];
+  % Here is the distance grid
+  y=sqrt(bsxfun(@plus,[ycol*dydx(1)].^2,[xrow*dydx(2)].^2));
+
+  % Here is the triangle grid
+  t=bsxfun(@times,triy,trix);
+  % Here is the blurred covariance on the 'double' grid
+  Hh=fftshift(realize(fft2(ifftshift(maternosy(y,th0).*t))));
+
+  % Normalize so that the C(y) is the proper transform of S(k)
+  Hh=Hh*prod(dydx)/(2*pi)^2;
+
+  % Could play with a culled DFTMTX but rather now subsample
+  Hh=Hh(1:2:end,1:2:end);
+  % Vectorize the argument
+  Sbar=Hh(:);    
+ case 'efs'
+  error('Exploiting the symmetry --- not quite working yet')
+  % Fully exact and trying to be faster for advanced symmetry
+  % Distance grid
+  ycol=[0:NyNx(1)-1]';
+  xrow=[0:NyNx(2)-1] ;
+  % The triangles coming out of the convolution
+  triy=1-ycol/NyNx(1);
+  trix=1-xrow/NyNx(2);
+  % Here is the distance grid
+  y=sqrt(bsxfun(@plus,[ycol*dydx(1)].^2,[xrow*dydx(2)].^2));
+  % Here is the triangle grid
+  t=bsxfun(@times,triy,trix);
+  % Need the Matern spatial covariance on the distance grid...
+  % multiplied by the transform of the Fejer kernel
+  sxx=maternosy(y,th0).*t;
+  % Pick out a column and a row
+  sxc=sxx(:,1); sxr=sxx(1,:);
+  % Produce the exact blurred spectrum, adjust the normalization here also
+  Sbar=fftshift(4*realize(fft2(sxx))-2*realize(bsxfun(@plus,fft(sxc),fft(sxr)))-3*th0(1));
+end
+
+% Check Hermiticity
+if xver==1
+  blurcheck(Sbar,params)
+end
