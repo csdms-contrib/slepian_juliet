@@ -1,7 +1,7 @@
 function eggers2
 % EGGERS2
 %
-% Makes FIGURE 2 of Olhede et al. (2017), illustrating the energy spectral
+% Makes FIGURE 1 of Olhede et al. (2017), illustrating the energy spectral
 % density, the spatial autocovariance and simulated fields from isotropic
 % Matern processes. The main routines being tested are MATERNOS, MATERNOSY,
 % and SIMULOSL.
