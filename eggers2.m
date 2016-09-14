@@ -1,11 +1,13 @@
 function eggers2
 % EGGERS2
 %
-% Illustration of the energy spectral density, the spatial autocovariance
-% and simulated fields from isotropic Matern processes. The main routines
-% being tested are MATERNOS, MATERNOSY, and SIMULOSL. 
+% Makes FIGURE 2 of Olhede et al. (2017), illustrating the energy spectral
+% density, the spatial autocovariance and simulated fields from isotropic
+% Matern processes. The main routines being tested are MATERNOS, MATERNOSY,
+% and SIMULOSL.
 %
-% Last modified by fjsimons-at-alum.mit.edu, 05/08/2016
+% Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
+% Last modified by fjsimons-at-alum.mit.edu, 09/13/2016
  
 % Metric conversion
 mfromkm=1000;
@@ -119,7 +121,7 @@ for ind=1:length(S2)
   Kx=maternosy(x,th0);
   pK(ind)=plot(x/mfromkm,Kx/S2(ind));
   set(ah(ind+ncol),'xlim',[x(1) max(x)]/mfromkm,...
-                   'ytick',newy,'ytickl',round(newy*10)/10,...
+                   'ytick',newy,'yticklabel',round(newy*10)/10,...
                    'ygrid','on','xgrid','on')
   hold on
   % Remove the ones where the labels will be
@@ -147,7 +149,7 @@ for ind=1:length(S2)
   % Spectral blurring using BLUROS or BLUROSY
   params.blurs=0;
   % Space decorrelation using QUARTER
-  params.quart=1;
+  params.quart=1; disp('Quartering')
   % Isotropic filtering
   params.kiso=pi/sqrt(prod(params.dydx)); disp('Isotropic filtering')
   params.kiso=NaN; disp('(Rather) no filtering')
@@ -198,9 +200,9 @@ end
 % Cosmetics
 longticks([ah(1:2*ncol) axx],1)
 longticks(ah([2*ncol+1:3*ncol]),0.75)
-set(aa,'HorizontalA','l')
-set(al,'HorizontalA','l','FontS',9)
-set(bb,'HorizontalA','r','Color','b')
+set(aa,'HorizontalAlignment','l')
+set(al,'HorizontalAlignment','l','FontSize',9)
+set(bb,'HorizontalAlignment','r','Color','b')
 set(hc(:,1),'color','b')
 set(ah([1:length(S2)]+3),'ylim',newr)
 nolabels(ha(4:end),2)
