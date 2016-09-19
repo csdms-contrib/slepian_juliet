@@ -32,9 +32,6 @@ npr=5;
 % Number of processors
 NumWorkers=8;
 
-% Y axis limits
-yls=[-0.1 1.1];
-
 % Sizes of the fields under investigation (watch if p.quart is on!)
 Ns=8:2:128;
 % Physical unit dimensions
@@ -49,6 +46,9 @@ p.blurs=-1;
 
 % Prepare the figure: four panels with different parameters
 clf; [ah,ha,H]=krijetem(subnum(2,2));
+
+% Y axis limits
+yls=[-0.1 1.1];
 
 % For each of the correlation lengths
 for fndex=1:length(rho)
