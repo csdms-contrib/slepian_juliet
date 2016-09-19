@@ -1,6 +1,6 @@
 function varargout=simulosl(th0,params,xver,varargin)
 % [Hx,th0,params,k,Hk,Sb,Lb,gane,miy]=SIMULOSL(th0,params,xver)
-% [gane,miy,ax,legs]=SIMULOSL('demo4',th0,params,xver,ptype,N,rindj,Nspm,ah,gane,miy)
+% [gane,miy,ax,legs]=SIMULOSL('demo4',th0,params,xver,ptype,N,rindj,npr,ah,gane,miy)
 %
 % Simulates single-field data in the Matern form. 
 %
@@ -24,11 +24,11 @@ function varargout=simulosl(th0,params,xver,varargin)
 % ptype    'mle' or 'poor' for 'demo4' only [default: 'poor']
 % N         Maximum size that we will be trying [default: 128]
 % rindj     Steps of sizes that are being tried... [default: 2:2:N]
-% Nspm      This many experiments to each of the processors [default: 5]
+% npr      This many experiments to each of the processors [default: 5]
 % ah        Axis handles so we can see if it's a multipanel figure or not
 %           and also, the right panel gets the ylims from the left panel
-% gane     Numbers for the axis equalization procedure in 'demo4'
-% miy      Numbers for the axis equalization procedure in 'demo4'
+% gane     Numbers for the axis equalization procedure in 'demo4' for EGGERS4
+% miy      Numbers for the axis equalization procedure in 'demo4' for EGGERS4
 %
 % OUTPUT:
 %
@@ -42,7 +42,7 @@ function varargout=simulosl(th0,params,xver,varargin)
 % Lb       The Cholesky decomposition of the spectral matrix which you
 %          might use to evaluate the fit later on, in which case you
 %          don't need any of the previous output
-% Only for 'demo4':
+% Only for 'demo4' which is used by EGGERS4
 % gane     Numbers for the axis equalization procedure
 % miy      Numbers for the axis equalization procedure
 % ax       Handle to the extra axis
@@ -55,25 +55,26 @@ function varargout=simulosl(th0,params,xver,varargin)
 % simulosl('demo1') % Just a little plot to illustrate the default behavior
 % simulosl('demo2') % Only for symmetry with SIMULOS, SIMULROS, etc 
 % simulosl('demo3') % Plots a couple of likelihoods to test LKOSL also
-% simulosl('demo4') % Naive and mle variance and their biases, used by EGGERS4
+% simulosl('demo4') % Naive and mle variance and their biases, e.g. by EGGERS4
 % simulosl('demo5',th0,p) % A really poor space-domain covariance estimator
 % simulosl('demo6',th0,p) % A better space-domain covariance estimator
 %
 % SEE ALSO:
 %
-% MLEOSL, LOADING, SIMULOS, EGGERS1, EGGERS2
+% MLEOSL, LOADING, SIMULOS, EGGERS1, EGGERS2, EGGERS4, etc
 %
-% Last modified by fjsimons-at-alum.mit.edu, 05/03/2016
+% Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
+% Last modified by fjsimons-at-alum.mit.edu, 09/19/2016
 
 % Here is the true parameter vector and the only variable that gets used 
-defval('th0',[1e6 2.5 20e3]);
+defval('th0',[1e6 2.5 2e4]);
 
 % If not a demo...
 if ~isstr(th0)
   % Supply the needed parameters, keep the givens, extract to variables
   fields={               'dydx','NyNx','blurs','kiso','quart'};
   defstruct('params',fields,...
-	    {                      [10 10]*1e3,[128 128]/2,-1,NaN,1});
+	    {                      [10 10]*1e3,[64 64],-1,NaN,1});
   struct2var(params)
 
   % Here is the extra verification parameter
@@ -271,7 +272,10 @@ elseif strcmp(th0,'demo3')
   set(ah,'xtick',[1 params.NyNx(2)],'ytick',[1 params.NyNx(1)])
   set(ah,'clim',[0 3])
 elseif strcmp(th0,'demo4')
-  % This was written especially for EGGERS4!
+  % Number of processors, must agree with your machine and EGGERS4
+  NumWorkers=8;
+
+  % This was written especially for EGGERS4! But you can run standalone
   % Shift the inputs so you can default them but also supply them
   % No further inputs needed, but if you have them, you keep them
   % No inputs needed, but if you had them, you should use them in this order
@@ -285,7 +289,7 @@ elseif strcmp(th0,'demo4')
   % Steps of sizes that are being tried...
   if nargin>5; rindj=varargin{3}; end; defval('rindj',[2:2:N]);
   % Give this many experiments to each of the processors
-  if nargin>6; Nspm=varargin{4}; end; defval('Nspm',5);
+  if nargin>6; npr=varargin{4}; end; defval('npr',5);
   % Axis handles to what will become the plot
   if nargin>7; ah=varargin{5}; end; defval('ah',gca);
   % Axis equalization parameters
@@ -299,8 +303,9 @@ elseif strcmp(th0,'demo4')
   [~,th0,p]=simulosl(th0,p);
 
   % For this set of parameters, make a unique hashed filename
-  fname=hash([struct2array(orderfields(p)) th0 rindj Nspm abs(ptype)],'SHA-1');
-  fnams=fullfile(getenv('IFILES'),'HASHES',sprintf('%s.mat',fname));
+  fname=hash([struct2array(orderfields(p)) th0 rindj npr abs(ptype)],'SHA-1');
+  % You need to have an environmental variable file structure set up
+  fnams=fullfile(getenv('IFILES'),'HASHES',sprintf('%s_%s.mat','EGGERS4',fname));
 
   if ~exist(fnams,'file') 
     % Values and statistics that will be collected and kept
@@ -312,7 +317,11 @@ elseif strcmp(th0,'demo4')
       % Slots for one data example for everything
       H=cellnan([length(rindj) 1],rindj,rindj);
     end
-    
+  
+    % Initialize the pool of workers
+    if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
+
+    % For each of the data sizes
     for index=1:length(rindj)
       % Change the size of the (square) patch under consideration
       NyNx(index,1:2)=rindj(index);
@@ -324,9 +333,9 @@ elseif strcmp(th0,'demo4')
         % Initialize to save time (?) I think I need COMPOSITE and not
         % CODISTRIBUTED since I do not need access to data between labs
         Hxv=Composite;
-        for i=1:matlabpool('size'); Hxv{i}=nan(1,Nspm); end
+        for i=1:NumWorkers; Hxv{i}=nan(1,npr); end
 	spmd
-	  for sndex=1:Nspm
+	  for sndex=1:npr
 	    % Simulate new data with the same parameters and record the empirical variance
 	    Hx=simulosl(th0,p);
 	    % Keep track of the variance --- per processor, so these will be composites
@@ -338,12 +347,12 @@ elseif strcmp(th0,'demo4')
 	  Hxva=[Hxv{:}]; clear Hxv; 
 	catch
 	  Hxva=Hxv(:); clear Hxv; 
-          end
-	  % The stats of the poor-variances over the processors
-	  hm(index)=mean(Hxva); hv(index)=var(Hxva);
-	  h05(index)=prctile(Hxva,05); h95(index)=prctile(Hxva,95);
-	  % Keep ONE poor-variance for every data patch size
-	  h(index)=Hxva(1);
+         end
+	 % The stats of the poor-variances over the processors
+	 hm(index)=mean(Hxva); hv(index)=var(Hxva);
+	 h05(index)=prctile(Hxva,05); h95(index)=prctile(Hxva,95);
+	 % Keep ONE poor-variance for every data patch size
+	 h(index)=Hxva(1);
       end
       
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -351,10 +360,10 @@ elseif strcmp(th0,'demo4')
 	% Initialize to save time (?) I think I need COMPOSITE and not
 	% CODISTRIBUTED since I do not need access to data between labs
 	thht=Composite;
-	for i=1:matlabpool('size'); thht{i}=nan(Nspm,length(th0)); end
+	for i=1:NumWorkers; thht{i}=nan(npr,length(th0)); end
 	% Now do a better job and run a real MLE inversion also
 	spmd
-	  for sndex=1:Nspm
+	  for sndex=1:npr
 	    % Simulate new data with the same parameters and record the
 	    % EMPIRICAL variance of doing multiple simulations with these
 	    % variables, rather than taking the word of "covh" for it
@@ -411,16 +420,19 @@ elseif strcmp(th0,'demo4')
       b3(index)=varbias(th0,p,3);
     end
 
-    % If we're worried, save inside the iteration?
-
     % Don't misinterpret the fact that we are saving a lot of different NyNx values
     rmfield(p,'NyNx');
+
+    % Close the pool of workers
+    delete(pnw)
+    % Save into the hash so the above won't need to be recalculated next time
+    % If we're worried, save inside the iteration?
     save(fnams,...
 	 'h','s','n','r','b','b3','hm','hv','sm','nm','rm',...
 	 'h05','h95','s05','s95','n05','n95','r05','r95',...
-	 'p','th0','NyNx','thhat','Nspm','H')
+	 'p','th0','NyNx','thhat','npr','H')
   else
-    disp(sprintf('Loading %s',fnams))
+    disp(sprintf('%s loading %s',upper(mfilename),fnams))
     load(fnams)
   end
 
@@ -494,7 +506,8 @@ elseif strcmp(th0,'demo4')
   % Scale the axis, it really doesn't matter
   % set(gca,'ytick',[0 th0(1) max(th0(1)+th0(1)/10,indeks(ylim,2))],'ytickl',{0, 1,' '})
   tix=4; tox=1.5;
-  set(gca,'ytick',linspace(0,tox*th0(1),tix),'ytickl',{linspace(0,tox,tix)})
+  set(gca,'ytick',linspace(0,tox*th0(1),tix),...
+          'yticklabel',{linspace(0,tox,tix)})
 
   % % Last minute fixin's in case we hadn't properly ordered to begin with
   delete(t)
@@ -504,9 +517,10 @@ elseif strcmp(th0,'demo4')
   % top(pp(2),gca)
   % bottom(pp(4),gca)
   
-  % ax=xtraxis(gca,[],[],[],th0(1),'s2',[]); set(ax,'FontN','symbol')
+  % ax=xtraxis(gca,[],[],[],th0(1),'s2',[]); set(ax,'FontName','symbol')
   ax=xtraxis(gca,[],[],[],th0(1),[],[]); xl=xlim(ax);
-  axt=text(xl(2)+range(xl)/30,th0(1),texlabel('sigma^2'),'FontS',get(gca,'FontS')+1);
+  axt=text(xl(2)+range(xl)/30,th0(1),texlabel('sigma^2'),...
+           'FontSize',get(gca,'FontSize')+1);
   axis on 
   longticks(ax)
   
@@ -517,12 +531,13 @@ elseif strcmp(th0,'demo4')
   % Figure out what all you will want to slap legends on, as in EGGERS1
   legs=[pp(2) pp(3) pb(1) pp(1) pp(4)];
   
-  fig2print(gcf,'portrait')
-  figna=figdisp([],sprintf('demo4_%s',ptype),[],1);
-  system(sprintf('epstopdf %s.eps',figna));
-  system(sprintf('rm -f %s.eps',figna));
-  
-  % Return the output if requested
+  % Print to file, unless it was called with output, e.g. by EGGERS4
+  if nargout==0
+    fig2print(gcf,'portrait')
+    figdisp([],sprintf('demo4_%s',ptype),[],2,'epsc','epstopdf');
+  end
+
+  % Return the output if requested, e.g. by EGGERS4
   varns={gane,miy,ax,legs};
   varargout=varns(1:nargout);
 elseif strcmp(th0,'demo5')
