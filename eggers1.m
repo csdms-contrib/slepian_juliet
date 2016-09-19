@@ -1,15 +1,16 @@
 function eggers1
 % EGGERS1
 %
-% Makes FIGURE 2 of Olhede et al. (2017), illustrating, by simulation, and
-% predicting, via three different analytical approximations, the biasing
-% influence that unknown spatial covariance (primarily via the
-% differentiability and range parameters nu and rho) has on the brute-force
-% estimation of the variance (sigma^2) of an isotropic Matern process.
+% Makes FIGURE 2 of Olhede et al. (2017), illustrating, by simulation (using
+% SIMULOSL), and predicting, via three different analytical approximations
+% (using VARBIAS), the biasing influence that unknown spatial covariance
+% (primarily via the differentiability and range parameters nu and rho) has
+% on the brute-force estimation of the variance (sigma^2) of an isotropic
+% Matern process.
 %
 % SEE ALSO:
 %
-% SIMULOSL('demo4'), EGGERS4, VARBIAS
+% SIMULOSL, VARBIAS
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 % Last modified by fjsimons-at-alum.mit.edu 09/13/2016
@@ -26,12 +27,7 @@ nu=[2 2 3 3];
 % This needs to alternate so the x-axes are common
 rho=[50 100 50 100]*mfromkm;
 
-% Number of simulations per processor, higher is better for small grids
-npr=5;
-
-% Number of processors
-NumWorkers=8;
-
+% Experimental parameters, in standard units
 % Sizes of the fields under investigation (watch if p.quart is on!)
 Ns=8:2:128;
 % Physical unit dimensions
@@ -44,6 +40,12 @@ p.quart=0;
 % keep the parity of even- and odd-dimensional grids 
 p.blurs=-1;
 
+% Number of simulations per processor, higher is better for small grids
+npr=5;
+% Number of processors
+NumWorkers=8;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Prepare the figure: four panels with different parameters
 clf; [ah,ha,H]=krijetem(subnum(2,2));
 
@@ -104,7 +106,7 @@ for fndex=1:length(rho)
   % Order from 'worst' to 'best' for display  
   hold on
 
-  % Plot the correlation length times pi times 2
+  % Pl
   plc(fndex)=plot(2*pi*[th0(3) th0(3)]/mfromkm,yls,'k-');
   % Prediction using the analytical full likelihood
   pl(fndex,4)=plot(plen/mfromkm,[th0(1)-b4]/th0(1),'r-'); 
@@ -142,7 +144,7 @@ for fndex=1:length(rho)
   drawnow 
 end
 
-% Cosmetics
+% Cosmetics to match EGGERS4 exactly
 longticks(ah)
 set(pl(:,1),'Color','k','Marker','o','MarkerFaceC','w','MarkerEdgeC','k','MarkerS',4)
 set(ah,'ygrid','on','box','on')
@@ -152,8 +154,6 @@ nolabels(ah([1 2]),1); delete(xl([1 2]))
 serre(H,[],'across'); serre(H',1/3,'down')
 legend;
 
-% Printo
+% Prin to file
 fig2print(gcf,'portrait')
-figna=figdisp([],[],[],1);
-system(sprintf('epstopdf %s.eps',figna));
-system(sprintf('rm -f %s.eps',figna));
+figdisp([],[],[],1,'epsc','epstopdf');
