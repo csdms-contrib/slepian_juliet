@@ -312,7 +312,8 @@ elseif strcmp(th0,'demo4')
   % Might need cleanup if you change your opinion on what the hash should contain
   % system(sprintf('mv %s %s',fnams1,fnams2))
   
-  if ~exist(fnams,'file') | 1==1
+  % Rerun the other examples tomorrow, from EGGERS7
+    if ~exist(fnams,'file') 
     % Values and statistics that will be collected and kept
     [h,s,n,r,b,hm,hv,sm,nm,rm,h05,h95,s05,s95,n05,n95,r05,r95,s50,n50,r50,nn]=...
 	deal(nan(length(rindj),1));
@@ -397,10 +398,13 @@ elseif strcmp(th0,'demo4')
          end      
 	 % For the very small data sizes, how about some MLE cleanup?
 	 % Because many times it's just not converging using FMINCON.
-	 if rindj<15
-	   thhat=trimit(thhat,80);
-	   % Here we should save the number of survivors! Since we would
-           % be otherwise thinking we are still reporting on npr*NumWorkers
+	 if rindj(index)*p.dydx(1)<2*pi*th0(3)
+	   thhat=trimit(thhat,80,1);
+         else
+           % Maybe trim out the really high values that we have come to
+           % expect? Could do with a Lagrange outlier test? Or a
+           % median/mean test? Leave this option unexercised now.
+           thhat=trimit(thhat,100,1);
          end 
          % We need to record how many "real" estimates we actually had
          nn(index)=sum(~isnan(thhat(:,1)));
@@ -531,7 +535,7 @@ elseif strcmp(th0,'demo4')
     % Mean of the estimators over all the realizations
     pp(2)=plot(xlox,me,'ko'); 
     % Median
-    % plot(xlox,md,'k+')
+    plot(xlox,md,'Color','c')
     if pix==3
       % The data size could be a limiting point for the correlation length
       plot([0 xlox],[0 xlox]*1e3,'-','Color','r')
