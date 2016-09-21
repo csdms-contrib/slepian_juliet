@@ -1,6 +1,6 @@
 function varargout=simulosl(th0,params,xver,varargin)
 % [Hx,th0,params,k,Hk,Sb,Lb,gane,miy]=SIMULOSL(th0,params,xver)
-% [gane,miy,ax,legs]=SIMULOSL('demo4',th0,params,xver,ptype,N,rindj,npr,ah,gane,miy)
+% [gane,miy,ax,legs]=SIMULOSL('demo4',th0,params,xver,ptype,N,rindj,npr,ah,gane,miy,pix)
 %
 % Simulates single-field data in the Matern form. 
 %
@@ -20,15 +20,16 @@ function varargout=simulosl(th0,params,xver,varargin)
 %          quart 1 quadruple, then QUARTER
 %                0 size as is, watch for periodic correlation behavior
 % xver     1 for extra verification, 0 if not needed
-% Only for 'demo4', which is used by EGGERS4
+% ... Only for 'demo4', which is used by EGGERS4
 % ptype    'mle' or 'poor' for 'demo4' only [default: 'poor']
-% N         Maximum size that we will be trying [default: 128]
-% rindj     Steps of sizes that are being tried... [default: 2:2:N]
+% N        Maximum size that we will be trying [default: 128]
+% rindj    Steps of sizes that are being tried... [default: 2:2:N]
 % npr      This many experiments to each of the processors [default: 5]
-% ah        Axis handles so we can see if it's a multipanel figure or not
-%           and also, the right panel gets the ylims from the left panel
+% ah       Axis handles so we can see if it's a multipanel figure or not
+%          and also, the right panel gets the ylims from the left panel
 % gane     Numbers for the axis equalization procedure in 'demo4' for EGGERS4
 % miy      Numbers for the axis equalization procedure in 'demo4' for EGGERS4
+% pix      What MLE parameter (1,2,3) is actually plotted for the rendition of EGGERS4
 %
 % OUTPUT:
 %
@@ -42,7 +43,7 @@ function varargout=simulosl(th0,params,xver,varargin)
 % Lb       The Cholesky decomposition of the spectral matrix which you
 %          might use to evaluate the fit later on, in which case you
 %          don't need any of the previous output
-% Only for 'demo4' which is used by EGGERS4
+% ... Only for 'demo4' which is used by EGGERS4
 % gane     Numbers for the axis equalization procedure
 % miy      Numbers for the axis equalization procedure
 % ax       Handle to the extra axis
@@ -188,20 +189,20 @@ elseif strcmp(th0,'demo1')
   [ah,ha]=krijetem(subnum(2,2));
   delete(ah(3:4))
   ah=ah(1:2);
-  [tl(1),cb(1),xc(1),xa(1)]=plotit(ah(1),Hx/1000,size(k),...
+  [tl(1),cb(1),xc(1),xa(1)]=plotit(ah(1),Hx/1e3,size(k),...
 				   'Matern surface','field (%s)','km');
 
   % Cosmetics
   movev(ah,-.25)
   they=linspace(1,NyNx(1),5);
   thex=linspace(1,NyNx(2),5);
-  spunkm=(NyNx-1).*dydx/1000;
+  spunkm=(NyNx-1).*dydx/1e3;
   set(ah,'ylim',they([1 end])+[-1 1]/2,...
 	 'xlim',thex([1 end])+[-1 1]/2,...
 	 'ytick',they,...
 	 'xtick',thex,...
-	 'ytickl',-spunkm(1)/2+(they-1)*dydx(1)/1000,...
-	 'xtickl',-spunkm(2)/2+(thex-1)*dydx(2)/1000)
+	 'ytickl',-spunkm(1)/2+(they-1)*dydx(1)/1e3,...
+	 'xtickl',-spunkm(2)/2+(thex-1)*dydx(2)/1e3)
   longticks([ah cb])
 
   % Plot the parameters here
@@ -281,20 +282,21 @@ elseif strcmp(th0,'demo4')
   % No inputs needed, but if you had them, you should use them in this order
   defval('params',[]); th0=params; clear params
   % Remember that for odd sample sizes 'rindj' 'blurs' better be odd also
-  defval('xver',  []);   p  =xver; clear xver
+  defval('xver',  []);   p=xver; clear xver
   % More input if you so desire
   if nargin>3; ptype=varargin{1}; end; defval('ptype','poor')
   % Maximum size that we will be trying
-  if nargin>4; N=varargin{2}; end; defval('N',128);
+  if nargin>4;     N=varargin{2}; end; defval('N',128);
   % Steps of sizes that are being tried...
   if nargin>5; rindj=varargin{3}; end; defval('rindj',[2:2:N]);
   % Give this many experiments to each of the processors
-  if nargin>6; npr=varargin{4}; end; defval('npr',5);
+  if nargin>6;   npr=varargin{4}; end; defval('npr',5);
   % Axis handles to what will become the plot
-  if nargin>7; ah=varargin{5}; end; defval('ah',gca);
+  if nargin>7;    ah=varargin{5}; end; defval('ah',gca);
   % Axis equalization parameters
-  if nargin>8; gane=varargin{6}; end; 
-  if nargin>9; miy=varargin{7}; end; 
+  if nargin>8;  gane=varargin{6}; end; 
+  if nargin>9;   miy=varargin{7}; end; 
+  if nargin>10;   pix=varargin{8}; end; defval('pix',1)
   
   % Last default which wasn't an input
   defval('keepdata',0)
@@ -303,18 +305,24 @@ elseif strcmp(th0,'demo4')
   [~,th0,p]=simulosl(th0,p);
 
   % For this set of parameters, make a unique hashed filename
-  fname=hash([struct2array(orderfields(p)) th0 rindj npr abs(ptype)],'SHA-1');
+  % I also have hashes saved without NumWorkers in it... for an alternative
+  fname=hash([struct2array(orderfields(p)) th0 rindj npr NumWorkers abs(ptype)],'SHA-1');
   % You need to have an environmental variable file structure set up
   fnams=fullfile(getenv('IFILES'),'HASHES',sprintf('%s_%s.mat','EGGERS4',fname));
-
-  if ~exist(fnams,'file') 
+  % Might need cleanup if you change your opinion on what the hash should contain
+  % system(sprintf('mv %s %s',fnams1,fnams2))
+  
+  if ~exist(fnams,'file') | 1==1
     % Values and statistics that will be collected and kept
-    [h,s,n,r,b,hm,hv,sm,nm,rm,h05,h95,s05,s95,n05,n95,r05,r95]=...
+    [h,s,n,r,b,hm,hv,sm,nm,rm,h05,h95,s05,s95,n05,n95,r05,r95,s50,n50,r50,nn]=...
 	deal(nan(length(rindj),1));
+    % Blank array with the parameter estimates
     thhat=nan(1,length(th0));
     NyNx=nan(length(rindj),2);
+    % Keep one covariance for every patch size
+    C=nan(6,length(rindj));
     if keepdata==1
-      % Slots for one data example for everything
+      % Slots for one data example for everything with the square patch size
       H=cellnan([length(rindj) 1],rindj,rindj);
     end
   
@@ -351,7 +359,7 @@ elseif strcmp(th0,'demo4')
 	 % The stats of the poor-variances over the processors
 	 hm(index)=mean(Hxva); hv(index)=var(Hxva);
 	 h05(index)=prctile(Hxva,05); h95(index)=prctile(Hxva,95);
-	 % Keep ONE poor-variance for every data patch size
+	 % Keep (any) ONE poor-variance for every data patch size
 	 h(index)=Hxva(1);
       end
       
@@ -367,43 +375,51 @@ elseif strcmp(th0,'demo4')
 	    % Simulate new data with the same parameters and record the
 	    % EMPIRICAL variance of doing multiple simulations with these
 	    % variables, rather than taking the word of "covh" for it
-	    % even though we might want to take a peak at the output?
 	    Hx=simulosl(th0,p);
 	    try
-	      % Make reasonbale guesses from the data themselves
+	      % Make reasonable guesses from the data themselves, then invert
 	      [th,covh,~,~,scl]=mleosl(Hx,[var(Hx) 2.0 sqrt(prod(p.dydx.*p.NyNx))/5],p);
-	      % It it was a NaN, fix the dimensions
-	      if isnan(th); [th,scl]=deal(nan(1,length(th0))); end
+	      % It it was a single NaN, fix the dimensions so it's NaN for all
+	      if isnan(th); [th,scl]=deal(nan(1,length(th0))); disp('NaN set'); end
 	      % Output was scaled, so apply the scaling
 	      thht(sndex,:)=th.*scl;
 	    catch
 	      thht(sndex,:)=nan(1,length(th0));
-             end
+              disp('NaNs set');
+            end
            end
-           end
-	   % Flatten all the values since they sit uncomfortably in Composite class.
-	   try
-	     thhat=cat(1,thht{:}); clear thht; 
-	   catch
-	     thhat=thht; clear thht; 
-           end      
-	   % For the very small data sizes, how about some MLE cleanup?
-	   % Because many times it's just not converging using FMINCON.
-	   if rindj<15
-	     thhat=trimit(thhat,80);
-	     % Here we should save the number of survivors!
-           end 
-	   % The stats of the MLE-variances over the processors
-	   sm(index)=nanmean(thhat(:,1));  sv(index)=nanvar(thhat(:,1));
-	   nm(index)=nanmean(thhat(:,2));  nv(index)=nanvar(thhat(:,2));
-	   rm(index)=nanmean(thhat(:,3));  rv(index)=nanvar(thhat(:,3));
-	   s05(index)=prctile(thhat(:,1),05); s95(index)=prctile(thhat(:,1),95);
-	   n05(index)=prctile(thhat(:,2),05); n95(index)=prctile(thhat(:,2),95);
-	   r05(index)=prctile(thhat(:,3),05); r95(index)=prctile(thhat(:,3),95);
-	   % Keep ONE MLE-variance for every data patch size
-	   s(index)=thhat(1,1);
-	   n(index)=thhat(1,2);
-	   r(index)=thhat(1,3);
+         end
+	 % Flatten all the values since they sit uncomfortably in Composite class.
+	 try
+	   thhat=cat(1,thht{:}); clear thht; 
+	 catch
+	   thhat=thht; clear thht; 
+         end      
+	 % For the very small data sizes, how about some MLE cleanup?
+	 % Because many times it's just not converging using FMINCON.
+	 if rindj<15
+	   thhat=trimit(thhat,80);
+	   % Here we should save the number of survivors! Since we would
+           % be otherwise thinking we are still reporting on npr*NumWorkers
+         end 
+         % We need to record how many "real" estimates we actually had
+         nn(index)=sum(~isnan(thhat(:,1)));
+	 % The stats of the MLE-variances over the processors, per patch size
+         sm(index)=nanmean(thhat(:,1)); sv(index)=nanvar(thhat(:,1));
+         nm(index)=nanmean(thhat(:,2)); nv(index)=nanvar(thhat(:,2));
+         rm(index)=nanmean(thhat(:,3)); rv(index)=nanvar(thhat(:,3));
+         s05(index)=prctile(thhat(:,1),05); s95(index)=prctile(thhat(:,1),95);
+         s50(index)=prctile(thhat(:,1),50);
+         n05(index)=prctile(thhat(:,2),05); n95(index)=prctile(thhat(:,2),95);
+         n50(index)=prctile(thhat(:,2),50);
+         r05(index)=prctile(thhat(:,3),05); r95(index)=prctile(thhat(:,3),95);
+         r50(index)=prctile(thhat(:,3),50);
+         % Keep ONE MLE-estimate for every data patch size, as an example
+         s(index)=thhat(1,1);
+         n(index)=thhat(1,2);
+         r(index)=thhat(1,3);
+         % Keep ONE covariance estimate from the observed Hessian out of MLEOSL
+         try ; C(:,index)=trilos(covh{1}); clear covh ; end
       end
       toc
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -417,20 +433,21 @@ elseif strcmp(th0,'demo4')
       
       % Now predict the bias of the 'poor' variance from the known correlation structure
       b(index)= varbias(th0,p,1);
+      % See below... we will calculate, plot it, and then throw it out
       b3(index)=varbias(th0,p,3);
     end
 
     % Don't misinterpret the fact that we are saving a lot of different NyNx values
     rmfield(p,'NyNx');
 
-    % Close the pool of workers
-    delete(pnw)
+    % Close the pool of workers if it was created just for this purpose
+    try; delete(pnw); end
     % Save into the hash so the above won't need to be recalculated next time
     % If we're worried, save inside the iteration?
     save(fnams,...
 	 'h','s','n','r','b','b3','hm','hv','sm','nm','rm',...
 	 'h05','h95','s05','s95','n05','n95','r05','r95',...
-	 'p','th0','NyNx','thhat','npr','H')
+	 'p','th0','NyNx','thhat','npr','H','C','s50','n50','r50','nn')
   else
     disp(sprintf('%s loading %s',upper(mfilename),fnams))
     load(fnams)
@@ -442,13 +459,29 @@ elseif strcmp(th0,'demo4')
   xloy=linspace(0,[rindj(end)+1]*dydx(1),100)/1e3;
   xloy=unique([xloy linspace(0,dydx(1),100)/1e3]);
   
-  % y-limits are based on the poor estimate
-  defval('gane',range([h05 ; h ; h95])/20)
-  defval('miy',[min([h ; h05]) max([h ; h95])]+[-gane gane]);
-  
+  % Y-limits based on the estimates 
+  switch ptype 
+    case 'poor'
+     defval('gane',range([h05 ; h ; h95])/20)
+     defval('miy',[min([h ; h05]) max([h ; h95])]+[-gane gane]);
+   case 'mle'
+    switch pix
+     case 1
+      be=s; lb=s05; ub=s95; me=sm; md=s50;
+     case 2
+      be=n; lb=n05; ub=n95; me=nm; md=n50;
+     case 3
+      be=r; lb=r05; ub=r95; me=rm; md=r50;
+     otherwise
+      error('Which parameter do you want plotted? Specify 1, 2 or 3')
+    end
+    defval('gane',range([lb ; be ; ub])/20)
+    defval('miy',[min([be ; lb]) max([be ; ub])]+[-gane gane]);
+  end
+          
+  % Vertical and horizontal guides to where brute-force bias is about a third
+  plot(2*pi*[th0(3) th0(3)]/1e3,halverange(miy,100),'k-')
   hold on
-  % Vertical and horizontal guides
-  plot([th0(3) th0(3)]/1e3*pi*2,miy,'k-')
   %plot(xlim,[th0(1) th0(1)],'k--')
 
   switch ptype
@@ -459,29 +492,65 @@ elseif strcmp(th0,'demo4')
     end
     % Rather plot a scaled version of the spatial-domain covariance itself!
     pp(4)=plot(xloy,maternosy(xloy*1e3,th0));
-    % Variance of ONE of the realizations
+    % Variance of any ONE of the realizations
     pp(1)=plot(xlox,h,'k');
     % Predicted mean of the variances knowing theoretical bias 
     pp(3)=plot([1*dydx(1)/1e3 xlox],th0(1)-[th0(1) ; b]);
-    % Almost always awesome approximate prediction
+    % Almost always awesome approximate prediction of the bias
     ppx=plot([1*dydx(1)/1e3 xlox],th0(1)-[th0(1) ; b3(:)],'kx-');
     % Mean of the variances over all the realizations
     pp(2)=plot(xlox,hm,'ko');
    case 'mle'
-    % Percentiles of the variances over all the realizations
-    for index=1:length(rindj)
-      pb(index)=plot([xlox(index) xlox(index)],[s05(index) s95(index)]);
+    % Best estimate (s, n, or r)
+    % Lower bound (s05, n05, or r05)
+    % Upper bound (s95, n95 and r95)
+    % Mean of the estimator (sm, nm, or rm)
+    % Truth (th0(1), th0(2) or th0(3))
+    tr=th0(pix); 
+    % Numerical Hessian-based covariance of the estimate
+    try ; cv=C([2*(pix>1)]*pix,:); end
+    % If the gain was specified, as in EGGERS4 but not in EGGERS7
+    if gane==varargin{6}
+      % Only when it is not s (thus for n and r) do we redefine yaxis miy
+      if tr~=th0(1)
+        miy=miy/th0(1)*tr;
+      end
     end
+        
+    % Percentiles of the estimators over all the realizations
+    for index=1:length(rindj)
+      pb(index)=plot([xlox(index) xlox(index)],[lb(index) ub(index)]);
+    end
+
     % Rather plot a scaled version of the spatial-domain covariance itself!
-    pp(4)=plot(xloy,maternosy(xloy*1e3,th0));
-    % MLE-variance of ONE of the realizations
-    pp(1)=plot(xlox,s,'k');
-    % Predicted mean of the variances knowing theoretical bias to be zero
-    pp(3)=plot([1*dydx(1)/1e3 xlox],repmat(th0(1),1,length(xlox)+1));
-    % Mean of the variances over all the realizations
-    pp(2)=plot(xlox,sm,'ko');
+    pp(4)=plot(xloy,maternosy(xloy*1e3,th0)/th0(1)*tr);
+    % MLE-estimate for any ONE of the realizations (e.g. s, n or r)
+    pp(1)=plot(xlox,be,'k');
+    % Predicted mean of the estimators knowing theoretical bias to be zero
+    pp(3)=plot([1*dydx(1)/1e3 xlox],repmat(tr,1,length(xlox)+1));
+    % Mean of the estimators over all the realizations
+    pp(2)=plot(xlox,me,'ko'); 
+    % Median
+    % plot(xlox,md,'k+')
+    if pix==3
+      % The data size could be a limiting point for the correlation length
+      plot([0 xlox],[0 xlox]*1e3,'-','Color','r')
+    end
+    % Now, utilize the numerical covariance information, by plotting cv
+    try 
+      look1=plot(xlox,me+sqrt(cv(:)),'k');
+      look2=plot(xlox,me-sqrt(cv(:)),'k');
+      
+      % Just to see what it is like, we may not keep it after all
+      % Bottom line is that the numerical Hessian is not to be trusted as a
+      % generic covariance estimate
+      delete(look1); delete(look2)
+    end
   end
 
+  % DO SOMETHING WITH THE KNOWLEDGE OF nn
+  %nn
+  
   hold off
 
   % Cosmetics
@@ -497,16 +566,17 @@ elseif strcmp(th0,'demo4')
   t=title(sprintf('SIMULOSL with blurs = %i, var(Hx) versus %s^2',...
 		  p.blurs,'\sigma'));
   movev(t,gane); grid off; 
-  % xlabel('data size | distance (km)');
+  % Check which one of the below x-labels will make sense given the layout
   xlabel(sprintf('grid size (km) ; 1 pixel = %i km',sqrt(prod(dydx))/1e3));
   %xl=xlabel(sprintf('grid size (km) ; %s = %i pixels',...
   %                  '\pi\rho',round(pi*th0(3)/sqrt(prod(dydx)))));
   % yl=ylabel('$s^2 \quad | \quad \mathcal{C}(r)$'); set(yl,'Interp','LaTex')
   yl=ylabel(sprintf('observed to predicted <s^2>/%s^2','\sigma'));
+  yl=ylabel(sprintf('%s estimates relative to truth','\sigma^2'));
   % Scale the axis, it really doesn't matter
   % set(gca,'ytick',[0 th0(1) max(th0(1)+th0(1)/10,indeks(ylim,2))],'ytickl',{0, 1,' '})
   tix=4; tox=1.5;
-  set(gca,'ytick',linspace(0,tox*th0(1),tix),...
+  set(gca,'ytick',linspace(0,tox*th0(pix),tix),...
           'yticklabel',{linspace(0,tox,tix)})
 
   % % Last minute fixin's in case we hadn't properly ordered to begin with
@@ -528,8 +598,12 @@ elseif strcmp(th0,'demo4')
   % which we did in EGGERS1
   try ; delete(ppx) ; end
   
+  % Delete that silly "any one" behavior
+  try; delete(pp(1)); end
+  
   % Figure out what all you will want to slap legends on, as in EGGERS1
-  legs=[pp(2) pp(3) pb(1) pp(1) pp(4)];
+  %legs=[pp(2) pp(3) pb(1) pp(1) pp(4)];
+  legs=[pp(2) pp(3) pb(1) pp(4)];
   
   % Print to file, unless it was called with output, e.g. by EGGERS4
   if nargout==0

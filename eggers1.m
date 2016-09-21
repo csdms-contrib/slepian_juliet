@@ -60,6 +60,7 @@ for fndex=1:length(rho)
   % For this ordered (!) set of parameters, make a unique hashed filename
   % so that you can save the results and don't have to redo the computations
   fname=hash([struct2array(orderfields(p)) th0 Ns npr NumWorkers],'SHA-1');
+  % You need to have an environmental variable file structure set up
   fnams=fullfile(getenv('IFILES'),'HASHES',sprintf('%s_%s.mat',upper(mfilename),fname));
   
   % If it hasn't been precomputed and saved ahead of time
@@ -106,7 +107,7 @@ for fndex=1:length(rho)
   % Order from 'worst' to 'best' for display  
   hold on
 
-  % Pl
+  % Plot empirical distance where bias decreases to about a third of the truth
   plc(fndex)=plot(2*pi*[th0(3) th0(3)]/mfromkm,yls,'k-');
   % Prediction using the analytical full likelihood
   pl(fndex,4)=plot(plen/mfromkm,[th0(1)-b4]/th0(1),'r-'); 
@@ -124,7 +125,8 @@ for fndex=1:length(rho)
   xl(fndex)=xlabel(sprintf('grid size (km) ; %s = %i pixels',...
                            '\pi\rho',round(pi*th0(3)/sqrt(prod(p.dydx)))));
   % yl(fndex)=ylabel(sprintf('normalized expected sample variance'));
-  yl(fndex)=ylabel(sprintf('observed to predicted <s^2>/%s^2','\sigma'));
+  % yl(fndex)=ylabel(sprintf('observed to predicted <s^2>/%s^2','\sigma'));
+  yl(fndex)=ylabel(sprintf('%s estimates relative to truth','\sigma^2'));
   tl(fndex)=title(sprintf('%s = %3.1f km ; %s = %i ; %s = %i km',...
                    '\sigma',sqrt(th0(1))/mfromkm,...
                    '\nu',th0(2),...
@@ -156,4 +158,4 @@ legend;
 
 % Prin to file
 fig2print(gcf,'portrait')
-figdisp([],[],[],1,'epsc','epstopdf');
+figdisp([],[],[],2,'epsc','epstopdf');
