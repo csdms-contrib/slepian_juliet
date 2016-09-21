@@ -59,6 +59,6 @@ else
     newmat=oldmat(trimi,:);
   end
   % Report on the trimmings
-  disp(sprintf('%s 3.3i%s preserved',upper(mfilename)...
+  disp(sprintf('%s %3.3i%s preserved',upper(mfilename),...
                round(length(newmat(:))/length(oldmat(:))*100),'%'))
 end
