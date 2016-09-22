@@ -26,11 +26,11 @@ mfromkm=1000;
 % Matern parameters, in standard units
 % The parameters for the first row in the published work
 th0t=[1e6 2.5 2e4];
-% Alternative set, not used for the paper, save as -final-alt
-%th0t=[1e6 2.0 5e4];
 % The parameters for the second row in the published work
 th0b=[1e6 2.5 4e4];
-% Alternative set, not used for the paper, save as -final-alt
+
+% Alternative set... used for EGGERS7, save as -final-alt
+%th0t=[1e6 2.0 5e4];
 %th0b=[1e6 3.0 10e4];
 
 % Experimental parameters
@@ -113,6 +113,14 @@ nolabels(ah([1 2]),1); delete(xl([1 2]))
 serre(H,[],'across'); serre(H',1/3,'down')
 % Do something with them? Nah, forget
 Hx=reshape(ax,2,2)'; delete(Hx); 
+
+% Set the medians in there also, see SIMULOSL
+dm=findobj('Color','c'); set(dm,'Marker','+','MarkerSize',2,'Color','k','LineStyle','none')
+delete(dm)
+
+% Set the trimmed-variances in there also, see SIMULOSL
+dv=findobj('Color','y'); set(dv,'Marker','none','Color','k','LineStyle','-')
+delete(dv)
 
 % Print to file
 fig2print(gcf,'portrait')

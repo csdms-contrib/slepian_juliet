@@ -1,6 +1,6 @@
 function varargout=simulosl(th0,params,xver,varargin)
 % [Hx,th0,params,k,Hk,Sb,Lb,gane,miy]=SIMULOSL(th0,params,xver)
-% [gane,miy,ax,legs]=SIMULOSL('demo4',th0,params,xver,ptype,N,rindj,npr,ah,gane,miy,pix)
+% [gane,miy,ax,legs]=SIMULOSL('demo4',th0,params,ptype,N,rindj,npr,ah,gane,miy,pix)
 %
 % Simulates single-field data in the Matern form. 
 %
@@ -21,6 +21,8 @@ function varargout=simulosl(th0,params,xver,varargin)
 %                0 size as is, watch for periodic correlation behavior
 % xver     1 for extra verification, 0 if not needed
 % ... Only for 'demo4', which is used by EGGERS4
+% th0      ... as above
+% params   ... as above
 % ptype    'mle' or 'poor' for 'demo4' only [default: 'poor']
 % N        Maximum size that we will be trying [default: 128]
 % rindj    Steps of sizes that are being tried... [default: 2:2:N]
@@ -302,7 +304,7 @@ elseif strcmp(th0,'demo4')
   defval('keepdata',0)
   
   % Initialize or accept the parameters and prefill some arrays
-  [~,th0,p]=simulosl(th0,p);
+  [~,th0,p]=simulosl(th0,p,0);
 
   % For this set of parameters, make a unique hashed filename
   % I also have hashes saved without NumWorkers in it... for an alternative
@@ -312,10 +314,9 @@ elseif strcmp(th0,'demo4')
   % Might need cleanup if you change your opinion on what the hash should contain
   % system(sprintf('mv %s %s',fnams1,fnams2))
   
-  % Rerun the other examples tomorrow, from EGGERS7
-    if ~exist(fnams,'file') 
+  if ~exist(fnams,'file') 
     % Values and statistics that will be collected and kept
-    [h,s,n,r,b,hm,hv,sm,nm,rm,h05,h95,s05,s95,n05,n95,r05,r95,s50,n50,r50,nn]=...
+    [h,s,n,r,b,hm,hv,sm,nm,rm,sv,nv,rv,h05,h95,s05,s95,n05,n95,r05,r95,s50,n50,r50,nn]=...
 	deal(nan(length(rindj),1));
     % Blank array with the parameter estimates
     thhat=nan(1,length(th0));
@@ -398,6 +399,8 @@ elseif strcmp(th0,'demo4')
          end      
 	 % For the very small data sizes, how about some MLE cleanup?
 	 % Because many times it's just not converging using FMINCON.
+         % Keep the original for the whole range
+         thhator=thhat;
 	 if rindj(index)*p.dydx(1)<2*pi*th0(3)
 	   thhat=trimit(thhat,80,1);
          else
@@ -409,15 +412,17 @@ elseif strcmp(th0,'demo4')
          % We need to record how many "real" estimates we actually had
          nn(index)=sum(~isnan(thhat(:,1)));
 	 % The stats of the MLE-variances over the processors, per patch size
+         % Even though we show the median/mean/variance after trimming...
          sm(index)=nanmean(thhat(:,1)); sv(index)=nanvar(thhat(:,1));
          nm(index)=nanmean(thhat(:,2)); nv(index)=nanvar(thhat(:,2));
          rm(index)=nanmean(thhat(:,3)); rv(index)=nanvar(thhat(:,3));
-         s05(index)=prctile(thhat(:,1),05); s95(index)=prctile(thhat(:,1),95);
          s50(index)=prctile(thhat(:,1),50);
-         n05(index)=prctile(thhat(:,2),05); n95(index)=prctile(thhat(:,2),95);
          n50(index)=prctile(thhat(:,2),50);
-         r05(index)=prctile(thhat(:,3),05); r95(index)=prctile(thhat(:,3),95);
          r50(index)=prctile(thhat(:,3),50);
+         % ... we want to show the ORIGINAL 5-95th range without trimming
+         s05(index)=prctile(thhator(:,1),05); s95(index)=prctile(thhator(:,1),95);
+         n05(index)=prctile(thhator(:,2),05); n95(index)=prctile(thhator(:,2),95);
+         r05(index)=prctile(thhator(:,3),05); r95(index)=prctile(thhator(:,3),95);
          % Keep ONE MLE-estimate for every data patch size, as an example
          s(index)=thhat(1,1);
          n(index)=thhat(1,2);
@@ -449,7 +454,7 @@ elseif strcmp(th0,'demo4')
     % Save into the hash so the above won't need to be recalculated next time
     % If we're worried, save inside the iteration?
     save(fnams,...
-	 'h','s','n','r','b','b3','hm','hv','sm','nm','rm',...
+	 'h','s','n','r','b','b3','hm','hv','sm','nm','rm','sv','nv','rv',...
 	 'h05','h95','s05','s95','n05','n95','r05','r95',...
 	 'p','th0','NyNx','thhat','npr','H','C','s50','n50','r50','nn')
   else
@@ -471,11 +476,11 @@ elseif strcmp(th0,'demo4')
    case 'mle'
     switch pix
      case 1
-      be=s; lb=s05; ub=s95; me=sm; md=s50;
+      be=s; lb=s05; ub=s95; me=sm; md=s50; ve=sv;
      case 2
-      be=n; lb=n05; ub=n95; me=nm; md=n50;
+      be=n; lb=n05; ub=n95; me=nm; md=n50; ve=nv;
      case 3
-      be=r; lb=r05; ub=r95; me=rm; md=r50;
+      be=r; lb=r05; ub=r95; me=rm; md=r50; ve=rv;
      otherwise
       error('Which parameter do you want plotted? Specify 1, 2 or 3')
     end
@@ -484,7 +489,7 @@ elseif strcmp(th0,'demo4')
   end
           
   % Vertical and horizontal guides to where brute-force bias is about a third
-  plot(2*pi*[th0(3) th0(3)]/1e3,halverange(miy,100),'k-')
+  plot(2*pi*[th0(3) th0(3)]/1e3,halverange(miy,100,NaN),'k-')
   hold on
   %plot(xlim,[th0(1) th0(1)],'k--')
 
@@ -532,14 +537,32 @@ elseif strcmp(th0,'demo4')
     pp(1)=plot(xlox,be,'k');
     % Predicted mean of the estimators knowing theoretical bias to be zero
     pp(3)=plot([1*dydx(1)/1e3 xlox],repmat(tr,1,length(xlox)+1));
-    % Mean of the estimators over all the realizations
+    
+    % Plot the means when you have the expected untrimmed number of
+    % samples, medians otherwise? Or would the trimming take care of it
+    % and we just need to identify where this happens. Check "nn"
+    % unique(nn)
+
+    % Mean of the estimators over all the realizations... if you have the
+    % full set. Nah, just mention in the legend that 2pi r was truncated
+    % pp(2)=plot(xlox(nn==npr*NumWorkers),me(nn==npr*NumWorkers),'ko'); 
     pp(2)=plot(xlox,me,'ko'); 
-    % Median
+      
+    % Variance... fish out the colors in EGGERS7
+    plot(xlox,me+sqrt(ve),'y-');
+    plot(xlox,me-sqrt(ve),'y-');
+    
+    % Check out the variance decay! Yes, it more or less decays with the
+    % data size, which is the SQUARE of the linear dimension
+    %  semilogy(xlox,ve/max(ve),'+'); hold on; semilogy(xlox,xlox.^-2/max(xlox.^-2),'o')
+    
+    % Median... fish out the colors in EGGERS7
     plot(xlox,md,'Color','c')
     if pix==3
       % The data size could be a limiting point for the correlation length
       plot([0 xlox],[0 xlox]*1e3,'-','Color','r')
     end
+
     % Now, utilize the numerical covariance information, by plotting cv
     try 
       look1=plot(xlox,me+sqrt(cv(:)),'k');
@@ -552,9 +575,6 @@ elseif strcmp(th0,'demo4')
     end
   end
 
-  % DO SOMETHING WITH THE KNOWLEDGE OF nn
-  %nn
-  
   hold off
 
   % Cosmetics
