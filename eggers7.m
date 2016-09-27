@@ -5,10 +5,11 @@ function eggers7
 % performance of estimating the parameters of an isotropic Matern process,
 % as a function of its parameters (variance, differentiability, range) and
 % for a suite of field sizes. The data plotted in this figure are generated
-% by invoking SIMULOSL('demo4').
+% by this program via invoking SIMULOSL('demo4'), where important things
+% are happening, and which you need to study internally.
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
-% Last modified by fjsimons-at-alum.mit.edu, 09/19/2016
+% Last modified by fjsimons-at-alum.mit.edu, 09/27/2016
 
 varos={'\sigma','\nu','\rho'};
 
