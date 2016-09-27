@@ -4,10 +4,10 @@ function [pf,pv,pr,alfa]=normtest(stat,mn,vr,alfa)
 % Test whether a particular value is derived from a hypothesized NORMAL
 % (GAUSSIAN) distribution with known (postulated) mean and variance,
 % reject if the probability of more extreme than observed values are very
-% unlikely, e.g. below (1-alfa)x100 percent. This is a two-sided test
+% unlikely, e.g. below (1-alfa)x100 percent. This is a TWO-SIDED test
 % where the algorithm depends on the symmetry of the distribution. It is
-% a one-sample test for every ELEMENT of the array offered (i.e. quite
-% literally one sample of one point each), unlike ZTEST.
+% a ONE-SAMPLE test for every ELEMENT of the array offered (i.e. quite
+% literally one sample, of one point, each), unlike ZTEST.
 %
 % INPUT: 
 %
@@ -36,7 +36,7 @@ function [pf,pv,pr,alfa]=normtest(stat,mn,vr,alfa)
 %
 % ZTEST, VARTEST
 %
-% Last modified by fjsimons-at-alum.mit.edu, 07/06/2015
+% Last modified by fjsimons-at-alum.mit.edu, 09/27/2016
 
 % Default confidence limit
 defval('alfa',0.05)
@@ -50,3 +50,6 @@ pf=pv<alfa;
 % This is the report on the rejections
 pr=sum(pf)/length(pf)*100;
 
+% Provide an uplifting message
+disp(sprintf('\n%s %i%% rejected at the %i%% confidence level',...
+             upper(mfilename),round(pr),round(alfa*100))) 
