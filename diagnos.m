@@ -31,7 +31,7 @@ function [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covh]=diagnos(fname,ddir,
 %
 % OSOPEN, OSLOAD (with which it needs to match!)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/15/2015
+% Last modified by fjsimons-at-alum.mit.edu, 09/29/2016
 
 defval('ddir','/u/fjsimons/PROGRAMS/MFILES/olhede4')
 defval('fname','mleosl_diagn_11-Jun-2015')
@@ -85,7 +85,8 @@ for index=1:ndim
   tseiter(index,:)=fscanf(fid,'%i',3); 
   try
     % The likelihood
-    L(index)=fscanf(fid,'%e',1); disp(sprintf('L= %7.4f',L(index)))
+    L(index)=fscanf(fid,'%e',1); 
+    % disp(sprintf('L= %7.4f',L(index)))
   catch
     % Tell if you're wrong
     L(index-1)
@@ -108,7 +109,8 @@ end
 fclose(fid);
 
 % Finetune the preallocation over time
-disp(sprintf('Expected length %i, true length %i',size(thhat,1),index))
+disp(sprintf('\n%s allocated length %i, received length %i',...
+             upper(mfilename),size(thhat,1),index))
 
 % Trim the possibly wrongly preallocated arrays
 thhat=thhat(1:index,:);
