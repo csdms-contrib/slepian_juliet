@@ -26,19 +26,23 @@ function varargout=covthosl(th,k,scl)
 % covF=covthosl(th0,k,1);
 % round(sqrt(covF(1,1)))
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/22/2015
+% Last modified by fjsimons-at-alum.mit.edu, 09/29/2016
 
 % Default scaling is none
 defval('scl',ones(size(th)))
 
+% Explicitly remove the zero wavenumber from consideration
+if ~isempty(k(~k))
+  warning(sprintf('%s zero wavenumber',upper(mfilename))); 
+end
+
 % First, the Fisher matrix at each wavenumber, unwrapped, unscaled
 mcF=Fisherkosl(k,th.*scl);
 
-disp('Check that zero k is never part of it?')
-
 % Take the expectation and put the elements in the right place
 for ind=1:length(mcF)
-  mcF{ind}=nanmean(mcF{ind});
+   % Note below that only half of the full-plane wavenumbers are independent
+   mcF{ind}=nanmean(mcF{ind});
 end
 
 % The full Fisher matrix
@@ -55,7 +59,7 @@ F(1,3)=mcF{5};
 F(2,3)=mcF{6};
 
 % Returns the unscaled covariance matrix and the scaled Fisher matrix
-disp('I am assuming that your wavenumbers are the entire plane')
+% Note that only half of the full-plane wavenumbers are independent
 [covF,F]=fish2cov(F,scl,length(k(~~k))/2);
 
 % Output
