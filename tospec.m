@@ -1,29 +1,26 @@
 function Hk=tospec(Hx,p)
 % Hk=TOSPEC(Hx,p)
 %
-% Converts a vector of two-dimensional spatial-domain observations to the
-% spectral domain with the proper normalization and again returned as a
-% vector. This pertains to unitary transforms, not Matlab's standard. 
+% Converts a vector of spatial-domain quantities to the physical spectral
+% domain, with unitary normalization, and units, returned as a vector.
 %
 % INPUT:
 %
-% Hx       A real vector of spatial-domain entries
-% p        A parameter structure containing
-%          NyNx  The number of samples in the y and x directions which
-%                equals the size of the corresponding wavenumber matrix 
+% Hx    Real-valued column vector of unwrapped spatial-domain quantities 
+% p     A parameter structure, containing, at a minimum,
+%       NyNx  The number of samples in the y and x directions 
+%       dydx  The sampling interval in the y and x directions [m m]
 %
 % OUTPUT:
 %
-% Hk       A complex vector of Fourier-domain entries
+% Hk     Complex-valued column vector of unwrapped Fourier-domain entries  
 %
 % SEE ALSO:
 %
-% TOSPACE
+% TOSPACE, KNUMS, KNUM2
 % 
-% Last modified by fjsimons-at-alum.mit.edu, 01/05/2012
+% Last modified by fjsimons-at-alum.mit.edu, 10/07/2016
 
-% This is all it is, really. Unitary transform if we
-% multiply IFFT by sqrt(prod(NyNx)) and divide FFT by it. 
-% New thing is that we stick the actual physical dimension in here 
+% Unitary transform, and it has physical units
 Hk=indeks(fftshift(fft2(reshape(Hx,p.NyNx))),':')...
    /sqrt(prod(p.NyNx))*sqrt(prod(p.dydx));
