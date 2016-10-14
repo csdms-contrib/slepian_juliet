@@ -56,9 +56,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % EXAMPLE:
 %
-% p.quart=0; p.blurs=0; p.kiso=NaN;
-% [Hx,th0,p]=simulosl([],p,1);
-% [thh,covF,L,thi,scl,pp]=mleosl(Hx,[],p,[],[],[],1);
+% p.quart=0; p.blurs=0; p.kiso=NaN; [Hx,~,p]=simulosl([],p,1); mleosl(Hx,[],p,[],[],[],1);
 %
 % You can stick in partial structures, e.g. only specifying params.kiso
 %% Perform a series of N simulations centered on th0
@@ -171,7 +169,7 @@ if ~isstr(Hx)
   % Doesn't seem to do much when we supply our own gradient
   % options.UseParallel='always';
 
-  if xver==1 && blurs>-1 && blurs<2
+  if xver==1 % && blurs>-1 && blurs<2
     % Using the analytical gradient in the optimization is not generally a good
     % idea but if the likelihoods aren't blurred, you can set this option to
     % 'on' and then you can verify that the numerical calculations match the
@@ -250,7 +248,7 @@ if ~isstr(Hx)
   end
 
   % Parameter covariance as calculated from numerical Hessian at estimate
-  covh=hes2cov(-hes,scl,length(k(knz))/2);
+  covh=hes2cov(-hes,scl,length(k)/2);
 
   % Parameter covariance as calculated from unblurred Fisher matrix at estimate
   % I suppose, in the single-variable case, we could produce blurred versions
@@ -262,20 +260,20 @@ if ~isstr(Hx)
   % Hessians are off, but the analytic Fishers remain right on; maybe the
   % blurring removes the variability such that numerical blurring ends up
   % producing results that are closer to the analytical Fishers
-  if xver==1 && blurs>-1 && blurs<2
+  if xver==1 % && blurs>-1 && blurs<2
     % The number of parameters that are being solved for
     np=length(thhat);
     % The number of unique entries in an np*np symmetric matrix
     npp=np*(np+1)/2;
 
     % Analytic (unblurred) Hessian, scaled for numerical comparison
-    H=Hessiosl(k(knz),thhat.*scl,Hk(knz)).*[scl(:)*scl(:)'];
+    H=Hessiosl(k,thhat.*scl,Hk).*[scl(:)*scl(:)'];
 
     % Parameter covariance as calculated from analytical Hessian at estimate
-    covH=hes2cov(H,scl,length(k(knz))/2);
+    covH=hes2cov(H,scl,length(k)/2);
     
     % Analytic (unblurred) gradient, scaled for numerical comparison
-    gros=-nanmean(gammakosl(k(knz),thhat.*scl,params,Hk(knz)))'.*scl(:);
+    gros=-nanmean(gammakosl(k,thhat.*scl,params,Hk))'.*scl(:);
 
     % Compare the analytic Hessian with the numerical Hessian and with
     % the Hessian expectation, which is the Fisher, at the estimate, and

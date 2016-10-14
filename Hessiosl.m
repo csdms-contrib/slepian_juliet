@@ -2,7 +2,7 @@ function F=Hessiosl(k,th,Hk)
 % F=HESSIOSL(k,th,Hk)
 %
 % Calculates the entries in the Hessian matrix of Olhede & Simons (2013) 
-% for the SINGLE-FIELD Matern model post wavenumber averaging. 
+% for the SINGLE-FIELD Matern model, post wavenumber averaging. 
 %
 % INPUT:
 %
@@ -21,9 +21,14 @@ function F=Hessiosl(k,th,Hk)
 %
 % FISHERKOSL, HES2COV
 %
-% Last modified by fjsimons-at-alum.mit.edu, 09/27/2016
+% Last modified by fjsimons-at-alum.mit.edu, 10/14/2016
 
 defval('xver',1)
+
+% Usually we remove the zero wavenumber from consideration
+if ~isempty(k(~k))
+  disp(sprintf('%s zero wavenumber detected',upper(mfilename))); 
+end
 
 % The number of parameters to solve for
 np=length(th);
@@ -38,9 +43,8 @@ lk=length(k(:));
 
 % Get the power spectrum and its ratio to the observations 
 S=maternos(k,th);
-% We recall that the average of Xk should be one close to the solution 
+% The average of Xk needs to be close to one as will be tested 
 Xk=abs(Hk).^2./S;
-disp(sprintf('mean of Xk is %8.6f',mean(Xk)))
 
 % Extract the parameters from the input
 s2=th(1);
@@ -79,8 +83,6 @@ jcombo=nchoosek(1:np,2);
 for j=1:length(jcombo)
   Fk(:,np+j)=-mx{np+j}-[m{jcombo(j,1)}.*m{jcombo(j,2)}-mx{np+j}].*Xk;
 end
-
-disp('Maybe set the zero k to NaN explicitly')
 
 % Now perform the averaging over all wavenumbers
 Ff=mean(Fk,1);
