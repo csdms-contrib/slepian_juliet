@@ -20,7 +20,7 @@ function varargout=osdisp(th0,thhats,nl,avhs,Fisher,covF)
 %
 % The strings used 
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/10/2015
+% Last modified by fjsimons-at-alum.mit.edu, 10/14/2016
 
 % The necessary strings for formatting
 str0='%27s';
@@ -32,35 +32,21 @@ str3='%12s ';
 str1s=repmat(str1,size(th0));
 str2s=repmat(str2,size(th0));
 
-if length(th0)==6
-  disp(sprintf(sprintf('\n%s : %s ',str0,repmat(str3,size(th0))),...
-	       'True theta','D','f2','r','s2','nu','rho'))
-  disp(sprintf(sprintf('%s : %s ',str0,str1s),' ',th0))
-elseif length(th0)==5
-  disp(sprintf(sprintf('\n%s : %s ',str0,repmat(str3,size(th0))),...
-	       'True theta','D','f2','s2','nu','rho'))
-  disp(sprintf(sprintf('%s : %s ',str0,str1s),' ',th0))
-elseif length(th0)==3
-  disp(sprintf(sprintf('\n%s : %s ',str0,repmat(str3,size(th0))),...
-	       'True theta','s2','nu','rho'))
-  disp(sprintf(sprintf('%s : %s ',str0,str1s),' ',th0))
-end
-
 % Don't use STRUC2ARRAY since we want them in our own order
 % But see the reordering solution in OSWZEROB
 if isstruct(thhats) && nargin==2
   params=thhats;
   if length(th0)>3
-    disp(sprintf(sprintf('%s : %s ',str0,repmat(str3,1,10)),...
-		 'Parameters','D1','D2','g','z2','dy','dx','Ny','Nx','blurs','quart'))
+    disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3,1,10)),...
+		 ' ','D1','D2','g','z2','dy','dx','Ny','Nx','blurs','quart'))
     disp(sprintf(sprintf('%s : %s ',str0,repmat(str1,1,10)),...
-                 ' ',params.DEL,params.g,params.z2,...
+                 'Parameters',params.DEL,params.g,params.z2,...
                  params.dydx,params.NyNx,params.blurs,params.quart))
   else
-    disp(sprintf(sprintf('%s : %s ',str0,repmat(str3,1,6)),...
-		 'Parameters','dy','dx','Ny','Nx','blurs','quart'))
+    disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3,1,6)),...
+		 ' ','dy','dx','Ny','Nx','blurs','quart'))
     disp(sprintf(sprintf('%s : %s ',str0,repmat(str1,1,6)),...
-                 ' ',params.dydx,params.NyNx,params.blurs,params.quart))
+                 'Parameters',params.dydx,params.NyNx,params.blurs,params.quart))
   end
 else
   % Estimated values
@@ -84,6 +70,21 @@ else
 	       'Observed percent stand devn',...
 	       round(100*std(thhats)./th0)))
 end
+
+if length(th0)==6
+  disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3,size(th0))),...
+	       ' ','D','f2','r','s2','nu','rho'))
+  disp(sprintf(sprintf('%s : %s ',str0,str1s),'True theta',th0))
+elseif length(th0)==5
+  disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3,size(th0))),...
+	       ' ','D','f2','s2','nu','rho'))
+  disp(sprintf(sprintf('%s : %s ',str0,str1s),'True theta',th0))
+elseif length(th0)==3
+  disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3,size(th0))),...
+	       ' ','s2','nu','rho'))
+  disp(sprintf(sprintf('%s : %s ',str0,str1s),'True theta',th0))
+end
+
 
 % Optional output
 varns={str0,str1,str2,str3};

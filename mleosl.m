@@ -1,16 +1,16 @@
-function varargout=mleosl(Hx,thini,params,algo,bounds,aguess)
-% [thhat,covh,logli,thini,scl,params,eflag,oput,grd,hes,Hk,k,options,bounds]=...
-%          MLEOSL(Hx,thini,params,algo,bounds,aguess)
+function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
+% [thhat,covF,logli,thini,scl,params,eflag,oput,grd,hes,Hk,k,options,bounds]=...
+%          MLEOSL(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % Performs a maximum-likelihood estimation for SINGLE FIELDS as in
 % Olhede & Simons (2013) by minimization using FMINUNC/FMINCON.
 %
 % INPUT:
 %
-% Hx       Real matrix with the field that is to be analyzed [whichever]
+% Hx       Real-valued column vector of unwrapped spatial-domain quantities 
 % thini    An unscaled starting guess for the parameter vector with elements:
-%          [          s2 nu rho] - see SIMULOSL. If you leave this
-%          value blank, then you will work from the perturbed "aguess"
+%          [          s2 nu rho], see SIMULOSL. If you leave this value
+%          blank, then you will work from the perturbed "aguess" 
 % params   A parameter structure with constants assumed known, see SIMULOSL
 %          [dydx NyNx blurs kiso] in the units of 
 %          m (2x), "nothing" (3x), rad/m, "nothing", namely, in order:
@@ -28,12 +28,13 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess)
 %           simulations for demo purposes, and on which "thini" will be
 %           based if that was left blank. If "aguess" is blank, there is
 %           a default. If "thini" is set, there is no need for "aguess"
+% xver      Conduct extra verification steps
 %
 % OUTPUT:
 %
 % thhat    The maximum-likelihood estimate of the vector [scaled]:
-%          [s2 nu rho], in Nm, and "nothing", see SIMULOSL
-% covh     The unscaled covariance from the (blurred) numerical Hessian at the estimate
+%          [s2 nu rho], in units of variance, "nothing", and distance, see SIMULOSL
+% covF     A covariance estimate, from the Fisher matrix, at the estimate
 % logli    The maximized value of the likelihood
 % thini    The scaled starting guess used in the optimization
 % scl      The scaling applied as part of the optimization procedure
@@ -49,10 +50,15 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess)
 %
 % NOTE: 
 %
-% At least 'demo1' has been tested to run in an SPMD loop! Files are
-% opened in append mode - except for thzro, which will only reflect one lab.
+% A program like EGGERS5 runs 'demo1' in an SPMD loop. Files are opened in
+% append mode, except "thzro", which only reflects one lab in that case.
+% Writing wires could get cross-checked, messing up the "diagn" files.
 %
 % EXAMPLE:
+%
+% p.quart=0; p.blurs=0; p.kiso=NaN;
+% [Hx,th0,p]=simulosl([],p,1);
+% [thh,covF,L,thi,scl,pp]=mleosl(Hx,[],p,[],[],[],1);
 %
 % You can stick in partial structures, e.g. only specifying params.kiso
 %% Perform a series of N simulations centered on th0
@@ -64,12 +70,12 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess)
 %% One simulation and a chi-squared plot
 % mleosl('demo5',th0,params)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 09/18/2016
+% Last modified by fjsimons-at-alum.mit.edu, 10/14/2016
 
 % NEED TO CHANGE THE k(~~k) to proper accounting for kiso
 
 if ~isstr(Hx)
-  defval('algo','con')
+  defval('algo','unc')
   % The necessary strings for formatting FJS see OSDISP
   str0='%27s';
   str1='%12.0e ';
@@ -87,7 +93,7 @@ if ~isstr(Hx)
     defval('bounds',{[],[],... % Linear inequalities
                      [],[],... % Linear equalities
                      [var(Hx)/100 0.15  sqrt(prod(dydx))],... % Lower bounds
-                     [var(Hx)*100 8.00  max(5e5,min(dydx.*NyNx))],... % Upper bounds
+                     [var(Hx)*100 8.00  max(2.5e5,min(dydx.*NyNx))],... % Upper bounds
                      []}); % Nonlinear (in)equalities
     % nu bound: 
     disp(sprintf('NU lower bound %5.2f',bounds{5}(2)))
@@ -108,15 +114,15 @@ if ~isstr(Hx)
   nperturb=0.25;
   % So not all the initialization points are the same!!
   defval('thini',abs((1+nperturb*randn(size(aguess))).*aguess))
-  disp(sprintf(sprintf('\n%s : %s\n',str0,repmat(str2,size(thini))),...
-	       'Starting theta',thini))
-
   % If you brought in your own initial guess, need an appropriate new scale
   if ~isempty(inputname(2)) || any(aguess~=thini)
     scl=10.^round(log10(abs(thini)));
     disp(sprintf(sprintf('%s : %s ',str0,repmat(str1,size(scl))),...
 		 'Scaling',scl))
   end
+  disp(sprintf(sprintf('%s : %s',str0,repmat(str2,size(thini))),...
+	       'Starting theta',thini))
+
   % Now scale so the minimization doesn't get into trouble
   thini=thini./scl;
   
@@ -139,11 +145,12 @@ if ~isstr(Hx)
 
   % Create the appropriate wavenumber axis
   k=knums(params);
+  
+  % We get into the habit of never involving the zero-wavenumber
+  knz=(~~k);
 
-  % Modify to demean
-  disp('DEMEAN BOTH DATA SETS')
+  % Always demean the data sets
   Hx(:,1)=Hx(:,1)-mean(Hx(:,1));
-  % Let us NOT demean and see where we end up...
 
   % Turn the observation vector to the spectral domain
   % Watch the 2pi in SIMULOSL
@@ -152,8 +159,9 @@ if ~isstr(Hx)
   NN=200;
   % And now get going with the likelihood using Hk
   % [ off|iter|iter-detailed|notify|notify-detailed|final|final-detailed ] 
-  % Should probably make the tolerances relative to the number of k points
-  options=optimset('GradObj','off','Display','on',...
+  % Should probably make the tolerances relative to the number of k
+  % points? Or watch at least how these gradients size to the scaled lik 
+  options=optimset('GradObj','off','Display','off',...
 		   'TolFun',1e-11,'TolX',1e-11,'MaxIter',NN,...
 		   'LargeScale','off');
   % The 'LargeScale' option goes straight for the line search when the
@@ -161,13 +169,20 @@ if ~isstr(Hx)
 
   % Set the parallel option to (never) use it for the actual optimization
   % Doesn't seem to do much when we supply our own gradient
-  options.UseParallel='always';
+  % options.UseParallel='always';
 
-  if blurs<2
-    % Use the analytical gradient in the optimization, rarely a good idea
-    % options.GradObj='on';
-    if xver==1
-      % Definitely good to check this once in a while
+  if xver==1 && blurs>-1 && blurs<2
+    % Using the analytical gradient in the optimization is not generally a good
+    % idea but if the likelihoods aren't blurred, you can set this option to
+    % 'on' and then you can verify that the numerical calculations match the
+    % analytics. According to the manual, "solvers check the match at a
+    % point that is a small random perturbation of the initial point". My
+    % own disp output (further below) provides comparisons at the estimate.
+    options.GradObj='off';
+    % When it's "on", you can perform the derivative check
+    if strcmp(options.GradObj,'on');
+      % The "if" statement wasn't strictly necessary, since it wouldn't actually
+      % check the derivatives is GradObj wasn't on, even when LOGLIOS has them.
       options.DerivativeCheck='on';
     end
   end
@@ -182,7 +197,6 @@ if ~isstr(Hx)
 	  fminunc(@(theta) logliosl(theta,params,Hk,k,scl),...
 		  thini,options);
       ts=etime(clock,t0);
-      % Could here compare to our own estimates of grad and hes!
      case 'con'
       % New for FMINCON
       options.Algorithm='active-set';
@@ -229,77 +243,100 @@ if ~isstr(Hx)
        varargout{end}=bounds;
        return
     end
-    if xver==1
-      disp(sprintf('%8.3gs per %i iterations or %8.3gs per %i function counts',...
-		   ts/oput.iterations*100,100,ts/oput.funcCount*1000,1000))
-    else
-      disp(sprintf('\n'))
-    end
   catch
     % If something went wrong, exit gracefully
     varargout=cellnan(nargout,1,1);
     return
   end
 
-  % Only if extra verification is invoked, and no blurring was done,
-  % since then the 'hes' that comes out of FMINUNC or FMINCON will be
-  % based on unblurred data, and comparisons with analytics make sense
-  if xver==1 && abs(blurs)<2
-    % We have an analytic unblurred Hessian, so check the scaled versions
-    H=Hessiosl(k,thhat.*scl,Hk).*[scl(:)*scl(:)'];
-    % Calculate the theoretical covariance and Fisher matrices 
-    [covF,FF]=covthosl(thhat,k,scl); 
-    
-    % So compare the analytic Hessian with the numerical Hessian and with
-    % the Hessian expectation, which is the Fisher, all evaluated at the
-    % estimate, and scaled. Note that we use the NEGATIVE LOG-LIKELIHOOD
-    disp(' ')
-    disp('Analytic Hessian       Observed -Hessian   Analytic Fisher')
-    [trilos(H) trilos(hes) trilos(FF)]
-    
-    % This is the covariance as predicted from the analytic Hessian
-    covH=hes2cov(H,scl,length(k(~~k))/2);
-    
-    % This is the covariance as calculated from the numerical Hessian
-    covh=hes2cov(hes,scl,length(k(~~k))/2);
-    disp('Analytic H-covariance  Observed H-covariance   Analytic F-covariance')
-    [trilos(covH) trilos(covh) trilos(covF)]
-    
-    % how about the gradient? compare to grd./scl'
-    grobs=-nanmean(gammakosl(k,thhat.*scl,params,Hk))';
-    disp('Gradient ratios')
-    [grobs./(grd./scl')]    
-  end
+  % Parameter covariance as calculated from numerical Hessian at estimate
+  covh=hes2cov(-hes,scl,length(k(knz))/2);
 
-  % This is the entire-plane estimate (hence the factor 2!) The
-  % covariance as calculated from the numerically observed blurred Hessian
-  covh=hes2cov(-hes,scl,length(k(~~k))/2);
+  % Parameter covariance as calculated from unblurred Fisher matrix at estimate
+  % I suppose, in the single-variable case, we could produce blurred versions
+  [covF,F]=covthosl(thhat,k(knz),scl); 
+    
+  % Analytical calculations of the Hessian neglect blurring, and thus,
+  % are expected to be close to numerical results only without blurring
+  % I don't yet understand the behavior if we DO compare them - the
+  % Hessians are off, but the analytic Fishers remain right on; maybe the
+  % blurring removes the variability such that numerical blurring ends up
+  % producing results that are closer to the analytical Fishers
+  if xver==1 && blurs>-1 && blurs<2
+    % The number of parameters that are being solved for
+    np=length(thhat);
+    % The number of unique entries in an np*np symmetric matrix
+    npp=np*(np+1)/2;
+
+    % Analytic (unblurred) Hessian, scaled for numerical comparison
+    H=Hessiosl(k(knz),thhat.*scl,Hk(knz)).*[scl(:)*scl(:)'];
+
+    % Parameter covariance as calculated from analytical Hessian at estimate
+    covH=hes2cov(H,scl,length(k(knz))/2);
+    
+    % Analytic (unblurred) gradient, scaled for numerical comparison
+    gros=-nanmean(gammakosl(k(knz),thhat.*scl,params,Hk(knz)))'.*scl(:);
+
+    % Compare the analytic Hessian with the numerical Hessian and with
+    % the Hessian expectation, which is the Fisher, at the estimate, and
+    % compare the analytic gradient with the numerical gradient
+    if all(thhat>0)
+      str3=repmat('%16g ',1,npp);
+      str4=repmat('%16g ',1,np);
+      disp(sprintf('\n%16s\n','At the ESTIMATE:'));
+      disp(sprintf(sprintf('Log likelihood    %s',str3),logli))
+      disp(' ')
+      disp(sprintf(sprintf('Numericl Gradient %s',str4),grd))
+      disp(sprintf(sprintf('Analytic Gradient %s',str4),gros))
+      disp(' ')
+      disp(sprintf(sprintf('Numerical Hessian %s',str3),trilos(hes)))
+      disp(sprintf(sprintf('Analyticl Hessian %s',str3),trilos(-H )))
+      disp(sprintf(sprintf('Analytical Fisher %s',str3),trilos(F  )))
+      disp(' ')
+      disp(sprintf(sprintf('Cov (Numer Hess.) %s',str3),trilos(covh)))
+      disp(sprintf(sprintf('Cov (Analy Hess.) %s',str3),trilos(covH)))
+      disp(sprintf(sprintf('Cov (Analy Fish.) %s',str3),trilos(covF)))
+    end
+  end
 
   % Talk!
   disp(sprintf(sprintf('\n%s : %s ',str0,repmat(str2,size(thhat))),...
 	       'Estimated theta',thhat.*scl))
+  disp(sprintf(sprintf('%s : %s ',str0,repmat(str2,size(thhat))),...
+	       'Numer Hessi std',sqrt(diag(covh))))
   disp(sprintf(sprintf('%s : %s\n ',str0,repmat(str2,size(thhat))),...
-	       'Obs-Hessian std',sqrt(diag(covh))))
+	       'Anal Fisher std',sqrt(diag(covF))))
+  if xver==1
+    disp(sprintf('%8.3gs per %i iterations or %8.3gs per %i function counts',...
+                 ts/oput.iterations*100,100,ts/oput.funcCount*1000,1000))
+  else
+    disp(sprintf('\n'))
+  end
 
   % Generate output as needed
-  varns={thhat,covh,logli,thini,scl,params,eflag,oput,grd,hes,Hk,k,options,bounds};
+  varns={thhat,covF,logli,thini,scl,params,eflag,oput,grd,hes,Hk,k,options,bounds};
   varargout=varns(1:nargout);
 elseif strcmp(Hx,'demo1')
-  % If you run this again on the same date, we'll just add to THINI and
-  % THHAT but you will start with a blank THZERO. See 'demo2'
-  % How many simulations? The SECOND argument after the demo id
+  % Runs a series of simulations. See 'demo2' to display them.
+  % If you run this again on the same date, the files THINI and
+  % THHAT get appended, but a blank THZERO is created. 
   defval('thini',[]);
+  % How many simulations? The SECOND argument, after the demo id.
   N=thini; clear thini
   defval('N',500)
   more off
-  % What th-parameter set? The THIRD argument after the demo id
+  % What th-parameter set? The THIRD argument, after the demo id
   defval('params',[]);
   % If there is no preference, then that's OK, it gets taken care of
   th0=params; clear params
-  % What fixed-parameter set? The FOURTH argument after the demo id
+  % What fixed-parameter set? The FOURTH argument, after the demo id
   defval('algo',[]);
   % If there is no preference, then that's OK, it gets taken care of
   params=algo; clear algo
+  % What algorithm? The FIFTH argument, after the demo id
+  defval('bounds',[]);
+  % If there is no preference, then that's OK, it gets taken care of
+  algo=bounds; clear bounds
     
   % The number of parameters to solve for
   np=3;
@@ -324,8 +361,8 @@ elseif strcmp(Hx,'demo1')
     % Form the maximum-likelihood estimate, pass on the params, use th0
     % as the basis for the perturbed initial values. Remember hes is scaled.
     t0=clock;
-    [thhat,covh,logli,thini,scl,p,e,o,gr,hs,Hk,k,ops,bnds]=...
-	mleosl(Hx,[],p,[],[],th0);
+    [thhat,covF,logli,thini,scl,p,e,o,gr,hs,Hk,k,ops,bnds]=...
+	mleosl(Hx,[],p,algo,[],th0);
     ts=etime(clock,t0);
 
     % Initialize the THZRO file... note that the bounds may change
@@ -371,7 +408,7 @@ elseif strcmp(Hx,'demo1')
 	[L,~,momx]=logliosl(thhat,p,Hk,k,scl);
 	% Print the optimization results and diagnostics to a different file 
 	oswdiag(fid3,fmt1,fmt3,logli,gr,hs,thhat,thini,scl,ts,e,o,....
-		var(Hx),momx,covh)
+		var(Hx),momx,covF)
       end
     end
   end
@@ -390,11 +427,11 @@ elseif strcmp(Hx,'demo1')
     % This is the scaling based on the truth which we use here 
     sclth0=10.^round(log10(th0));
 
-    % This is the average of the Hessians, should be close to the Fisher
+    % This is the average of the Hessians, should be closer to the Fisher
     avH=avH.*[sclth0(:)*sclth0(:)']/good;
 
-    % Now compute the theoretical covariance and scaled Fisher
-    [covF,F]=covthosl(th0./sclth0,k,sclth0);
+    % Now compute the theoretical covariance and scaled Fisher, avoid zero-k
+    [covF,F]=covthosl(th0./sclth0,k(knz),sclth0);
     % Of course when we don't have the truth we'll build the covariance
     % from the single estimate that we have just obtained. This
     % covariance would then be the only thing we'd have to save.
@@ -414,16 +451,30 @@ elseif strcmp(Hx,'demo2')
   np=3;
 
   % Load everything you know about this simulation
-  [th0,thhats,p,covF,covHav,covHts,~,~,~,~,momx]=osload(datum);
+  [th0,thhats,p,covF,covHav,covHts,~,~,~,~,momx,covthpix]=osload(datum);
 
   % Report the findings of all of the moment parameters
-  disp(sprintf('m(m(Xk)) %f m(v(Xk)) %f m(magic) %s v(magic) %f',...
+  disp(sprintf('m(m(Xk)) %f m(v(Xk)) %f\nm(magic) %f v(magic) %f',...
 	      mean(momx),var(momx(:,end))))
   
   % Plot it all - perhaps some outlier selection?
-  [ah,ha]=mleplos(trimit(thhats,99,1),th0,covF,covHav,covHts,[],[],p,...
+  disp(sprintf('\n'))
+  figure(1)
+  fig2print(gcf,'landscape')
+  clf
+  trims=98;
+  % disp(sprintf('%s estimates trimmed at %i percentile',...
+  %      upper(mfilename),trims))
+  
+  % covF is the Fisher-based covariance evaluate at the truth
+  % covthpix is the Fisher-based covariance at one of the randomly picked estimates
+
+  % If the above two are close, we need to start using the second one
+  % Yep!
+  [ah,ha]=mleplos(trimit(thhats,trims,1),th0,covF,covHav,covthpix,[],[],p,...
                   sprintf('MLEOSL-%s',datum));
-  % Should report this below the number of data in the title
+  
+  % Soon, we will be able to start loading different numbers
 
   % Return some output, how about just the empirically observed
   % means and covariance matrix of the estimates, and the number of
@@ -440,29 +491,41 @@ elseif strcmp(Hx,'demo2')
   system(sprintf('epstopdf %s.eps',figna)); 
   system(sprintf('rm -f %s.eps',figna)); 
   
-  % Take a look a the distribution of the momx?
-  % With our definitions, the variance predicted (RB X p 51) should be
-  % doh, that is the skewness of a chi-squared - just sayin'.
-  % We don't change the number of degrees of freedom! If you have used
-  % twice the number, and given half correlated variables, you do not
-  % change the variance, that is the whole point. Unlike in COVTHOSL
-  % where you make an analytical prediction that does depend on the
-  % number and which therefore you need to adjust.
-  k=knums(p); varpred=8/[length(k(~~k))];
-  figure
-  subplot(211)
-  histfit(momx(:,3)); [m,s]=normfit(momx(:,3));
-  subplot(212)
-  qqplot((momx(:,3)-1)/sqrt(varpred)); axis image; grid on
-  refline(1,0)
-  % Could also do, as these quantities should be very close of course
-  % qqplot(momx(:,2),momx(:,3)); axis image; refline(1,0); grid on
-  % Then use NORMTEST to ascertain the veracity... don't bother with the
-  % Nyquist wavenumbers, there will be very few, but take out the zero
-  % Predicted expected value is one.
-  [a,b,c,d]=normtest(momx(:,3),1,varpred);
-  disp(sprintf('%i%% rejected at the %i%% confidence level',...
-               round(c),round(d*100)))  
+  % Being extra careful or not?
+  defval('xver',0)
+
+  if xver==1
+    % Take a look a the distribution of the residual moments
+    % See RB X, p. 51 about the skewness of a chi-squared - just sayin'.
+    % We don't change the number of degrees of freedom! If you have used
+    % twice the number, and given half correlated variables, you do not
+    % change the variance, that is the whole point. Unlike in COVTHOSL
+    % where you make an analytical prediction that does depend on the
+    % number and which therefore you need to adjust.
+    k=knums(p); varpred=8/[length(k(~~k))];
+
+    figure(2)
+    clf
+    fig2print(gcf','portrait')
+    ahh(1)=subplot(121);
+    histfit(momx(:,3)); 
+    [m,s]=normfit(momx(:,3));
+    disp(sprintf('mean %f predicted mean 1 \nstdv %s predicted stdv %s',m,s,sqrt(varpred)))
+    shrink(ahh(1),1,1.5)
+    xl(1)=xlabel('histogram of the residual moments');
+    ahh(2)=subplot(122);
+    qqplot((momx(:,3)-1)/sqrt(varpred)); axis image; grid on; box on
+    refline(1,0)
+    movev(ahh,-0.1)
+    t=ostitle(ahh,p,sprintf('MLEOSL-%s',datum)); movev(t,1)
+    % Could also do, as these quantities should be very close of course
+    % qqplot(momx(:,2),momx(:,3)); axis image; refline(1,0); grid on
+    % Then use NORMTEST to ascertain the veracity... don't bother with the
+    % Nyquist wavenumbers, there will be very few, but take out the zero
+
+    % Predicted expected value is one.
+    [a,b,c,d]=normtest(momx(:,3),1,varpred);
+  end
 elseif strcmp(Hx,'demo3')
   disp('This does not exist, numbering kept for consistency only')
 elseif strcmp(Hx,'demo4')
