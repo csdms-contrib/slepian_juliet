@@ -1,5 +1,5 @@
-function F=Hessiosl(k,th,Hk)
-% F=HESSIOSL(k,th,Hk)
+function F=Hessiosl(k,th,params,Hk)
+% F=HESSIOSL(k,th,params,Hk)
 %
 % Calculates the entries in the Hessian matrix of Olhede & Simons (2013) 
 % for the SINGLE-FIELD Matern model, post wavenumber averaging. 
@@ -11,6 +11,12 @@ function F=Hessiosl(k,th,Hk)
 %          th(1)=s2   The first Matern parameter, aka sigma^2 
 %          th(2)=nu   The second Matern parameter 
 %          th(3)=rho  The third Matern parameter 
+% params   A structure with AT LEAST these constants that are known:
+%          blurs 0 Don't blur likelihood using the Fejer window
+%                N Blur likelihood using the Fejer window [default: N=2]
+%               -1 Blur likelihood using the exact procedure
+%          NOTE: It's not going to be a great derivative unless you
+%          change MAOSL also. Still, the order of magnitude will be OK.
 % Hk       A complex matrix of Fourier-domain observations
 %
 % OUTPUT:
@@ -21,7 +27,7 @@ function F=Hessiosl(k,th,Hk)
 %
 % FISHERKOSL, HES2COV
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/14/2016
+% Last modified by fjsimons-at-alum.mit.edu, 10/18/2016
 
 defval('xver',1)
 
@@ -38,11 +44,21 @@ npp=np*(np+1)/2;
 % First compute the "means" parameters
 m=mAosl(k,th,xver);
 
-% Then compute the various entries in the order of the paper
-lk=length(k(:));
+% Extract the needed parameters of the simulation variables
+blurs=params.blurs;
 
-% Get the power spectrum and its ratio to the observations 
-S=maternos(k,th);
+% We need the power spectrum and its ratio to the observations 
+% See LKOSL for the detailed explanations of these procedures
+switch blurs
+ case {0,1}
+    S=maternos(k,th);
+ otherwise
+  if blurs>1
+    S=bluros(maternos(knums(params,1),th),params);
+  else
+    S=blurosy(th,params);
+  end
+end
 % The average of Xk needs to be close to one as will be tested 
 Xk=abs(Hk).^2./S;
 
@@ -68,10 +84,11 @@ mx{5}=0;
 % This I've done twice to check the symmetry, checked dmrhodnu or dmnudrho
 mx{6}=2/rho*(-1+[2*nu+1]*vpiro./avark-nu*[nu+1]*vpiro^2./avark.^2);
 
+
 % Allocate arrays for good measure; no cell since they're all k-dependent
-Fk=nan(lk,npp);
+Fk=nan(length(k(:)),npp);
 Ff=nan(1,npp);
-F=nan(np,np);
+F =nan(np,np);
 
 % Fkthth
 for j=1:3
@@ -105,3 +122,4 @@ F(2,3)=Ff(6);
 
 % Then symmetrize
 F=[triu(F)'+triu(F)-diag(diag(F))];
+

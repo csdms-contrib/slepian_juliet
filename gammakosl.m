@@ -28,7 +28,7 @@ function gammak=gammakosl(k,th,params,Hk)
 %
 % LKOSL
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/14/2016
+% Last modified by fjsimons-at-alum.mit.edu, 10/18/2016
 
 % The number of parameters to solve for
 np=length(th);
@@ -43,6 +43,7 @@ m=mAosl(k,th);
 % Extract the needed parameters of the simulation variables
 blurs=params.blurs;
 
+% We need the power spectrum and its ratio to the observations 
 % See LKOSL for the detailed explanations of these procedures
 switch blurs
  case {0,1}
@@ -54,12 +55,13 @@ switch blurs
     S=blurosy(th,params);
   end
 end
+% The average of Xk needs to be close to one as will be tested 
+Xk=abs(Hk).^2./S;
 
 % Now compute the score properly speaking
 for j=1:np
   % The below two are alternative formulations
   % gammak(:,j)=-m{j}-hformos(S,A{j},Hk);
   % gammak(:,j)=-m{j}+hformos(S,m{j},Hk);
-  gammak(:,j)=-m{j}.*[1-abs(Hk).^2./S];
+  gammak(:,j)=-m{j}.*[1-Xk];
 end
-

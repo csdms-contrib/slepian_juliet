@@ -2,7 +2,7 @@ function mcF=Fisherkosl(k,th)
 % mcF=FISHERKOSL(k,th)
 %
 % Calculates the entries in the Fisher matrix of Olhede & Simons (2013) 
-% for the SINGLE-FIELD Matern model prior to wavenumber averaging. 
+% for the SINGLE-FIELD Matern model, prior to wavenumber averaging. 
 %
 % INPUT:
 %
@@ -27,9 +27,14 @@ function mcF=Fisherkosl(k,th)
 % [~,th0,p,k]=simulosl([],[],1);
 % mcF=Fisherkosl(k,th0);
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/23/2015
+% Last modified by fjsimons-at-alum.mit.edu, 10/18/2016
 
 defval('xver',1)
+
+% Usually we remove the zero wavenumber from consideration
+if ~isempty(k(~k))
+  warning(sprintf('%s zero wavenumber',upper(mfilename))); 
+end
 
 % The number of parameters to solve for
 np=length(th);

@@ -68,16 +68,17 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %% One simulation and a chi-squared plot
 % mleosl('demo5',th0,params)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/14/2016
+% Last modified by fjsimons-at-alum.mit.edu, 10/18/2016
 
 % NEED TO CHANGE THE k(~~k) to proper accounting for kiso
 
 if ~isstr(Hx)
   defval('algo','unc')
-  % The necessary strings for formatting FJS see OSDISP
+  % The necessary strings for formatting FJS see OSDISP and OSANSW
   str0='%27s';
   str1='%12.0e ';
-  str2='%12.5g ';
+  str2='%12.5g %12.5g %12.5g';
+  str2='%12.0f %12.1f %12.0f';
 
   % Supply the needed parameters, keep the givens, extract to variables
   fields={               'dydx','NyNx','blurs','kiso','quart'};
@@ -118,7 +119,7 @@ if ~isstr(Hx)
     disp(sprintf(sprintf('%s : %s ',str0,repmat(str1,size(scl))),...
 		 'Scaling',scl))
   end
-  disp(sprintf(sprintf('%s : %s',str0,repmat(str2,size(thini))),...
+  disp(sprintf(sprintf('%s : %s',str0,str2),...
 	       'Starting theta',thini))
 
   % Now scale so the minimization doesn't get into trouble
@@ -169,20 +170,21 @@ if ~isstr(Hx)
   % Doesn't seem to do much when we supply our own gradient
   % options.UseParallel='always';
 
-  if xver==1 % && blurs>-1 && blurs<2
+  if xver==1 && blurs>-1 && blurs<2 
     % Using the analytical gradient in the optimization is not generally a good
     % idea but if the likelihoods aren't blurred, you can set this option to
-    % 'on' and then you can verify that the numerical calculations match the
-    % analytics. According to the manual, "solvers check the match at a
+    % 'on' and then let Matlab verify that the numerical calculations match
+    % the analytics. According to the manual, "solvers check the match at a
     % point that is a small random perturbation of the initial point". My
-    % own disp output (further below) provides comparisons at the estimate.
-    options.GradObj='off';
-    % When it's "on", you can perform the derivative check
-    if strcmp(options.GradObj,'on');
-      % The "if" statement wasn't strictly necessary, since it wouldn't actually
-      % check the derivatives is GradObj wasn't on, even when LOGLIOS has them.
-      options.DerivativeCheck='on';
-    end
+    % own "disp" output (further below) provides comparisons at the estimate
+    % even when the below option is set to "off" and we don't use it for any
+    % aspect of the optimization. If you shoudl try this for blurred
+    % systems, you will fail the test and the whole thing will come to a
+    % halt. So after doing this interactively a few times, I've been
+    % setting the below to "off". 
+    options.GradObj='on';
+    % Leave the below "on" since it's inconsequential when the above is "off"
+    options.DerivativeCheck='on';
   end
 
   % And find the MLE! Work on scaled parameters
@@ -192,7 +194,7 @@ if ~isstr(Hx)
       % disp('Using FMINUNC for unconstrained optimization of LOGLIOSL')
       t0=clock;
       [thhat,logli,eflag,oput,grd,hes]=...
-	  fminunc(@(theta) logliosl(theta,params,Hk,k,scl),...
+	  fminunc(@(theta) logliosl(k,theta,params,Hk,scl),...
 		  thini,options);
       ts=etime(clock,t0);
      case 'con'
@@ -215,7 +217,7 @@ if ~isstr(Hx)
               nwi,nwh))
         end
         [thhat,logli,eflag,oput,lmd,grd,hes]=...
-            fmincon(@(theta) logliosl(theta,params,Hk,k,scl),...
+            fmincon(@(theta) logliosl(k,theta,params,Hk,scl),...
                     thini,...
                     bounds{1},bounds{2},bounds{3},bounds{4},...
                     bounds{5}./scl,bounds{6}./scl,bounds{7},...
@@ -266,8 +268,11 @@ if ~isstr(Hx)
     % The number of unique entries in an np*np symmetric matrix
     npp=np*(np+1)/2;
 
-    % Analytic (unblurred) Hessian, scaled for numerical comparison
-    H=Hessiosl(k,thhat.*scl,Hk).*[scl(:)*scl(:)'];
+    % Analytic (unblurred) Hessian, scaled for numerical comparison, but
+    % note that the numerical value WILL include the zero
+    % wavenumber. This is a compromise we make for symmetry,, but it is
+    % inconsequential for the truth.
+    H=Hessiosl(k(knz),thhat.*scl,Hk(knz)).*[scl(:)*scl(:)'];
 
     % Parameter covariance as calculated from analytical Hessian at estimate
     covH=hes2cov(H,scl,length(k)/2);
@@ -298,11 +303,11 @@ if ~isstr(Hx)
   end
 
   % Talk!
-  disp(sprintf(sprintf('\n%s : %s ',str0,repmat(str2,size(thhat))),...
+  disp(sprintf(sprintf('\n%s : %s ',str0,str2),...
 	       'Estimated theta',thhat.*scl))
-  disp(sprintf(sprintf('%s : %s ',str0,repmat(str2,size(thhat))),...
+  disp(sprintf(sprintf('%s : %s ',str0,str2),...
 	       'Numer Hessi std',sqrt(diag(covh))))
-  disp(sprintf(sprintf('%s : %s\n ',str0,repmat(str2,size(thhat))),...
+  disp(sprintf(sprintf('%s : %s\n ',str0,str2),...
 	       'Anal Fisher std',sqrt(diag(covF))))
   if xver==1
     disp(sprintf('%8.3gs per %i iterations or %8.3gs per %i function counts',...
@@ -403,7 +408,7 @@ elseif strcmp(Hx,'demo1')
 	fprintf(fid1,fmt1,thhat.*scl);
 	fprintf(fid2,fmt1,thini.*scl);
 	% Here we compute and write out the moments of the Xk
-	[L,~,momx]=logliosl(thhat,p,Hk,k,scl);
+	[L,~,momx]=logliosl(k,thhat,p,Hk,scl);
 	% Print the optimization results and diagnostics to a different file 
 	oswdiag(fid3,fmt1,fmt3,logli,gr,hs,thhat,thini,scl,ts,e,o,....
 		var(Hx),momx,covF)
@@ -612,7 +617,7 @@ elseif strcmp(Hx,'demo5')
   % Maybe we should show different covariances than the predicted ones??
 
   % Time to rerun LOGLIOS one last time at the solution
-  [L,~,momx]=logliosl(thhat,p,Hk,k,scl);
+  [L,~,momx]=logliosl(k,thhat,p,Hk,scl);
 
   disp('fjs feed this into the next one')
   disp('fjs here fits the likelihood contours')
