@@ -272,7 +272,7 @@ if ~isstr(Hx)
     % note that the numerical value WILL include the zero
     % wavenumber. This is a compromise we make for symmetry,, but it is
     % inconsequential for the truth.
-    H=Hessiosl(k(knz),thhat.*scl,Hk(knz)).*[scl(:)*scl(:)'];
+    H=Hessiosl(k,thhat.*scl,params,Hk).*[scl(:)*scl(:)'];
 
     % Parameter covariance as calculated from analytical Hessian at estimate
     covH=hes2cov(H,scl,length(k)/2);

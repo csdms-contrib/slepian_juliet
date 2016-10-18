@@ -2,7 +2,8 @@ function F=Hessiosl(k,th,params,Hk)
 % F=HESSIOSL(k,th,params,Hk)
 %
 % Calculates the entries in the Hessian matrix of Olhede & Simons (2013) 
-% for the SINGLE-FIELD Matern model, post wavenumber averaging. 
+% for the SINGLE-FIELD Matern model, post wavenumber averaging. When
+% blurred, no consideration is given to the zero wavenumber, see LOGLIOSL. 
 %
 % INPUT:
 %
@@ -12,10 +13,11 @@ function F=Hessiosl(k,th,params,Hk)
 %          th(2)=nu   The second Matern parameter 
 %          th(3)=rho  The third Matern parameter 
 % params   A structure with AT LEAST these constants that are known:
+%          NyNx  number of samples in the y and x directions
 %          blurs 0 Don't blur likelihood using the Fejer window
 %                N Blur likelihood using the Fejer window [default: N=2]
 %               -1 Blur likelihood using the exact procedure
-%          NOTE: It's not going to be a great derivative unless you
+%          NOTE: It's not going to be a great derivative unless you could
 %          change MAOSL also. Still, the order of magnitude will be OK.
 % Hk       A complex matrix of Fourier-domain observations
 %
@@ -31,11 +33,6 @@ function F=Hessiosl(k,th,params,Hk)
 
 defval('xver',1)
 
-% Usually we remove the zero wavenumber from consideration
-if ~isempty(k(~k))
-  disp(sprintf('%s zero wavenumber detected',upper(mfilename))); 
-end
-
 % The number of parameters to solve for
 np=length(th);
 % The number of unique entries in an np*np symmetric matrix
@@ -46,6 +43,7 @@ m=mAosl(k,th,xver);
 
 % Extract the needed parameters of the simulation variables
 blurs=params.blurs;
+NyNx=params.NyNx;
 
 % We need the power spectrum and its ratio to the observations 
 % See LKOSL for the detailed explanations of these procedures
@@ -59,6 +57,7 @@ switch blurs
     S=blurosy(th,params);
   end
 end
+
 % The average of Xk needs to be close to one as will be tested 
 Xk=abs(Hk).^2./S;
 
@@ -101,8 +100,22 @@ for j=1:length(jcombo)
   Fk(:,np+j)=-mx{np+j}-[m{jcombo(j,1)}.*m{jcombo(j,2)}-mx{np+j}].*Xk;
 end
 
+% Don't take out the zero wavenumber when there is no blurring, otherwise
+% the score won't verify if you should choose to do so. On the whole, you
+% won't want to run unblurred anything, so it won't be a big deal. 
+if blurs~=0
+  % Trouble is at the central wave numbers, we take those out 
+  % Find the zero wavenumber
+  kzero=sub2ind(NyNx,floor(NyNx(1)/2)+1,floor(NyNx(2)/2)+1);
+  % Check that this is correctly done
+  difer(k(kzero),[],[],NaN)
+  % Behavior is rather different if this is NOT done... knowing that it
+  % will not blow up but rather be some numerically large value
+  Fk(kzero)=NaN;
+end
+
 % Now perform the averaging over all wavenumbers
-Ff=mean(Fk,1);
+Ff=nanmean(Fk,1);
 
 % Ff     The 6-entry Hessian matrix, in this order:
 %          [1] Fs2s2   [2] Fnunu  [3] Frhorho
@@ -122,4 +135,3 @@ F(2,3)=Ff(6);
 
 % Then symmetrize
 F=[triu(F)'+triu(F)-diag(diag(F))];
-

@@ -15,7 +15,7 @@ function gammak=gammakosl(k,th,params,Hk)
 %          blurs 0 Don't blur likelihood using the Fejer window
 %                N Blur likelihood using the Fejer window [default: N=2]
 %               -1 Blur likelihood using the exact procedure
-%          NOTE: It's not going to be a great derivative unless you
+%          NOTE: It's not going to be a great derivative unless you could
 %          change MAOSL also. Still, the order of magnitude will be OK.
 % Hk       A complex matrix of Fourier-domain observations
 %
@@ -55,6 +55,7 @@ switch blurs
     S=blurosy(th,params);
   end
 end
+
 % The average of Xk needs to be close to one as will be tested 
 Xk=abs(Hk).^2./S;
 

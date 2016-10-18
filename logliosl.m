@@ -1,12 +1,14 @@
-function [L,gam,momx,vr]=logliosl(th,params,Hk,k,scl)
-% [L,gam,momx,vr]=LOGLIOSL(th,params,Hk,k,scl)
+function [L,gam,momx,vr]=logliosl(k,th,params,Hk,scl)
+% [L,gam,momx,vr]=LOGLIOSL(k,th,params,Hk,scl)
 %
 % Calculates the full negative logarithmic likelihood and its
 % derivatives, i.e. minus LKOSL and minus GAMMAKOSL averaged over
-% wavenumber space. This is the function that we need to MINIMIZE!
+% wavenumber space. This is the function that we need to MINIMIZE! When
+% blurred, no consideration is given to the zero wavenumber, see LKOSL. 
 %
 % INPUT:
 %
+% k        The wavenumbers at which these are being evaluated [1/m]
 % th       The three-parameter vector argument [scaled]:
 %          th(1)=s2   The first Matern parameter, aka sigma^2
 %          th(2)=nu   The second Matern parameter
@@ -16,9 +18,9 @@ function [L,gam,momx,vr]=logliosl(th,params,Hk,k,scl)
 %          NyNx  number of samples in the y and x directions
 %          blurs 0 Don't blur likelihood using the Fejer window
 %                N Blur likelihood using the Fejer window [default: N=2]
+%                -1 Blur likelihood using the exact BLUROSY procedure
 %          kiso   wavenumber beyond which we are not considering the likelihood
 % Hk       A [prod(params.NyNx)*1]-column vector of complex Fourier-domain observations
-% k        The wavenumbers at which these are being evaluated [1/m]
 % scl      The vector with any scalings applied to the parameter vector
 %
 % OUTPUT:
@@ -33,7 +35,7 @@ function [L,gam,momx,vr]=logliosl(th,params,Hk,k,scl)
 %
 % FISHERKOSL, which should be incorporated at a later stage
 %
-% Last modified by fjsimons-at-alum.mit.edu, 07/12/2015
+% Last modified by fjsimons-at-alum.mit.edu, 10/18/2016
 
 % Default scaling is none
 defval('scl',ones(size(th)))
@@ -58,8 +60,8 @@ end
 % Note: should we restrict this to the upper halfplane? or will mean do
 % Get the likelihood at the individual wavenumbers; average
 L=-nanmean(Lk);
+% Attempt to reset if for some reason the whole thing failed
 if isnan(L)
-  % Attempt to reset
   L=1e100;
 end
 
@@ -79,14 +81,9 @@ end
 % I say, time to extract Hessiosl here also?
 
 % Get the scores at the individual wavenumbers; average
-switch params.blurs
-  case {0,1}
-   gam=-nanmean(gammakosl(k,th,params,Hk));
-   % The correct gradient is too heterogeneous to be good so scale
-   gam=gam.*scl;
- otherwise
-  gam=NaN;
-end
+gam=-nanmean(gammakosl(k,th,params,Hk));
+% The correct gradient is too heterogeneous to be good so scale
+gam=gam.*scl;
 
 % Print the trajectory, seems like one element at a time gets changed
 %disp(sprintf('Current theta: %8.3g %8.3g %8.3g %8.3g %8.3g %8.3g',th))
