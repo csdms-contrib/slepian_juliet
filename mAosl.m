@@ -14,11 +14,12 @@ function varargout=mAosl(k,th,xver)
 %
 % OUTPUT:
 %
-% m        The "means" parameters which enter in the score, as a cell
-% A        The "A" matrices which enter in the score, as a cell
+% m        The "means" parameters for GAMMIOSL, HESSIOSL, as a cell
+% A        The "A" matrices for GAMMIOSL, HESSIOSL, as a cell
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/22/2015
+% Last modified by fjsimons-at-alum.mit.edu, 10/19/2016
 
+% Extra verification?
 defval('xver',1)
 
 % Extract the parameters from the input
@@ -26,31 +27,36 @@ s2=th(1);
 nu=th(2);
 rho=th(3);
 
-% A variable that is also needed
+% How many wavenumbers?
+lk=length(k(:));
+
+% Auxillary variable
 avark=4*nu/pi^2/rho^2+k(:).^2;
 
-% First calculate the "means" that depend on the wavenumbers
-% Eq. (A25)
+% The "means",which still depend on the wavenumbers, sometimes
+% Eq. (A25) in doi: 10.1093/gji/ggt056
 m{1}=1/s2;
-% Eq. (A26)
+% Eq. (A26) in doi: 10.1093/gji/ggt056
 m{2}=(nu+1)/nu+log(4*nu/pi^2/rho^2)...
      -4*(nu+1)/pi^2/rho^2./avark-log(avark);
-% Eq. (A27)
+% Eq. (A27) in doi: 10.1093/gji/ggt056
 m{3}=-2*nu/rho+8*nu/rho*(nu+1)/pi^2/rho^2./avark;
 
 % Full output and extra verification etc
 if nargout>1 || xver==1
   % Initialize
-  A=cellnan(length(th),length(k(:)),3);
-  % Obviously totally faking it here in this special case
-  L=[ones(length(k(:)),1) zeros(length(k(:)),1) ones(length(k(:)),1)];
-
-  A{1}=-repmat(m{1},length(k(:)),3);
-  A{2}=-repmat(m{2},1,3);
+  A=cellnan(length(th),lk,3);
+  % Eq. (A28) in doi: 10.1093/gji/ggt056
+  A{1}=-repmat(m{1},lk,3);
+  % Eq. (A29) in doi: 10.1093/gji/ggt056
+  A{2}=-repmat(m{2},1,3);  
+  % Eq. (A30) in doi: 10.1093/gji/ggt056
   A{3}=-repmat(m{3},1,3);
 
   % Verification mode
   if xver==1
+    % In this univariate case, we have some rather simple forms
+    L=[ones(lk,1) zeros(lk,1) ones(lk,1)];
     % Check various identities at random wavenumbers 
     tracecheck(L,A,m,9,1)
   end
