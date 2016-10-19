@@ -56,7 +56,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % EXAMPLE:
 %
-% p.quart=0; p.blurs=0; p.kiso=NaN; [Hx,~,p]=simulosl([],p,1); mleosl(Hx,[],p,[],[],[],1);
+% p.quart=0; p.blurs=0; p.kiso=NaN; clc; [Hx,~,p]=simulosl([],p,1); mleosl(Hx,[],p,[],[],[],1);
 %
 % You can stick in partial structures, e.g. only specifying params.kiso
 %% Perform a series of N simulations centered on th0
@@ -75,10 +75,11 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 if ~isstr(Hx)
   defval('algo','unc')
   % The necessary strings for formatting FJS see OSDISP and OSANSW
-  str0='%27s';
-  str1='%12.0e ';
-  str2='%12.5g %12.5g %12.5g';
-  str2='%12.0f %12.1f %12.0f';
+  str0='%18s';
+  str1='%13.0e ';
+  str2='%13.5g %13.5g %13.5g';
+  str2='%13.0f %13.1f %13.0f';
+  str3s='%13s ';
 
   % Supply the needed parameters, keep the givens, extract to variables
   fields={               'dydx','NyNx','blurs','kiso','quart'};
@@ -94,9 +95,6 @@ if ~isstr(Hx)
                      [var(Hx)/100 0.15  sqrt(prod(dydx))],... % Lower bounds
                      [var(Hx)*100 8.00  max(2.5e5,min(dydx.*NyNx))],... % Upper bounds
                      []}); % Nonlinear (in)equalities
-    % nu bound: 
-    disp(sprintf('NU lower bound %5.2f',bounds{5}(2)))
-    disp(sprintf('NU upper bound %5.2f',bounds{6}(2)))
   else
     bounds=[];
   end
@@ -116,12 +114,18 @@ if ~isstr(Hx)
   % If you brought in your own initial guess, need an appropriate new scale
   if ~isempty(inputname(2)) || any(aguess~=thini)
     scl=10.^round(log10(abs(thini)));
-    disp(sprintf(sprintf('%s : %s ',str0,repmat(str1,size(scl))),...
+    disp(sprintf(sprintf('\n%s : %s ',str0,repmat(str1,size(scl))),...
 		 'Scaling',scl))
   end
   disp(sprintf(sprintf('%s : %s',str0,str2),...
 	       'Starting theta',thini))
-
+  if strcmp(algo,'con')
+    disp(sprintf(sprintf('\n%s : %s',str0,str2),...
+                 'Lower bounds',bounds{5}))
+    disp(sprintf(sprintf('%s : %s',str0,str2),...
+                 'Upper bounds',bounds{6}))
+  end
+  
   % Now scale so the minimization doesn't get into trouble
   thini=thini./scl;
   
@@ -170,6 +174,11 @@ if ~isstr(Hx)
   % Doesn't seem to do much when we supply our own gradient
   % options.UseParallel='always';
 
+  % The number of parameters that are being solved for
+  np=length(thini);
+  % The number of unique entries in an np*np symmetric matrix
+  npp=np*(np+1)/2;
+  
   if xver==1 && blurs>-1 && blurs<2 
     % Using the analytical gradient in the optimization is not generally a good
     % idea but if the likelihoods aren't blurred, you can set this option to
@@ -182,7 +191,7 @@ if ~isstr(Hx)
     % systems, you will fail the test and the whole thing will come to a
     % halt. So after doing this interactively a few times, I've been
     % setting the below to "off". 
-    options.GradObj='on';
+    options.GradObj='off';
     % Leave the below "on" since it's inconsequential when the above is "off"
     options.DerivativeCheck='on';
   end
@@ -255,65 +264,78 @@ if ~isstr(Hx)
   % Parameter covariance as calculated from unblurred Fisher matrix at estimate
   % I suppose, in the single-variable case, we could produce blurred versions
   [covF,F]=covthosl(thhat,k(knz),scl); 
-    
-  % Analytical calculations of the Hessian neglect blurring, and thus,
+  
+  % It is not impossible that a solution is reached which yields a
+  % negative rho - which only appears in the square in MATERNOS. But if
+  % we're going to calculate (approximately blurred) analytical
+  % gradients and  Hessians (even using exact blurring of the spectral
+  % densities) we are going to be using MATERNOSY, which will complain...
+  if thhat(3)<0
+    thhat(3)=abs(thhat(3));
+  end
+
+  % Analytic (poorly blurred) Hessian, scaled for numerical comparison
+  H=Hessiosl(k,thhat.*scl,params,Hk).*[scl(:)*scl(:)'];
+  
+  % Parameter covariance as calculated from analytical Hessian at estimate
+  covH=hes2cov(H,scl,length(k)/2);
+  
+  % Analytical calculations of the gradient and the Hessian poorly represent
+  % the blurring (though it's much better than not trying at all), and thus,
   % are expected to be close to numerical results only without blurring
-  % I don't yet understand the behavior if we DO compare them - the
-  % Hessians are off, but the analytic Fishers remain right on; maybe the
-  % blurring removes the variability such that numerical blurring ends up
-  % producing results that are closer to the analytical Fishers
-  if xver==1 % && blurs>-1 && blurs<2
-    % The number of parameters that are being solved for
-    np=length(thhat);
-    % The number of unique entries in an np*np symmetric matrix
-    npp=np*(np+1)/2;
-
-    % Analytic (unblurred) Hessian, scaled for numerical comparison, but
-    % note that the numerical value WILL include the zero
-    % wavenumber. This is a compromise we make for symmetry,, but it is
-    % inconsequential for the truth.
-    H=Hessiosl(k,thhat.*scl,params,Hk).*[scl(:)*scl(:)'];
-
-    % Parameter covariance as calculated from analytical Hessian at estimate
-    covH=hes2cov(H,scl,length(k)/2);
-    
+  if xver==1 
     % Analytic (unblurred) gradient, scaled for numerical comparison
     gros=-nanmean(gammakosl(k,thhat.*scl,params,Hk))'.*scl(:);
 
     % Compare the analytic Hessian with the numerical Hessian and with
     % the Hessian expectation, which is the Fisher, at the estimate, and
     % compare the analytic gradient with the numerical gradient
-    if all(thhat>0)
-      str3=repmat('%16g ',1,npp);
-      str4=repmat('%16g ',1,np);
-      disp(sprintf('\n%16s\n','At the ESTIMATE:'));
-      disp(sprintf(sprintf('Log likelihood    %s',str3),logli))
-      disp(' ')
-      disp(sprintf(sprintf('Numericl Gradient %s',str4),grd))
-      disp(sprintf(sprintf('Analytic Gradient %s',str4),gros))
-      disp(' ')
-      disp(sprintf(sprintf('Numerical Hessian %s',str3),trilos(hes)))
-      disp(sprintf(sprintf('Analyticl Hessian %s',str3),trilos(-H )))
-      disp(sprintf(sprintf('Analytical Fisher %s',str3),trilos(F  )))
-      disp(' ')
-      disp(sprintf(sprintf('Cov (Numer Hess.) %s',str3),trilos(covh)))
-      disp(sprintf(sprintf('Cov (Analy Hess.) %s',str3),trilos(covH)))
-      disp(sprintf(sprintf('Cov (Analy Fish.) %s',str3),trilos(covF)))
+    str3=repmat('%13g ',1,npp);
+    str4=repmat('%13g ',1,np);
+    disp(sprintf('%s',repmat('_',119,1)))
+    disp(sprintf('\n%16s\n','At the ESTIMATE:'));
+    disp(sprintf(sprintf('    Log-likelihood : %s',str3),logli))
+    %disp(' ')
+    if params.blurs~=0
+      disp(sprintf(...
+          ['With blurring, the comparisons below are necessarily inexact:\n']))
     end
+    disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3s,1,np)),...
+	       ' ','ds2','dnu','drho'))
+    disp(sprintf(sprintf(' Numericl Gradient : %s',str4),grd))
+    disp(sprintf(sprintf(' Analytic Gradient : %s',str4),gros))
+    %disp(' ')
+    disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3s,1,npp)),...
+	       ' ','(ds2)^2','(dnu)^2','(drho)^2','ds2dnu','ds2drho','dnudrho'))
+    disp(sprintf(sprintf(' Numerical Hessian : %s',str3),trilos(hes)))
+    disp(sprintf(sprintf(' Analyticl Hessian : %s',str3),trilos(-H )))
+    disp(sprintf(sprintf(' Analytical Fisher : %s',str3),trilos(F  )))
+    %disp(' ')
+    disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3s,1,npp)),...
+	       ' ','C(s2,s2)','C(nu,nu)','C(rho,rho)','C(s2,nu)','C(s2,rho)','C(nu,rho)'))
+    disp(sprintf(sprintf(' Cov (Numer Hess.) : %s',str3),trilos(covh)))
+    disp(sprintf(sprintf(' Cov (Analy Hess.) : %s',str3),trilos(covH)))
+    disp(sprintf(sprintf(' Cov (Analy Fish.) : %s',str3),trilos(covF)))
+    disp(sprintf('%s',repmat('_',119,1)))
   end
 
   % Talk!
-  disp(sprintf(sprintf('\n%s : %s ',str0,str2),...
+  disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3s,1,np)),...
+	       ' ','s2','nu','rho'))
+  disp(sprintf(sprintf('%s : %s ',str0,str2),...
 	       'Estimated theta',thhat.*scl))
+  disp(' ')
   disp(sprintf(sprintf('%s : %s ',str0,str2),...
 	       'Numer Hessi std',sqrt(diag(covh))))
+  disp(sprintf(sprintf('%s : %s ',str0,str2),...
+	       'Anal Hessi std',sqrt(diag(covH))))
   disp(sprintf(sprintf('%s : %s\n ',str0,str2),...
 	       'Anal Fisher std',sqrt(diag(covF))))
   if xver==1
     disp(sprintf('%8.3gs per %i iterations or %8.3gs per %i function counts',...
                  ts/oput.iterations*100,100,ts/oput.funcCount*1000,1000))
-  else
-    disp(sprintf('\n'))
+  % else
+  %   disp(sprintf('\n'))
   end
 
   % Generate output as needed
