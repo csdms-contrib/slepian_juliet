@@ -620,7 +620,7 @@ elseif strcmp(th0,'demo4')
   
   % Delete the awesome prediction... assuming we verified it still works,
   % which we did in EGGERS1
-  try ; delete(ppx) ; end
+  try; delete(ppx) ; end
   
   % Delete that silly "any one" behavior
   try; delete(pp(1)); end

@@ -258,21 +258,23 @@ if ~isstr(Hx)
     return
   end
 
-  % Parameter covariance as calculated from numerical Hessian at estimate
+  % Parameter covariance as calculated from numerical Hessian NEAR estimate
   covh=hes2cov(-hes,scl,length(k)/2);
 
-  % Parameter covariance as calculated from unblurred Fisher matrix at estimate
-  % I suppose, in the single-variable case, we could produce blurred versions
-  [covF,F]=covthosl(thhat,k(knz),scl); 
-  
   % It is not impossible that a solution is reached which yields a
   % negative rho - which only appears in the square in MATERNOS. But if
   % we're going to calculate (approximately blurred) analytical
   % gradients and  Hessians (even using exact blurring of the spectral
   % densities) we are going to be using MATERNOSY, which will complain...
-  if thhat(3)<0
-    thhat(3)=abs(thhat(3));
+  if thhat(1)<0
+    error('Negative variance')
   end
+  if thhat(3)<0
+    thhat(3)=abs(thhat(3))
+  end
+
+  % Parameter covariance as calculated from Fisher matrix AT estimate
+  [covF,F]=covthosl(thhat,k(knz),scl); 
 
   % Analytic (poorly blurred) Hessian, scaled for numerical comparison
   H=Hessiosl(k,thhat.*scl,params,Hk).*[scl(:)*scl(:)'];
@@ -296,9 +298,11 @@ if ~isstr(Hx)
     disp(sprintf('\n%16s\n','At the ESTIMATE:'));
     disp(sprintf(sprintf('    Log-likelihood : %s',str3),logli))
     %disp(' ')
+    disp(sprintf(...
+	['\nThe numerical Hessians are usually at the penultimate iteration:']))
     if params.blurs~=0
       disp(sprintf(...
-          ['With blurring, the comparisons below are necessarily inexact:\n']))
+          ['\nWith blurring, the comparisons below are necessarily inexact:']))
     end
     disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3s,1,np)),...
 	       ' ','ds2','dnu','drho'))
