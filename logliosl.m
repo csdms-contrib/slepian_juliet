@@ -33,7 +33,7 @@ function [L,gam,momx,vr]=logliosl(k,th,params,Hk,scl)
 %
 % SEE ALSO:
 %
-% FISHERKOSL, which should be incorporated at a later stage
+% HESSIOSL, FISHIOSL
 %
 % Last modified by fjsimons-at-alum.mit.edu, 10/18/2016
 
@@ -78,12 +78,11 @@ if nargout>3
   vr=8/sum(~isnan(Xk));
 end
 
-% I say, time to extract Hessiosl here also?
+% I say, time to extract HESSIOSL here also?
 
 % Get the scores at the individual wavenumbers; average
-gam=-nanmean(gammakosl(k,th,params,Hk));
 % The correct gradient is too heterogeneous to be good so scale
-gam=gam.*scl;
+gam=gammiosl(k,th,params,Hk,0).*scl;
 
 % Print the trajectory, seems like one element at a time gets changed
 %disp(sprintf('Current theta: %8.3g %8.3g %8.3g %8.3g %8.3g %8.3g',th))

@@ -276,6 +276,10 @@ if ~isstr(Hx)
   % Parameter covariance as calculated from Fisher matrix AT estimate
   [covF,F]=covthosl(thhat,k(knz),scl); 
 
+  keyboard
+  
+disp('scaling precision check')
+
   % Analytic (poorly blurred) Hessian, scaled for numerical comparison
   H=Hessiosl(k,thhat.*scl,params,Hk).*[scl(:)*scl(:)'];
   
@@ -287,7 +291,7 @@ if ~isstr(Hx)
   % are expected to be close to numerical results only without blurring
   if xver==1 
     % Analytic (unblurred) gradient, scaled for numerical comparison
-    gros=-nanmean(gammakosl(k,thhat.*scl,params,Hk))'.*scl(:);
+    gros=[gammiosl(k,thhat.*scl,params,Hk,xver)]'.*scl(:);
 
     % Compare the analytic Hessian with the numerical Hessian and with
     % the Hessian expectation, which is the Fisher, at the estimate, and
@@ -297,7 +301,7 @@ if ~isstr(Hx)
     disp(sprintf('%s',repmat('_',119,1)))
     disp(sprintf('\n%16s\n','At the ESTIMATE:'));
     disp(sprintf(sprintf('    Log-likelihood : %s',str3),logli))
-    %disp(' ')
+
     disp(sprintf(...
 	['\nThe numerical Hessians are usually at the penultimate iteration:']))
     if params.blurs~=0
@@ -308,13 +312,13 @@ if ~isstr(Hx)
 	       ' ','ds2','dnu','drho'))
     disp(sprintf(sprintf(' Numericl Gradient : %s',str4),grd))
     disp(sprintf(sprintf(' Analytic Gradient : %s',str4),gros))
-    %disp(' ')
+
     disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3s,1,npp)),...
 	       ' ','(ds2)^2','(dnu)^2','(drho)^2','ds2dnu','ds2drho','dnudrho'))
     disp(sprintf(sprintf(' Numerical Hessian : %s',str3),trilos(hes)))
     disp(sprintf(sprintf(' Analyticl Hessian : %s',str3),trilos(-H )))
     disp(sprintf(sprintf(' Analytical Fisher : %s',str3),trilos(F  )))
-    %disp(' ')
+
     disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3s,1,npp)),...
 	       ' ','C(s2,s2)','C(nu,nu)','C(rho,rho)','C(s2,nu)','C(s2,rho)','C(nu,rho)'))
     disp(sprintf(sprintf(' Cov (Numer Hess.) : %s',str3),trilos(covh)))
@@ -332,7 +336,7 @@ if ~isstr(Hx)
   disp(sprintf(sprintf('%s : %s ',str0,str2),...
 	       'Numer Hessi std',sqrt(diag(covh))))
   disp(sprintf(sprintf('%s : %s ',str0,str2),...
-	       'Anal Hessi std',sqrt(diag(covH))))
+	       'Analy Hessi std',sqrt(diag(covH))))
   disp(sprintf(sprintf('%s : %s\n ',str0,str2),...
 	       'Anal Fisher std',sqrt(diag(covF))))
   if xver==1
@@ -596,9 +600,9 @@ elseif strcmp(Hx,'demo5')
   % Perform the optimization, whatever the quality of the result
   [thhat,~,logli,thini,scl,p,e,o,gr,hs]=mleosl(Hx,thini,p);
 
-  % Take a look at the unblurred gradient purely for fun, they should be
-  % so small as to be immaterial
-  grobs=-nanmean(gammakosl(k,thhat.*scl,p,Hk))';
+  % Take a look at the approximately blurred gradient purely for fun,
+  % they should be so small as to be immaterial
+  grobs=[gammiosl(k,thhat.*scl,p,Hk)]';
   
   % Take a look at the unblurred theoretical covariance at the estimate,
   % to compare to the observed blurred Hessian; in the other demos we

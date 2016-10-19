@@ -1,8 +1,10 @@
-function mcF=Fisherkosl(k,th)
-% mcF=FISHERKOSL(k,th)
+function F=Fishiosl(k,th)
+% F=FISHIOSL(k,th)
 %
 % Calculates the entries in the Fisher matrix of Olhede & Simons (2013) 
-% for the SINGLE-FIELD Matern model, prior to wavenumber averaging. 
+% for the SINGLE-FIELD Matern model, post wavenumber averaging. No
+% blurring is possible here, since no data are involved and we work from
+% analytical expressions, see LOGLIOSL.
 %
 % INPUT:
 %
@@ -14,20 +16,20 @@ function mcF=Fisherkosl(k,th)
 %
 % OUTPUT:
 %
-% mcF      The 6-column Fisher-k matrix, 'celled' in this order:
+% F      The 6-column Fisher-k matrix, 'celled' in this order:
 %          [1] Fs2s2   [2] Fnunu  [3] Frhorho
 %          [4] Fs2nu   [5] Fs2rho [6] Fnurho [not scaled]
 %
 % SEE ALSO: 
 %
-% COVTHOSL, HESSIOSL
+% COVTHOSL, HESSIOSL, TRILOS, TRILOSI
 % 
 % EXAMPLE:
 % 
 % [~,th0,p,k]=simulosl([],[],1);
-% mcF=Fisherkosl(k,th0);
+% F=Fishiosl(k,th0);
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/18/2016
+% Last modified by fjsimons-at-alum.mit.edu, 10/19/2016
 
 defval('xver',1)
 
@@ -48,17 +50,23 @@ m=mAosl(k,th,xver);
 lk=length(k(:));
 
 % Some of them depend on the wave vectors, some don't
-mcF=cellnan([npp 1],[1 repmat(lk,1,5)],repmat(1,1,6));
+F=cellnan([npp 1],[1 repmat(lk,1,5)],repmat(1,1,6));
 
 % Fthsths, eq. (A60)
 for j=1:3
-  mcF{j}=m{j}.^2;
+  F{j}=m{j}.^2;
 end
 
 % All further combinations, eq. (A60)
 jcombo=nchoosek(1:np,2);
 for j=1:length(jcombo)
-  mcF{np+j}=m{jcombo(j,1)}.*m{jcombo(j,2)};
+  F{np+j}=m{jcombo(j,1)}.*m{jcombo(j,2)};
 end
 
 % All the verification has already happened in the subroutines
+
+% Take the expectation and put the elements in the right place
+for ind=1:length(F)
+   F{ind}=nanmean(F{ind});
+end
+

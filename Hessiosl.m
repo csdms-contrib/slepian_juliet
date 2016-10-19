@@ -37,6 +37,8 @@ defval('xver',1)
 np=length(th);
 % The number of unique entries in an np*np symmetric matrix
 npp=np*(np+1)/2;
+% The number of wavenumbers
+lk=length(k(:));
 
 % First compute the "means" parameters
 m=mAosl(k,th,xver);
@@ -85,7 +87,7 @@ mx{6}=2/rho*(-1+[2*nu+1]*vpiro./avark-nu*[nu+1]*vpiro^2./avark.^2);
 
 
 % Allocate arrays for good measure; no cell since they're all k-dependent
-Fk=nan(length(k(:)),npp);
+Fk=nan(lk,npp);
 Ff=nan(1,npp);
 F =nan(np,np);
 
