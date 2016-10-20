@@ -1,4 +1,4 @@
-function [F,cF]=Fishiosl(k,th,xver)
+function [F,cF]=fishiosl(k,th,xver)
 % [F,cF]=FISHIOSL(k,th,xver)
 %
 % Calculates the entries in the Fisher matrix of Olhede & Simons (2013) for
@@ -14,7 +14,7 @@ function [F,cF]=Fishiosl(k,th,xver)
 %          th(1)=s2   The first Matern parameter [variance]
 %          th(2)=nu   The second Matern parameter [differentiability]
 %          th(3)=rho  The third Matern parameter [range]
-% xver     Excessive verification [1 or 0]
+% xver     Excessive verification [0 or 1]
 %
 % OUTPUT:
 %
@@ -30,9 +30,9 @@ function [F,cF]=Fishiosl(k,th,xver)
 % EXAMPLE:
 % 
 % p.quart=0; p.blurs=0; p.kiso=NaN; clc; [~,th0,p,k,Hk]=simulosl([],p,1);
-% F=Fishiosl(k,th0); 
+% F=fishiosl(k,th0); 
 % G=gammiosl(k,th0,p,Hk);
-% H=Hessiosl(k,th0,p,Hk);
+% H=hessiosl(k,th0,p,Hk);
 % % On average, F and H should be close
 %
 % Last modified by fjsimons-at-alum.mit.edu, 10/20/2016
@@ -56,35 +56,27 @@ mth=mAosl(k,th,xver);
 % Initialize
 cF=nan(npp,1);
 
+% Creative indexing - compare NCHOOSEK elsewhere
+[i,j]=ind2sub([np np],trilos(reshape(1:np^2,np,np)));
+
+% We're abusing the 'xver' switch to bypass saving wavenumber-dependencies
 if xver==0
-  % Creative indexing - compare NCHOOSEK below
-  [i,j]=ind2sub([np np],trilos(reshape(1:np^2,np,np)));
-  % Do it all at once, don't save the wavenumber-dependent entities
+  % Do not save the wavenumber-dependent entities
   for ind=1:npp
-    cF(ind)=mean(mth{j(ind)}.*mth{i(ind)});
+    % Eq. (A60) in doi: 10.1093/gji/ggt056
+    cF(ind)=mean(mth{i(ind)}.*mth{j(ind)});
   end
 elseif xver==1
   % Initialize; some of them depend on the wave vectors, some don't
   cFk=cellnan([npp 1],[1 repmat(lk,1,5)],repmat(1,1,6));
-  
-  % We're doing it in this way to be able to compare it to HESSIOSL
-  % Fthth, eq. (A60) in doi: 10.1093/gji/ggt056
-  for j=1:3
-    cFk{j}=mth{j}.^2;
-  end
-  
-  % All further combinations Fththp, eq. (A60) in doi: 10.1093/gji/ggt056
-  jcombo=nchoosek(1:np,2);
-  for j=1:length(jcombo)
-    cFk{np+j}=mth{jcombo(j,1)}.*mth{jcombo(j,2)};
-  end
-  
-  % Take the expectation and put the elements in the right place
+  % Do save the wavenumber-dependent entities
   for ind=1:npp
+    cFk{ind}=mth{i(ind)}.*mth{j(ind)};
+    % Eq. (A60) in doi: 10.1093/gji/ggt056
     cF(ind)=mean(cFk{ind});
   end
 end
 
-% The full Fisher matrix
+% The full-form matrix
 F=trilosi(cF);
     

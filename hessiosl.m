@@ -1,5 +1,5 @@
-function [H,cH]=Hessiosl(k,th,params,Hk,xver)
-% [H,cH]=HESSIOSL(k,th,params,Hk,xver)
+function [F,cF]=hessiosl(k,th,params,Hk,xver)
+% [F,cF]=HESSIOSL(k,th,params,Hk,xver)
 %
 % Calculates the entries in the Hessian matrix of Olhede & Simons (2013) for
 % the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN model, after
@@ -21,11 +21,11 @@ function [H,cH]=Hessiosl(k,th,params,Hk,xver)
 %          NOTE: It's not going to be a great derivative unless you could
 %          change MAOSL also. Still, the order of magnitude will be OK.
 % Hk       A complex matrix of Fourier-domain observations
-% xver     Excessive verification [1 or 0]
+% xver     Excessive verification [0 or 1]
 %
 % OUTPUT:
 %
-% H        The full-form Hessian matrix, a symmetric 3x3 matrix
+% F        The full-form Hessian matrix, a symmetric 3x3 matrix
 % cF       The uniquely relevant elements listed in this order:
 %          [1] Hs2s2   [2] Hnunu  [3] Hrhorho
 %          [4] Hs2nu   [5] Hs2rho [6] Hnurho
@@ -37,10 +37,10 @@ function [H,cH]=Hessiosl(k,th,params,Hk,xver)
 % EXAMPLE:
 % 
 % p.quart=0; p.blurs=0; p.kiso=NaN; clc; [~,th0,p,k,Hk]=simulosl([],p,1);
-% F=Fishiosl(k,th0); 
+% F=fishiosl(k,th0); 
 % G=gammiosl(k,th0,p,Hk);
-% H=Hessiosl(k,th0,p,Hk);
-% % On average, F and H should be close
+% H=hessiosl(k,th0,p,Hk);
+% % On average, F and -H should be close
 %
 % Last modified by fjsimons-at-alum.mit.edu, 10/20/2016
 
@@ -81,29 +81,30 @@ end
 % The average of Xk needs to be close to one as will be tested 
 Xk=abs(Hk).^2./S;
 
+% Initialize
+cF=nan(npp,1);
+
+% Creative indexing - compare NCHOOSEK elsewhere
+[i,j]=ind2sub([np np],trilos(reshape(1:np^2,np,np)));
 keyboard
-
-% Allocate arrays for good measure; no cell since they're all k-dependent
-Hk=nan(lk,npp);
-Hf=nan(1,npp);
-cH=nan(np,np);
-
-% Hkthth
-for j=1:3
-  Hk(:,j)=-mththp{j}-[mth{j}.^2-mththp{j}].*Xk;
+% We're abusing the 'xver' switch to bypass saving wavenumber-dependencies
+if xver==0
+  % Do it all at once, don't save the wavenumber-dependent entities
+  for ind=1:npp
+    % Eq. (135) in doi: 10.1093/gji/ggt056
+    cF(ind)=mean(-mththp{ind}-[mth{i(ind)}.*mth{j(ind)}-mththp{ind}].*Xk);
+  end
+elseif xver==1
+  % Initialize; no cell since all of them depend on the wave vectors
+  cFk=nan(lk,npp);
+  % Do save the wavenumber-dependent entities
+  for ind=1:npp
+    cFk(:,ind)=-mththp{ind}-[mth{i(ind)}.*mth{j(ind)}-mththp{ind}].*Xk;
+    % Eq. (135) in doi: 10.1093/gji/ggt056
+    cF(ind)=mean(cFk(:,ind));
+  end
 end
 
-% All further combinations Hkththp
-jcombo=nchoosek(1:np,2);
-for j=1:length(jcombo)
-  Hk(:,np+j)=-mththp{np+j}-[mth{jcombo(j,1)}.*mth{jcombo(j,2)}-mththp{np+j}].*Xk;
-end
-
-keyboard
-
-% Now perform the averaging over all wavenumbers
-Hf=nanmean(Hk,1);
-
-% The full Hessian matrix
+% The full-form matrix
 F=trilosi(cF);
 
