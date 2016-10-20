@@ -2,10 +2,10 @@ function [F,cF]=Fishiosl(k,th,xver)
 % [F,cF]=FISHIOSL(k,th,xver)
 %
 % Calculates the entries in the Fisher matrix of Olhede & Simons (2013) for
-% the Whittle-likelihood estimate of the SINGLE-FIELD Matern model, after
+% the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN model, after
 % wavenumber averaging. No blurring is possible here, since no data are
-% involved and we work with analytical expressions for the derivatives,
-% see LOGLIOSK. Zero-wavenumber excluded. No scaling asked or applied. 
+% involved and we work with analytical expressions for the derivatives, see
+% LOGLIOSK. Zero-wavenumber excluded. No scaling asked or applied.
 %
 % INPUT:
 %
@@ -14,24 +14,26 @@ function [F,cF]=Fishiosl(k,th,xver)
 %          th(1)=s2   The first Matern parameter [variance]
 %          th(2)=nu   The second Matern parameter [differentiability]
 %          th(3)=rho  The third Matern parameter [range]
-% xver     Excessive verification
+% xver     Excessive verification [1 or 0]
 %
 % OUTPUT:
 %
 % F        The full-form Fisher matrix, a symmetric 3x3 matrix
-% cF       The 6-column Fisher matrix, listed in this order:
+% cF       The uniquely relevant elements listed in this order:
 %          [1] Fs2s2   [2] Fnunu  [3] Frhorho
 %          [4] Fs2nu   [5] Fs2rho [6] Fnurho
 %
 % SEE ALSO: 
 %
-% COVTHOSL, HESSIOSL, TRILOS, TRILOSI
+% GAMMIOSL, HESSIOSL, FISH2COV, TRILOS, TRILOSI
 % 
 % EXAMPLE:
 % 
-% [~,th0,p,k,Hk]=simulosl([],[],1);
-% F=Fishiosl(k,th0); H=Hessiosl(k,th0,p,Hk);
-% % On average, these two should be close!
+% p.quart=0; p.blurs=0; p.kiso=NaN; clc; [~,th0,p,k,Hk]=simulosl([],p,1);
+% F=Fishiosl(k,th0); 
+% G=gammiosl(k,th0,p,Hk);
+% H=Hessiosl(k,th0,p,Hk);
+% % On average, F and H should be close
 %
 % Last modified by fjsimons-at-alum.mit.edu, 10/20/2016
 
@@ -48,7 +50,7 @@ npp=np*(np+1)/2;
 % The number of wavenumbers
 lk=length(k(:));
 
-% First compute the "means" parameters, one per parameter
+% First compute the auxiliary parameters
 mth=mAosl(k,th,xver);
 
 % Initialize
