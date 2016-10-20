@@ -1,17 +1,18 @@
 function F=Hessiosl(k,th,params,Hk)
 % F=HESSIOSL(k,th,params,Hk)
 %
-% Calculates the entries in the Hessian matrix of Olhede & Simons (2013) 
-% for the SINGLE-FIELD Matern model, post wavenumber averaging. When
-% blurred, no consideration is given to the zero wavenumber, see LOGLIOSL. 
+% Calculates the entries in the Fisher matrix of Olhede & Simons (2013) for
+% the Whittle-likelihood estimate of the SINGLE-FIELD Matern model, after
+% wavenumber averaging. When blurred, no consideration is given to the
+% zero wavenumber, see LOGLIOSL. Zero-wavenumber excluded.
 %
 % INPUT:
 %
 % k        Wavenumber(s), e.g. from KNUM2 [rad/m]
 % th       The three-parameter vector argument [not scaled]:
-%          th(1)=s2   The first Matern parameter, aka sigma^2 
-%          th(2)=nu   The second Matern parameter 
-%          th(3)=rho  The third Matern parameter 
+%          th(1)=s2   The first Matern parameter [variance]
+%          th(2)=nu   The second Matern parameter [differentiability]
+%          th(3)=rho  The third Matern parameter [range]
 % params   A structure with AT LEAST these constants that are known:
 %          NyNx  number of samples in the y and x directions
 %          blurs 0 Don't blur likelihood using the Fejer window
@@ -29,9 +30,19 @@ function F=Hessiosl(k,th,params,Hk)
 %
 % FISHERKOSL, HES2COV
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/18/2016
+% EXAMPLE:
+% 
+% [~,th0,p,k,Hk]=simulosl([],[],1);
+% F=Fishiosl(k,th0); H=Hessiosl(k,th0,p,Hk);
+%% On average, these two should be close
+%
+% Last modified by fjsimons-at-alum.mit.edu, 10/20/2016
 
+% Early setup exactly as in FISHIOSL
 defval('xver',1)
+
+% Exclude the zero wavenumbers
+k=k(~~k);
 
 % The number of parameters to solve for
 np=length(th);
@@ -40,12 +51,13 @@ npp=np*(np+1)/2;
 % The number of wavenumbers
 lk=length(k(:));
 
-% First compute the "means" parameters
-m=mAosl(k,th,xver);
+% First compute the "means" parameters, one per parametre
+mth=mAosl(k,th,xver);
 
 % Extract the needed parameters of the simulation variables
 blurs=params.blurs;
 NyNx=params.NyNx;
+
 
 % We need the power spectrum and its ratio to the observations 
 % See LKOSL for the detailed explanations of these procedures
@@ -68,6 +80,7 @@ s2=th(1);
 nu=th(2);
 rho=th(3);
 
+% Here be the derivat
 % A variable that is also needed
 vpiro=4/pi^2/rho^2;
 avark=nu*vpiro+k(:).^2;
