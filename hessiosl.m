@@ -3,8 +3,9 @@ function [F,cF]=hessiosl(k,th,params,Hk,xver)
 %
 % Calculates the entries in the Hessian matrix of Olhede & Simons (2013) for
 % the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN model, after
-% wavenumber averaging. No consideration is given to the zero wavenumber,
-% see LOGLIOSL.
+% wavenumber averaging. Blurring is only approximately possible here, we
+% work with analytical expressions for some of the derivatives, see
+% LOGLIOSL. Zero-wavenumber excluded. No scaling asked or applied.
 %
 % INPUT:
 %
@@ -27,8 +28,8 @@ function [F,cF]=hessiosl(k,th,params,Hk,xver)
 %
 % F        The full-form Hessian matrix, a symmetric 3x3 matrix
 % cF       The uniquely relevant elements listed in this order:
-%          [1] Hs2s2   [2] Hnunu  [3] Hrhorho
-%          [4] Hs2nu   [5] Hs2rho [6] Hnurho
+%          [1] Fs2s2   [2] Fnunu  [3] Frhorho
+%          [4] Fs2nu   [5] Fs2rho [6] Fnurho
 %
 % SEE ALSO:
 %
@@ -37,10 +38,8 @@ function [F,cF]=hessiosl(k,th,params,Hk,xver)
 % EXAMPLE:
 % 
 % p.quart=0; p.blurs=0; p.kiso=NaN; clc; [~,th0,p,k,Hk]=simulosl([],p,1);
-% F=fishiosl(k,th0); 
-% G=gammiosl(k,th0,p,Hk);
-% H=hessiosl(k,th0,p,Hk);
-% % On average, F and -H should be close
+% F=fishiosl(k,th0); G=gammiosl(k,th0,p,Hk); H=hessiosl(k,th0,p,Hk);
+% round(abs((F+H)./F)*100) % should be small numbers
 %
 % Last modified by fjsimons-at-alum.mit.edu, 10/20/2016
 
@@ -53,10 +52,10 @@ k=k(~~k);
 
 % The number of parameters to solve for
 np=length(th);
-% The number of unique entries in an np*np symmetric matrix
-npp=np*(np+1)/2;
 % The number of wavenumbers
 lk=length(k(:));
+% The number of unique entries in an np*np symmetric matrix
+npp=np*(np+1)/2;
 
 % First compute the auxiliary parameters
 [mth,mththp]=mAosl(k,th,xver);
@@ -65,18 +64,8 @@ lk=length(k(:));
 blurs=params.blurs;
 NyNx=params.NyNx;
 
-% We need the power spectrum and its ratio to the observations 
-% See LKOSL for the detailed explanations of these procedures
-switch blurs
- case {0,1}
-    S=maternos(k,th);
- otherwise
-  if blurs>1
-    S=bluros(maternos(knums(params,1),th),params);
-  else
-    S=blurosy(th,params);
-  end
-end
+% We need the (blurred) power spectrum and its ratio to the observations
+S=maternosp(k,th,params);
 
 % The average of Xk needs to be close to one as will be tested 
 Xk=abs(Hk).^2./S;
@@ -86,7 +75,7 @@ cF=nan(npp,1);
 
 % Creative indexing - compare NCHOOSEK elsewhere
 [i,j]=ind2sub([np np],trilos(reshape(1:np^2,np,np)));
-keyboard
+
 % We're abusing the 'xver' switch to bypass saving wavenumber-dependencies
 if xver==0
   % Do it all at once, don't save the wavenumber-dependent entities
@@ -108,3 +97,4 @@ end
 % The full-form matrix
 F=trilosi(cF);
 
+% Can do an additional tracecheck here, using Option 2

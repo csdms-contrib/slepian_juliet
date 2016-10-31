@@ -1,17 +1,17 @@
 function Sk=maternos(k,th,varargin)
-% Sk=MATERNOS(k,[s2 nu rho],d)
+% Sk=MATERNOS(k,th,d)
 %
 % Calculates the three-parameter isotropic d-dimensional Matern
-% spectral density used by Olhede & Simons (2013).
+% spectral density used by Olhede & Simons (2013). Depends on d. 
 %
 % INPUT:
 %
 % k        Wavenumber(s), e.g. from KNUM2 [rad/m]
-% th       The three-parameter vector argument [not scaled]:
-%          th(1)=s2   The first Matern parameter, aka sigma^2 
-%          th(2)=nu   The second Matern parameter 
-%          th(3)=rho  The third Matern parameter 
-% d        Dimension [default is 2]
+% th       The unscaled parameter vector, with, in the last three slots: 
+%          s2   The first Matern parameter [variance in units^2]
+%          nu   The second Matern parameter [differentiability]
+%          rho  The third Matern parameter [range in m]
+% d        The dimensionality [default is 2]
 %
 % OUTPUT:
 %
@@ -19,19 +19,19 @@ function Sk=maternos(k,th,varargin)
 %
 % SEE ALSO:
 %
-% MATERNPRC, MATERNOS2D
+% MATERNPRC, MATERNOSY, MATERNOSP
 %
 % EXAMPLE:
 %
 % [~,th0]=simulosl;
 % difer(maternos(0,th0)-th0(1)*pi*th0(3)^2/4,8,[],NaN)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/23/2015
+% Last modified by fjsimons-at-alum.mit.edu, 10/31/2016
 
 % These are always the last three elements of the input 
 s2=th(end-2);
 nu=th(end-1);
-rho=th(end);
+rh=th(end  );
 
 % Change dimension if you like
 if nargin==3

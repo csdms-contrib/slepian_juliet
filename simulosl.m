@@ -67,7 +67,7 @@ function varargout=simulosl(th0,params,xver,varargin)
 % MLEOSL, LOADING, SIMULOS, EGGERS1, EGGERS2, EGGERS4, etc
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
-% Last modified by fjsimons-at-alum.mit.edu, 09/27/2016
+% Last modified by fjsimons-at-alum.mit.edu, 10/31/2016
 
 % Here is the true parameter vector and the only variable that gets used 
 defval('th0',[1e6 2.5 2e4]);
@@ -76,7 +76,8 @@ defval('th0',[1e6 2.5 2e4]);
 if ~isstr(th0)
   % Supply the needed parameters, keep the givens, extract to variables
   fields={               'dydx','NyNx','blurs','kiso','quart'};
-  defstruct('params',fields,...
+
+ defstruct('params',fields,...
 	    {                      [10 10]*1e3,[64 64],-1,NaN,1});
   struct2var(params)
 
@@ -107,41 +108,12 @@ if ~isstr(th0)
   % disp(sprintf('Z1: mean %+6.3f ; stdev %6.3f',...
   %    mean(Z1(:)),std(Z1(:))))
 
-  switch blurs
-   case {0,1}
-    % disp(sprintf('%s without blurring',upper(mfilename)))
-    % Now make the spectral-spectral portion of the spectral matrix
-    S=maternos(k,th0);
-    % Roll in the sqrt of the factored portion
-    Lb=sqrt(S);
-    % The spectral matrix in case you care but you don't
-    Sb=S;
-   otherwise
-    % If I stay on the same k-grid, I'm really not doing any convolution at
-    % all as you can see quickly. So by "suitably discretizing" the
-    % convolutional operator we mean performing it on a highly densified
-    % grid of which the target grid may be a subset. Doing this on the
-    % same grid would be the "inverse crime" of not changing the grid at
-    % all. Run Fk for this case to see it then would be a delta function
-
-    if blurs>1
-      % Blurs IS the refinement parameter; make new wavenumber grid
-      % Then make the spectral-spectral portion of the spectral matrix
-      % Then do the blurring and subsampling to original grid
-      Sb=bluros(maternos(knums(params,1),th0),params,xver);
-    else
-      % Here is the alternative EXACT way of doing it, which does away
-      % with the approximate convolutional refinement procedure
-      Sb=blurosy(th0,params,xver);
-    end
-
-    % And then we do the Cholesky decomposition of that, explicitly
-    Lb=sqrt(Sb);
-
-    % Should make sure that this is real! Why wouldn't it be?
-    Lb=realize(Lb);
-  end
+  % We need the (blurred) power spectrum
+  Sb=maternosp(k,th,params);
   
+  % Should make sure that this is real! Why wouldn't it be?
+  Lb=realize(sqrt(Sb));
+
   % Blurred or unblurred, go on
 
   % And put it all together, unwrapped over k and over x
@@ -175,7 +147,7 @@ if ~isstr(th0)
     % This may have implications later on, that we choose to ignore now,
     % an example is if some of this output were to be passed onto LKOSL
   end
-  
+
   % Return the output if requested
   varns={Hx,   th0,params,k,Hk,   Sb,Lb};
   varargout=varns(1:nargout);

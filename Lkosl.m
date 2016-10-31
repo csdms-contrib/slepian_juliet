@@ -2,7 +2,8 @@ function [Lk,Xk]=Lkosl(k,th,params,Hk)
 % [Lk,Xk]=Lkosl(k,th,params,Hk)
 %
 % Computes the likelihood function for the SINGLE-FIELD isotropic Matern
-% model in Olhede & Simons (2013). Takes out the zero wavenumber. 
+% model in Olhede & Simons (2013). When blurred, sets the zero
+% wavenumber-value to NaN.  
 %
 % INPUT:
 %
@@ -38,44 +39,26 @@ defval('xver',1)
 blurs=params.blurs;
 NyNx=params.NyNx;
 
-% We need the power spectrum and its ratio to the observations 
-
-switch blurs
- case {0,1}
-  % Too much screen time, FMINUNC/FMINCON evaluate this a lot
-  % disp(sprintf('%s without blurring',upper(mfilename)))
-  %  Calculate the Matern spectrum with the spectral parameters
-  S=maternos(k,th);
- otherwise
-  % Too much screen time, FMINUNC/FMINCON evaluate this a lot
-  % disp(sprintf('%s with blurring factor %i',upper(mfilename),blurs))
-  if blurs>1
-    % Blurs IS the refinement parameter; make new wavenumber grid
-    % Now make the spectral-spectral portion of the spectral matrix
-    % Which we need to convolve now in two dimensions
-    % And then do subsampling onto the original target grid
-    S=bluros(maternos(knums(params,1),th),params);
-  else
-    % Here is the alternative EXACT way of doing it, which does away
-    % with the approximate convolutional refinement procedure
-    S=blurosy(th,params);
-  end
-end
+% We need the (blurred) power spectrum and its ratio to the observations
+S=maternosp(k,th,params);
 
 % The average of Xk needs to be close to one as will be tested 
 warning off MATLAB:log:logOfZero
 Xk=abs(Hk).^2./S;
 warning on MATLAB:log:logOfZero
-Lk=-log(Sb)-Xk;
-
-% Trouble is at the central wave numbers, we take those out 
-% Find the zero wavenumber
-kzero=sub2ind(NyNx,floor(NyNx(1)/2)+1,floor(NyNx(2)/2)+1);
-% Check that this is correctly done
-difer(k(kzero),[],[],NaN)
-% Behavior is rather different if this is NOT done... knowing that it
-% will not blow up but rather be some numerically large value
-Lk(kzero)=NaN;
-
 % Should make sure that this is real! Don't take any chances
-Lk=realize(Lk);
+Lk=realize(-log(S)-Xk);
+
+% Don't take out the zero wavenumber when there is no blurring, otherwise
+% the score won't verify if you should choose to do so. On the whole, you
+% won't want to run unblurred anything, so it won't be a big deal. 
+if blurs~=0
+  % Trouble is at the central wave numbers, we take those out 
+  % Find the zero wavenumber
+  kzero=sub2ind(NyNx,floor(NyNx(1)/2)+1,floor(NyNx(2)/2)+1);
+  % Check that this is correctly done
+  difer(k(kzero),[],[],NaN)
+  % Behavior is rather different if this is NOT done... knowing that it
+  % will not blow up but rather be some numerically large value
+  Lk(kzero)=NaN;
+end

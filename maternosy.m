@@ -6,20 +6,21 @@ function Cy=maternosy(y,th,varargin)
 %
 % INPUT:
 %
-% y        Lag parameter, the distance between spatial positions
-% th       The spectral parameter vector, with, in the last three slots: 
-%          s2    The first Matern parameter, aka sigma^2
-%          nu    The second Matern parameter
-%          rh    The third Matern parameter
-% d        The dimensionality. Leave it out, for symmetry only
+% y        Lag parameter, the distance between spatial positions,
+%          e.g. from XXPDIST or SSPDIST [m]
+% th       The unscaled parameter vector, with, in the last three slots: 
+%          s2    The first Matern parameter [variance in units^2]
+%          nu    The second Matern parameter [differentiability]
+%          rh    The third Matern parameter [range in m]
+% d        The dimensionality. Not used, for symmetry with MATERNOS only 
 %
 % OUTPUT:
 %
-% Cy       A column vector with all the wavenumbers unwrapped
+% Cy       The spatial Matern covariance at all the requested lags
 %
 % SEE ALSO:
 %
-% MATERNOS, MATERNOS2D
+% MATERNOS, MATERNOSP, MATERNPRC
 %
 % EXAMPLE:
 %
@@ -34,9 +35,7 @@ function Cy=maternosy(y,th,varargin)
 % These are always the last three elements of the input 
 s2=th(end-2);
 nu=th(end-1);
-rh=th(end);
-
-% t=tic;
+rh=th(end  );
 
 % The argument, make sure it is a distance
 argu=2*sqrt(nu)/pi/rh*abs(y);
@@ -45,4 +44,3 @@ Cy=2^(1-nu)*s2/gamma(nu)*argu.^nu.*besselk(nu,argu);
 % Supply the smallest arguments
 Cy(y==0)=s2;
 
-% disp(sprintf('%s took %f seconds',upper(mfilename),toc(t)))
