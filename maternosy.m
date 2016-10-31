@@ -1,5 +1,5 @@
-function Cy=maternosy(y,th0s,varargin)
-% Cy=MATERNOSY(y,th0s,d)
+function Cy=maternosy(y,th,varargin)
+% Cy=MATERNOSY(y,th,d)
 %
 % Calculates the three-parameter isotropic d-dimensional Matern
 % covariance used by Olhede & Simons (2013). Independent of d. 
@@ -7,7 +7,7 @@ function Cy=maternosy(y,th0s,varargin)
 % INPUT:
 %
 % y        Lag parameter, the distance between spatial positions
-% th0s     The spectral parameter vector, containing
+% th       The spectral parameter vector, with, in the last three slots: 
 %          s2    The first Matern parameter, aka sigma^2
 %          nu    The second Matern parameter
 %          rh    The third Matern parameter
@@ -29,16 +29,17 @@ function Cy=maternosy(y,th0s,varargin)
 %% Compared to what we think it should be:
 % [sum(y.*maternosy(y,th0))*(y(2)-y(1))/(2*pi) maternos(0,th0)]
 %
-% Last modified by fjsimons-at-alum.mit.edu, 07/15/2015
+% Last modified by fjsimons-at-alum.mit.edu, 10/31/2016
 
 % These are always the last three elements of the input 
-s2=th0s(end-2);
-nu=th0s(end-1);
-rho=th0s(end);
+s2=th(end-2);
+nu=th(end-1);
+rh=th(end);
 
 % t=tic;
+
 % The argument, make sure it is a distance
-argu=2*sqrt(nu)/pi/rho*abs(y);
+argu=2*sqrt(nu)/pi/rh*abs(y);
 % The evaluation
 Cy=2^(1-nu)*s2/gamma(nu)*argu.^nu.*besselk(nu,argu);
 % Supply the smallest arguments
