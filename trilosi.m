@@ -5,8 +5,7 @@ function m=trilosi(v)
 %
 % INPUT:
 %
-% v      The elements that matter, linearly unwrapped
-% np     The number of diagonal elements
+% v      The elements that matter, in a column vector
 %
 % OUTPUT:
 %
@@ -14,18 +13,18 @@ function m=trilosi(v)
 % 
 % SEE ALSO:
 %
-% TRILOS
+% TRILOS, NCHOOSEK
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/25/2014
+% Last modified by fjsimons-at-alum.mit.edu, 10/20/2016
 
-% How many diagonal elements?
+% Figure out the full dimension of the matrix
 np=(-1+sqrt(1+4*2*length(v(:))))/2;
 
 % Empty bucket
 m=zeros(np,np);
 
 % Fill the lower half of them up
-m(nonzeros(triu(reshape(1:np^2,np,np)')'))=v;
+m(trilos(reshape(1:np^2,np,np)))=v;
 
 % Symmetrize
-m=[tril(m)'+tril(m)-diag(diag(m))];
+m=[m+m'-diag(diag(m))];
