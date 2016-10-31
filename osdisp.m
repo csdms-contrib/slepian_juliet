@@ -20,13 +20,13 @@ function varargout=osdisp(th0,thhats,nl,avhs,Fisher,covF)
 %
 % The strings used 
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/14/2016
+% Last modified by fjsimons-at-alum.mit.edu, 10/19/2016
 
 % The necessary strings for formatting
-str0='%27s';
-str1='%12.5g ';
-str2='%12i ';
-str3='%12s ';
+str0='%18s';
+str1='%13.5g ';
+str2='%13i ';
+str3='%13s ';
 
 % Replicate to the size of the parameter vector
 str1s=repmat(str1,size(th0));
@@ -84,7 +84,6 @@ elseif length(th0)==3
 	       ' ','s2','nu','rho'))
   disp(sprintf(sprintf('%s : %s ',str0,str1s),'True theta',th0))
 end
-
 
 % Optional output
 varns={str0,str1,str2,str3};

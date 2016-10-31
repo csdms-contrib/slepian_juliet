@@ -18,6 +18,7 @@ function Sbar=bluros(S,params,xver)
 %         blurs 0 Don't blur likelihood using the Fejer window
 %               1 With no refinement, this is like not blurring at all!
 %               N Blur likelihood using the Fejer window [default: N=2]
+%              -1 Blur likelihood using the exact BLUROSY procedure
 % xver    1 Extra verification, among other ways, via BLURCHECK
 %         0 No checking at all
 %
@@ -38,7 +39,7 @@ function Sbar=bluros(S,params,xver)
 %
 % Maybe should formally increase it in those cases so as to never worry?
 %
-% Last modified by fjsimons-at-alum.mit.edu, 09/13/2016
+% Last modified by fjsimons-at-alum.mit.edu, 09/29/2016
 
 if params.blurs<0
   error('You should be running BLUROSY, not BLUROS!')
@@ -128,4 +129,3 @@ difer(sum(isnan(Sbar(:))),[],2,NaN)
 if xver==1
   blurcheck(Sbar,params)
 end
-

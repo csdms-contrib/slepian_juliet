@@ -26,7 +26,7 @@ function varargout=covthosl(th,k,scl)
 % covF=covthosl(th0,k,1);
 % round(sqrt(covF(1,1)))
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/19/2016
+% Last modified by fjsimons-at-alum.mit.edu, 10/31/2016
 
 % Default scaling is none
 defval('scl',ones(size(th)))
@@ -37,20 +37,7 @@ if ~isempty(k(~k))
 end
 
 % First, the Fisher matrix at each wavenumber, unwrapped, unscaled
-mcF=Fishiosl(k,th.*scl);
-
-% The full Fisher matrix
-% These will become the variances
-F(1,1)=mcF{1};
-F(2,2)=mcF{2};
-F(3,3)=mcF{3};
-
-% These will be the covariances of D with others
-F(1,2)=mcF{4};
-F(1,3)=mcF{5};
-
-% These will be the covariances of f2 with others
-F(2,3)=mcF{6};
+F=fishiosl(k,th.*scl);
 
 % Returns the unscaled covariance matrix and the scaled Fisher matrix
 % Note that only half of the full-plane wavenumbers are independent

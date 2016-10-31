@@ -37,10 +37,13 @@ defval('xver','1')
 % The dimensionality of the problem (not being actively used)
 d=2;
 
+% Extract the needed parameters of the simulation variables
+blurs=params.blurs;
+
+%  Calculate the Matern spectrum for the spectral parameters
 switch blurs
  case {0,1}
   % disp(sprintf('%s without blurring',upper(mfilename)))
-  %  Calculate the Matern spectrum with the spectral parameters
   Sk=maternos(k,th,d);
  otherwise
   % disp(sprintf('%s with blurring factor %i',upper(mfilename),blurs))

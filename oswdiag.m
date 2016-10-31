@@ -1,6 +1,8 @@
 function oswdiag(fid3,fmt1,fmt3,logli,gr,hs,thhat,thini,scl,ts,e,o,vHxs,momx,covh)
 % OSWDIAG(fid3,fmt1,fmt3,logli,gr,hs,thhat,thini,scl,ts,e,o,vHxs,momx,covh)
 %
+% Writes an entry in the DIAGN file for the Olhede & Simons (2013) suite
+%
 % INPUT:
 %
 % fid3,fmt1,fmt3   Format strings
@@ -12,8 +14,6 @@ function oswdiag(fid3,fmt1,fmt3,logli,gr,hs,thhat,thini,scl,ts,e,o,vHxs,momx,cov
 % vHxs             Spatial (sample) variance
 % momx             Moments of the quadratic portion of the likelihood
 % covh             The asymptotic covariance matrix for the estimate
-%
-% Writes an entry in the DIAGN file for the Olhede & Simons (2013) suite
 %
 % Last modified by fjsimons-at-alum.mit.edu, 10/25/2014
 

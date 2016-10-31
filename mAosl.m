@@ -8,9 +8,9 @@ function varargout=mAosl(k,th,xver)
 %
 % k        Wavenumber(s) at which this is to be evaluated [1/m]
 % th       The parameter vector with elements [not scaled]:
-%          s2  The first Matern parameter, aka sigma^2
-%          nu  The second Matern parameter
-%          rho The third Matern parameter
+%          th(1)=s2   The first Matern parameter [variance]
+%          th(2)=nu   The second Matern parameter [differentiability]
+%          th(3)=rho  The third Matern parameter [range]
 %
 % OUTPUT:
 %

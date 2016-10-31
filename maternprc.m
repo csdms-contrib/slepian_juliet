@@ -36,10 +36,10 @@ function varargout=maternprc(theta,prc,meth,xver)
 %
 % TO DO: shunt the 0th and 100th 
 %
-% See also FZERO, SYM, SYMS, TRAPEZE
+% SEE ALSO:  MATERNOS, MATERNOSP, MATERNOSY, FZERO, SYM, SYMS, TRAPEZE
 %
 % Last modified by gleggers-at-princeton.edu, 03/19/2014
-% Last modified by fjsimons-at-princeton.edu, 06/08/2015
+% Last modified by fjsimons-at-princeton.edu, 10/31/2016
 
 % Default values
 defval('prc',50)

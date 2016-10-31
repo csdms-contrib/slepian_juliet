@@ -5,7 +5,7 @@ function [F,cF]=fishiosl(k,th,xver)
 % the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN model, after
 % wavenumber averaging. No blurring is possible here, since no data are
 % involved and we work with analytical expressions for the derivatives, see
-% LOGLIOSK. Zero-wavenumber excluded. No scaling asked or applied.
+% LOGLIOSL. Zero-wavenumber excluded. No scaling asked or applied.
 %
 % INPUT:
 %
@@ -30,10 +30,8 @@ function [F,cF]=fishiosl(k,th,xver)
 % EXAMPLE:
 % 
 % p.quart=0; p.blurs=0; p.kiso=NaN; clc; [~,th0,p,k,Hk]=simulosl([],p,1);
-% F=fishiosl(k,th0); 
-% G=gammiosl(k,th0,p,Hk);
-% H=hessiosl(k,th0,p,Hk);
-% % On average, F and H should be close
+% F=fishiosl(k,th0); G=gammiosl(k,th0,p,Hk); H=hessiosl(k,th0,p,Hk);
+% round(abs((F+H)./F)*100) % should be small numbers
 %
 % Last modified by fjsimons-at-alum.mit.edu, 10/20/2016
 
@@ -45,10 +43,10 @@ k=k(~~k);
 
 % The number of parameters to solve for
 np=length(th);
-% The number of unique entries in an np*np symmetric matrix
-npp=np*(np+1)/2;
 % The number of wavenumbers
 lk=length(k(:));
+% The number of unique entries in an np*np symmetric matrix
+npp=np*(np+1)/2;
 
 % First compute the auxiliary parameters
 mth=mAosl(k,th,xver);

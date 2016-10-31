@@ -25,7 +25,7 @@ function [covF,F]=fish2cov(Fut,scl,df)
 
 warning off MATLAB:nearlySingularMatrix
 
-% Note that only the half plane is statistically independent
+% Calculate this version of the covariance matrix
 covF=inv(F)/df;
 
 % Full form and in the scaled dimensions of the problem

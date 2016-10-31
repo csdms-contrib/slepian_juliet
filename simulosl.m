@@ -109,7 +109,7 @@ if ~isstr(th0)
   %    mean(Z1(:)),std(Z1(:))))
 
   % We need the (blurred) power spectrum
-  Sb=maternosp(k,th,params);
+  Sb=maternosp(k,th0,params);
   
   % Should make sure that this is real! Why wouldn't it be?
   Lb=realize(sqrt(Sb));

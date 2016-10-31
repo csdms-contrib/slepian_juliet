@@ -28,7 +28,7 @@ function Sbar=blurosy(th0,params,xver,method)
 %
 % SIMULOSL, BLUROS
 %
-% Last modified by fjsimons-at-alum.mit.edu, 05/04/2016
+% Last modified by fjsimons-at-alum.mit.edu, 10/18/2016
 
 if params.blurs>=0
   error('Are you sure you should be running BLUROSY, not BLUROS?')

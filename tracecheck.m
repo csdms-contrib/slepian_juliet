@@ -2,8 +2,8 @@ function tracecheck(L,A,mv,tol,meth)
 % TRACECHECK(L,A,mv,tol,meth)
 %
 % Checks the trace (sum of the eigenvalues), or the sum of the squares of
-% the eigenvalues, of a matrix L'*A*L, against an analytically derived
-% expression.
+% the eigenvalues, of a matrix quadratic form L'*A*L, against an
+% analytically derived expression. No output for pass, error for fail.
 %
 % INPUT:
 %
@@ -14,21 +14,26 @@ function tracecheck(L,A,mv,tol,meth)
 % tol     The negative of the tolerance exponent
 % meth    1 Checks the sum of the eigenvalues
 %         2 Checks the sum of the squares of the eigenvalues
-%          
-% If it passes, no output, if it doesn't, get an error
+%
+% SEE ALSO:
+%
+% MAOSL
 % 
-% Last modified by fjsimons-at-alum.mit.edu, 10/08/2014
+% Last modified by fjsimons-at-alum.mit.edu, 10/19/2016
 
 for j=1:length(A)
   % Checks a random wavenumber
   randi=ceil(rand*length(A{j}));
 
+  % These are matrices out of MAOSL
   mrand=mv{j}(min(randi,length(mv{j})));
   Arand=[A{j}(randi,1) A{j}(randi,2) ; A{j}(randi,2) A{j}(randi,3)];
-  Lrand=[L(randi,1)    0       ; L(randi,2) L(randi,3)];
+  % This is a lower-triangular matrix out of a Cholesky decomposition
+  Lrand=[L(randi,1)    0             ; L(randi,2)    L(randi,3)];
   
   switch meth
    case 1
+    % Eq. (122) in doi: 10.1093/gji/ggt056
     chekit=trace(Lrand'*Arand*Lrand);
     chekot=-2*mrand;
    case 2
@@ -40,7 +45,7 @@ for j=1:length(A)
   
   if ~isnan(mrand) && ~isnan(chekit)
     % This may by chance be at zero wavenumber in which case we skip the
-    % test. Check RELATIVE accuracy, do not return an output to difer!
+    % test. Check RELATIVE accuracy, do not return an output to DIFER!
     % Maybe should only check the leading terms for the tiny ones (D)
     % since that's where the finite precision is going to be pretty bad
     relac=(chekit-chekot)/chekot;

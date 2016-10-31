@@ -1,5 +1,5 @@
-function varargout=mleplos(thhats,th0,covF,covHav,covHts,E,v,params,name)
-% MLEPLOS(thhats,th0,covF,covHav,covHts,E,v,params,name)
+function varargout=mleplos(thhats,th0,covF,covHav,covthpix,E,v,params,name)
+% MLEPLOS(thhats,th0,covF,covHav,covthpix,E,v,params,name)
 %
 % Graphical statistical evaluation of the maximum-likelihood inversion
 % results from the suite MLEOS, MLEROS, MLEROS0, MLEOSL. 
@@ -14,9 +14,9 @@ function varargout=mleplos(thhats,th0,covF,covHav,covHts,E,v,params,name)
 %            th0(3/4)=s2   The first Matern parameter, aka sigma^2 
 %            th0(4/5)=nu   The second Matern parameter 
 %            th0(5/6)=rho  The third Matern parameter 
-% covF       The covariance matrix based on the Fisher matrix at the truth
+% covF       The covariance matrix based on the Fisher at the truth or estimate 
 % covHav     The covariance matrix based on the average Hessian matrix
-% covHts     The covariance matrix based on one randomly picked Hessian matrix
+% covthpix   The covariance matrix based on the Fisher at a random estimate
 % E          Young's modulus (not used for single fields)
 % v          Poisson's ratio (not used for single fields)
 % params     The structure with the fixed parameters from the experiment
@@ -30,7 +30,7 @@ function varargout=mleplos(thhats,th0,covF,covHav,covHts,E,v,params,name)
 %
 % This only gets used in MLEOS/MLEROS/MLEROS0/MLEOSL thus far
 %
-% Last modified by fjsimons-at-alum.mit.edu, 09/27/2016
+% Last modified by fjsimons-at-alum.mit.edu, 10/05/2016
 
 % Number of times the standard deviation for scale truncation
 nstats=[-3:3]; fax=3;
@@ -63,6 +63,8 @@ end
 clf
 [ah,ha]=krijetem(subnum(2,np));
 
+disp(sprintf('\n'))
+
 % For each of the parameters
 for ind=1:np
   % The empirical means and standard deviations of the estimates
@@ -75,6 +77,7 @@ for ind=1:np
   % The theoretical means and standard deviations for any one estimate
   th0i=th0(ind);
   if ~isempty(covF)
+    % Error estimate based on the Fisher matrix 
     stdF=real(sqrt(covF(ind,ind)));
   else
     stdF=NaN;
@@ -83,12 +86,14 @@ for ind=1:np
   stdFs(ind)=stdF;
 
   if ~isempty(covHav)
+    % Error estimate based on the median Hessian matrix
     stdH=real(sqrt(covHav(ind,ind)));
   else
     stdH=NaN;
   end
-  if ~isempty(covHts)
-    stdHts=real(sqrt(covHts(ind,ind)));
+  if ~isempty(covthpix)
+    % Error estimate based on one particular randomly picked Fisher
+    stdHts=real(sqrt(covthpix(ind,ind)));
   else
     stdHts=NaN;
   end
@@ -104,7 +109,8 @@ for ind=1:np
     bdens=bdens/indeks(diff(c),1)/size(thhats(:,ind),1);
   end
   % This number is close to one... it's a proper density!
-  disp(sprintf('Integral = %g',sum(bdens)*indeks(diff(c),1)))
+  disp(sprintf('%s pdf normalization check by summation %g',...
+               upper(mfilename),sum(bdens)*indeks(diff(c),1)))
 
   % Now plot it using a scale factor to remove the units from the y axis
   thhis(ind)=bar(c,sobs*bdens,1);
@@ -116,18 +122,18 @@ for ind=1:np
   hold on
   p0(ind)=plot([th0i th0i],ylim,'k-');
   halfup=indeks(ylim,1)+range(ylim)/2;
-  % Covariance based on the Fisher matrix
+  % Covariance based on the Fisher matrix at the truth... didn't like this plot
   ps(ind)=plot(th0i+[-1 1]*stdF,...
 	       [halfup halfup],'k-'); 
   delete(ps(ind))
   
-  % Plots the normal with the predicted means and variances
+  % Estimate x-axis from observed means and variances
   xnorm=linspace(nstats(1),nstats(end),100)*sobs+mobs;
-  % Based on the Fisher matrix
+  % Normal distribution based on the Fisher matrix at the truth
   ps(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdF));
   % Based on the average/median Hessian matrix
   pha(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdH),'--');
-  % Based on one of them picked at random
+  % Based on one of them picked at random, Fisher at estimate
   phats(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdHts),'-');
   % Based on the actually observed covariance of these data
   po(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,sobs),'-');
@@ -214,19 +220,26 @@ movev(ah(length(ah)/2+1:end),mv)
 axes(ah(1))
 yl=ylabel('posterior probability density');
 longticks(ah)
+% Normal distribution based on the Fisher matrix at the truth
 set(ps,'linew',1,'color','k')
+% Based on the average/median Hessian matrix - will be deleted
 set(pha,'linew',1,'color','b')
+% Based on the actually observed covariance of these data
 set(po,'linew',2,'color',grey(3.5))
 % FOCUS ON THE COVF first and foremost, the mean/median Hessians are
 % sometimes out of control even though the solutions look really good and
-% to the eye the numbers look good also
+% to the eye the numbers look good also, sometimes
 
-% Sometimes really off, and wonder why
+% Sometimes really off, and still wonder why
+% Based on Fisher at the truth 
 delete(pha)
+% Based on Fisher at a randomly picked estimate 
+delete(phats)
 % Not interesting as it is well captured by the kde
 % delete(po)
 
 nolabels(ah(2:np),2)
+disp(sprintf('\n'))
 fig2print(gcf,'landscape')
 
 % Do this so the reduction looks slightly better
@@ -240,16 +253,25 @@ if isstruct(params)
 end
 
 % We are quoting the TRUTHS and the THEORETICAL standard deviation with
-% which it can be known using the available data
+% which it can be known using the available data... this is close to the
+% average behavior, and we'll use it for the titles
 [answ,answs]=osansw(th0,covF,E,v);
-% But we rather should quote the randomly selected Hessian-based on ones?
-[answ,answs]=osansw(th0,covHts,E,v);
+disp(sprintf('\n%s','Fisher-based covariance evaluated at the truth'))
+disp(sprintf(answs,answ{:}))
+% On the figure we should quote the actually observed sample variance?
+[answ,answs]=osansw(mean(thhats),cov(thhats),E,v);
+disp(sprintf('\n%s','Sample-based covariance for the ensemble simulations'))
+disp(sprintf(answs,answ{:}))
 tt=supertit(ah(np+1:2*np),sprintf(answs,answ{:}));
 if np>3
   movev(tt,-4)
 else
   movev(tt,-3.5)
 end
+% Also quote the Fisher prediction at a random estimate
+[answ,answs]=osansw(th0,covthpix,E,v);
+disp(sprintf('\n%s','Fisher-based covariance evaluated at a randomly picked estimate'))
+disp(sprintf(answs,answ{:}))
 
 % Make a basic x-y plot
 xy=0;

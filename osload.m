@@ -1,5 +1,5 @@
-function [th0,thhats,params,covF,covHav,covHts,E,v,obscov,sclcovF,momx]=osload(datum,perc)
-% [th0,thhats,params,covF,covHav,covHts,E,v,obscov,sclcovF,momx]=OSLOAD(datum,perc)
+function [th0,thhats,params,covF,covHav,covHts,E,v,obscov,sclcovF,momx,covthpix]=osload(datum,perc)
+% [th0,thhats,params,covF,covHav,covHts,E,v,obscov,sclcovF,momx,covthpix]=OSLOAD(datum,perc)
 %
 % Loads all four of the output diagnostic files produced by the suite of
 % programs following Simons & Olhede (2013). 
@@ -22,12 +22,14 @@ function [th0,thhats,params,covF,covHav,covHts,E,v,obscov,sclcovF,momx]=osload(d
 % obscov       Scaled observed covariance (ones on the diagonal)
 % sclcovF      Scaled theoretical covariance (ones on the diagonal)
 % momx         Moment parameters of the simulation results
+% covthpix     The covariance matrix based on the Fisher matrix at the
+%              randomly picked solution 
 %
 % SEE ALSO:
 %
 % OSOPEN, DIAGNOS, TRIMIT, MLEOS etc
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/27/2016
+% Last modified by fjsimons-at-alum.mit.edu, 09/29/2016
 
 % Who called? Work this into the filenames
 [~,n]=star69;
@@ -52,6 +54,10 @@ thhats=load(f3);
 
 % The number of parameters solved
 np=size(thinis,2);
+
+% Report what it is trying to readd
+disp(sprintf('\n%s Reading log files:\n\n%s\n%s\n%s\n%s',...
+             upper(mfilename),f1,f2,f3,f4))
 
 % Then load and display what we have
 fid=fopen(f1,'r');
@@ -84,37 +90,45 @@ end
 
 % So THIS actually observed average is to be compared with the theory
 % Note that this is sometimes very strongly affected by outliers;
-% shouldn't give it too much credence. Try the median?
+% shouldn't give it too much credence. So now we do the MEDIAN
 avhs=median(hes,1);
 
-% This is the covariance derived from the grand average over all runs
+% Below is the covariance derived from the "grand average" over all runs
 % collected in the DIAGN file, expressed with a common scaling
 k=knums(params);
-covHav=hes2cov(trilosi(avhs),sclth0,length(k(~~k))*2);
-% This is the "partial average" over the last nh runs as reported in the
-% OSWZERO file, expressed with the same scaling again... wasn't the median
-% If it was a "blank" filler shot at the end, ignore warnings
+covHav=hes2cov(trilosi(-avhs),sclth0,length(k(~~k))*2);
+
+% Below is the "partial average" over the last nh runs as reported in the
+% OSWZERO file, expressed with the same scaling again... NOT the median
+% If it was a "blank" filler shot at the end, ignore, ignore warnings
 warning off MATLAB:singularMatrix
-covHavz=hes2cov(trilosi(avhsz),sclth0,length(k(~~k))*2);
+covHavz=hes2cov(trilosi(-avhsz),sclth0,length(k(~~k))*2);
 warning on MATLAB:singularMatrix
 
 % Also pick some random ones from the list of Hessian-derived covariances
 pix=randi(size(covh,1));
 covHts=trilosi(covh(pix,:));
 % Tell us what the three picked values were!
-disp(sprintf('\n%s picking %i %g %i for the blue display\n',...
+disp(sprintf('\n%s solution %i %g %i picked for display in blur\n',...
              upper(mfilename),thhats(pix,1:3)))
-% The theoretical AT the random one isn't the same as the observed one at
-% the random one, and THAT is what the blue line is.
-covthpix=covthosl(thhats(pix,:),k,1);
-% This should be the same as covF
-covth0=covthosl(th0,k,1);
+% The theoretical unblurred covariance evaluated at the specific solution
+% that we picked at random from the set, which is not the same as the
+% theoretical covariance evaluated at the truth, which is not the same as
+% the Hessian observed at the estimate, but still, is probably the best 
+covthpix=covthosl(thhats(pix,:),k(~~k),1);
+% The below should be the same as covF since it came out of OSWZEROE, not at zero-k
+covth0=covthosl(th0,k(~~k),1);
 
-% Take a good look at the second one, just for kicks
-disp(sprintf('black nu %f',indeks(sqrt(diag(covth0)),2)))
-disp(sprintf('blue  nu %f',indeks(sqrt(diag(covthpix)),2)))
+% For simulations 9/29/2016 any message should start going away
+diferm(covth0(:),covF(:),3)
+% But the one taking out the wavenumber at zero is the right one
+covF=covth0;
 
-% fix the theoretical covariance to have physical scaling AT THE FIRST WRITING
+% Take a good just for kicks
+% disp(sprintf('black std(nu) %f',indeks(sqrt(diag(covth0)),2)))
+% disp(sprintf('blue  std(nu) %f',indeks(sqrt(diag(covthpix)),2)))
+
+% Fix the theoretical covariance to have physical scaling AT THE FIRST WRITING
 
 % Remember the avhs is actually coming from the diagnostic file; below is untrimmed
 osdisp(th0,thhat(:,1:np),size(hes,1),avhs,Fisher,covF)
@@ -135,6 +149,6 @@ end
 % Actually, best to scale so the diagonal has unit variance
 sclcovF=covF./[diag(sqrt(covF))*diag(sqrt(covF))'];
 
-% How about we plot the observed covariance matrix instead
+% How about we plot the observed sample covariance matrix instead
 obscov=cov(thhat(:,1:np));
 obscov=obscov./[diag(sqrt(obscov))*diag(sqrt(obscov))'];

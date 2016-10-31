@@ -35,7 +35,7 @@ function G=gammiosl(k,th,params,Hk,xver)
 % F=fishiosl(k,th0); G=gammiosl(k,th0,p,Hk); H=hessiosl(k,th0,p,Hk);
 % round(abs((F+H)./F)*100) % should be small numbers
 % 
-% Last modified by fjsimons-at-alum.mit.edu, 10/20/2016
+% Last modified by fjsimons-at-alum.mit.edu, 10/31/2016
 
 defval('xver',1)
 
@@ -68,14 +68,14 @@ S=maternosp(k,th,params);
 Xk=abs(Hk).^2./S;
 
 % Initialize
-G=nan(npp,1);
+G=nan(np,1);
 
 % We're abusing the 'xver' switch to bypass saving wavenumber-dependencies
 if xver==0
   % Do it all at once, don't save the wavenumber-dependent entities
-  for ind=1:np
+  for j=1:np
     % Eq. (A53) in doi: 10.1093/gji/ggt056
-    G(ind)=mean(mth{j}.*[1-Xk]);
+    G(j)=mean(mth{j}.*[1-Xk]);
   end
 elseif xver==1
   % Initialize; no cell since all of them depend on the wave vectors
@@ -97,5 +97,4 @@ elseif xver==1
     end
   end
 end
-
 

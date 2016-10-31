@@ -43,10 +43,9 @@ defval('scl',ones(size(th)))
 % Scale up the parameter vector for the proper likelihood and score
 th=th.*scl;
 
-% Here I build the protection that the flexural rigidity,
-% subsurface-to-surface ration, and the three Matern parameters should be
-% positive. I mirror them up! Thereby messing with the iteration path,
-% but hey. It means we can use FMINUNC also.
+% Here I build the protection that the three Matern parameters should be
+% positive. I mirror them up! Thereby messing with the iteration path, but
+% hey. It means we can use FMINUNC also.
 th([1 2 3])=abs(th([1 2 3]));
 
 % Filter, perhaps if-loop if extracting the Xk proves slower
@@ -81,8 +80,7 @@ end
 % I say, time to extract HESSIOSL here also?
 
 % Get the scores at the individual wavenumbers; average
-% The correct gradient is too heterogeneous to be good so scale
-gam=gammiosl(k,th,params,Hk,0).*scl;
+gam=gammiosl(k,th,params,Hk,0).*scl(:);
 
 % Print the trajectory, seems like one element at a time gets changed
 %disp(sprintf('Current theta: %8.3g %8.3g %8.3g %8.3g %8.3g %8.3g',th))
