@@ -75,7 +75,7 @@ if xver==0
   % Do it all at once, don't save the wavenumber-dependent entities
   for j=1:np
     % Eq. (A53) in doi: 10.1093/gji/ggt056
-    G(j)=mean(mth{j}.*[1-Xk]);
+    G(j)=mean(-mth{j}.*[1-Xk]);
   end
 elseif xver==1
   % Initialize; no cell since all of them depend on the wave vectors
@@ -83,18 +83,14 @@ elseif xver==1
   % Do save the wavenumber-dependent entities
   for j=1:np
     % Eq. (A53) in doi: 10.1093/gji/ggt056
-    Gk(:,j)=mth{j}.*[1-Xk];
-    % Now the wavenumber averaging
-    G(ind)=mean(Gk);
-    % We are going to pull these things out
-    if xver==1
-      % WHICH WE SHOULD PUT SOMEWHERE ELSE
-      gkalt1(:,j)=-mth{j}-hformos(S,A{j},Hk);
-      gkalt2(:,j)=-mth{j}+hformos(S,mth{j},Hk);
-      % Check for numerical indistinguishability
-      diferm(gkalt1(:,j),Gk(:,j));
-      diferm(gkalt2(:,j),Gk(:,j));
-    end
+    Gk(:,j)=-mth{j}.*[1-Xk];
+    % Check for numerical indistinguishability
+    gkalt1(:,j)=-mth{j}-hformos(S,A{j},Hk);
+    gkalt2(:,j)=-mth{j}+hformos(S,mth{j},Hk);
+    diferm(gkalt1(:,j),Gk(:,j));
+    diferm(gkalt2(:,j),Gk(:,j));
   end
+  % Now the wavenumber averaging
+  G=mean(Gk)';
 end
 
