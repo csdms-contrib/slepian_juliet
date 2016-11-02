@@ -1,8 +1,8 @@
-function [F,cF]=hessiosl(k,th,params,Hk,xver)
-% [F,cF]=HESSIOSL(k,th,params,Hk,xver)
+function [F,covF,cF]=hessiosl(k,th,params,Hk,xver)
+% [F,covF,cF]=HESSIOSL(k,th,params,Hk,xver)
 %
 % Calculates the entries in the Hessian matrix of Olhede & Simons (2013) for
-% the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN model, after
+% the Whittle-likelihood under the UNIVARIATE ISOnTROPIC MATERN model, after
 % wavenumber averaging. Blurring is only approximately possible here, we
 % work with analytical expressions for some of the derivatives, see
 % LOGLIOSL. Zero-wavenumber excluded. No scaling asked or applied.
@@ -11,9 +11,9 @@ function [F,cF]=hessiosl(k,th,params,Hk,xver)
 %
 % k        Wavenumber(s), e.g. from KNUM2 [rad/m]
 % th       The three-parameter vector argument [not scaled]:
-%          th(1)=s2   The first Matern parameter [variance]
+%          th(1)=s2   The first Matern parameter [variance in unit^2]
 %          th(2)=nu   The second Matern parameter [differentiability]
-%          th(3)=rho  The third Matern parameter [range]
+%          th(3)=rho  The third Matern parameter [range in m]
 % params   A structure with AT LEAST these constants that are known:
 %          NyNx  number of samples in the y and x directions
 %          blurs 0 Don't blur likelihood using the Fejer window
@@ -22,12 +22,14 @@ function [F,cF]=hessiosl(k,th,params,Hk,xver)
 %          NOTE: It's not going to be a great derivative unless you could
 %          change MAOSL also. Still, the order of magnitude will be OK.
 % Hk       A complex matrix of Fourier-domain observations
-% xver     Excessive verification [0 or 1]
+% xver     Excessive verification [0 or 1] where 1 also keeps option open
+%          to output wavenumber dependence
 %
 % OUTPUT:
 %
 % F        The full-form Hessian matrix, a symmetric 3x3 matrix
-% cF       The uniquely relevant elements listed in this order:
+% covF     A covariance estimate based on this Hessian matrix
+% cF       The uniquely relevant Hessian elements listed in this order:
 %          [1] Fs2s2   [2] Fnunu  [3] Frhorho
 %          [4] Fs2nu   [5] Fs2rho [6] Fnurho
 %
@@ -41,7 +43,7 @@ function [F,cF]=hessiosl(k,th,params,Hk,xver)
 % F=fishiosl(k,th0); G=gammiosl(k,th0,p,Hk); H=hessiosl(k,th0,p,Hk);
 % round(abs((F+H)./F)*100) % should be small numbers
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/20/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/2/2016
 
 % Early setup exactly as in FISHIOSL
 defval('xver',1)
@@ -97,4 +99,11 @@ end
 % The full-form matrix
 F=trilosi(cF);
 
-% Can do an additional tracecheck here, using Option 2
+% Can do an additional TRACECHECK here, using Option 2
+
+% Determine the degrees of freedom - could make sure to deduce this from
+% the Hermiticity
+df=lk/2;
+
+% Construct the covariance matrix
+covF=inv(-F)/df;

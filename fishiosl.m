@@ -1,5 +1,5 @@
-function [F,cF]=fishiosl(k,th,xver)
-% [F,cF]=FISHIOSL(k,th,xver)
+function [F,covF,cF]=fishiosl(k,th,xver)
+% [F,covF,cF]=FISHIOSL(k,th,xver)
 %
 % Calculates the entries in the Fisher matrix of Olhede & Simons (2013) for
 % the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN model, after
@@ -11,15 +11,17 @@ function [F,cF]=fishiosl(k,th,xver)
 %
 % k        Wavenumber(s), e.g. from KNUM2 [rad/m]
 % th       The three-parameter vector argument [not scaled]:
-%          th(1)=s2   The first Matern parameter [variance]
+%          th(1)=s2   The first Matern parameter [variance in unit^2]
 %          th(2)=nu   The second Matern parameter [differentiability]
-%          th(3)=rho  The third Matern parameter [range]
-% xver     Excessive verification [0 or 1]
+%          th(3)=rho  The third Matern parameter [range in m]
+% xver     Excessive verification [0 or 1] where 1 also keeps option open
+%          to output wavenumber dependence
 %
 % OUTPUT:
 %
 % F        The full-form Fisher matrix, a symmetric 3x3 matrix
-% cF       The uniquely relevant elements listed in this order:
+% covF     A covariance estimate based on this Hessian matrix
+% cF       The uniquely relevant Fisher elements listed in this order:
 %          [1] Fs2s2   [2] Fnunu  [3] Frhorho
 %          [4] Fs2nu   [5] Fs2rho [6] Fnurho
 %
@@ -33,7 +35,7 @@ function [F,cF]=fishiosl(k,th,xver)
 % F=fishiosl(k,th0); G=gammiosl(k,th0,p,Hk); H=hessiosl(k,th0,p,Hk);
 % round(abs((F+H)./F)*100) % should be small numbers
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/20/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/2/2016
 
 % Early setup exactly as in HESSIOSL
 defval('xver',0)
@@ -77,4 +79,10 @@ end
 
 % The full-form matrix
 F=trilosi(cF);
-    
+
+% Determine the degrees of freedom - could make sure to deduce this from
+% the Hermiticity
+df=lk/2;
+
+% Construct the covariance matrix
+covF=inv(F)/df;

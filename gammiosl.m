@@ -11,9 +11,9 @@ function G=gammiosl(k,th,params,Hk,xver)
 %
 % k        Wavenumber(s), e.g. from KNUM2 [rad/m]
 % th       The three-parameter vector argument [not scaled]:
-%          th(1)=s2   The first Matern parameter [variance]
+%          th(1)=s2   The first Matern parameter [variance in unit^2]
 %          th(2)=nu   The second Matern parameter [differentiability]
-%          th(3)=rho  The third Matern parameter [range]
+%          th(3)=rho  The third Matern parameter [range in m]
 % params   A structure with AT LEAST these constants that are known:
 %          NyNx  number of samples in the y and x directions
 %          blurs 0 Don't blur likelihood using the Fejer window
@@ -35,7 +35,7 @@ function G=gammiosl(k,th,params,Hk,xver)
 % F=fishiosl(k,th0); G=gammiosl(k,th0,p,Hk); H=hessiosl(k,th0,p,Hk);
 % round(abs((F+H)./F)*100) % should be small numbers
 % 
-% Last modified by fjsimons-at-alum.mit.edu, 10/31/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/2/2016
 
 defval('xver',1)
 
@@ -75,7 +75,7 @@ if xver==0
   % Do it all at once, don't save the wavenumber-dependent entities
   for j=1:np
     % Eq. (A53) in doi: 10.1093/gji/ggt056
-    G(j)=mean(-mth{j}.*[1-Xk]);
+    G(j)=-mean(-mth{j}.*[1-Xk]);
   end
 elseif xver==1
   % Initialize; no cell since all of them depend on the wave vectors
@@ -84,13 +84,12 @@ elseif xver==1
   for j=1:np
     % Eq. (A53) in doi: 10.1093/gji/ggt056
     Gk(:,j)=-mth{j}.*[1-Xk];
-    % Check for numerical indistinguishability
+    % Check for numerical indistinguishability ->>> MOVE TO ELSEWHERE
     gkalt1(:,j)=-mth{j}-hformos(S,A{j},Hk);
     gkalt2(:,j)=-mth{j}+hformos(S,mth{j},Hk);
     diferm(gkalt1(:,j),Gk(:,j));
     diferm(gkalt2(:,j),Gk(:,j));
   end
   % Now the wavenumber averaging
-  G=mean(Gk)';
+  G=-mean(Gk)';
 end
-
