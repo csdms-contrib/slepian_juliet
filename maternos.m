@@ -23,10 +23,9 @@ function Sk=maternos(k,th,varargin)
 %
 % EXAMPLE:
 %
-% [~,th0]=simulosl;
-% difer(maternos(0,th0)-th0(1)*pi*th0(3)^2/4,8,[],NaN)
+% [~,th0]=simulosl; difer(maternos(0,th0)/th0(1)-pi*th0(3)^2/4,7,[],NaN)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/31/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/02/2016
 
 % These are always the last three elements of the input 
 s2=th(end-2);

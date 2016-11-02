@@ -1,5 +1,5 @@
-function [Lk,Xk]=Lkosl(k,th,params,Hk)
-% [Lk,Xk]=Lkosl(k,th,params,Hk)
+function [Lk,Xk]=Lkosl(k,th,params,Hk,xver)
+% [Lk,Xk]=Lkosl(k,th,params,Hk,xver)
 %
 % Computes the likelihood function for the SINGLE-FIELD isotropic Matern
 % model in Olhede & Simons (2013). When blurred, sets the zero
@@ -20,6 +20,7 @@ function [Lk,Xk]=Lkosl(k,th,params,Hk)
 %                N Blur likelihood using the Fejer window [default: N=2]
 %               -1 Blur likelihood using the exact procedure
 % Hk       A [prod(params.NyNx)*1]-column vector of complex Fourier-domain observations
+% xver     Excessive verification [0 or 1]
 %
 % OUTPUT:
 %
@@ -30,7 +31,7 @@ function [Lk,Xk]=Lkosl(k,th,params,Hk)
 %
 % LOGLIOSL
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/18/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/02/2016
 
 % Extra verification?
 defval('xver',1)
@@ -40,7 +41,7 @@ blurs=params.blurs;
 NyNx=params.NyNx;
 
 % We need the (blurred) power spectrum and its ratio to the observations
-S=maternosp(k,th,params);
+S=maternosp(th,params,xver);
 
 % The average of Xk needs to be close to one as will be tested 
 warning off MATLAB:log:logOfZero
@@ -52,8 +53,8 @@ Lk=realize(-log(S)-Xk);
 % Don't take out the zero wavenumber when there is no blurring, otherwise
 % the score won't verify if you should choose to do so. On the whole, you
 % won't want to run unblurred anything, so it won't be a big deal. 
-if blurs~=0
-  % Trouble is at the central wave numbers, we take those out 
+%if  blurs<=-1 || blurs>1
+   % Trouble is at the central wave numbers, we take those out 
   % Find the zero wavenumber
   kzero=sub2ind(NyNx,floor(NyNx(1)/2)+1,floor(NyNx(2)/2)+1);
   % Check that this is correctly done
@@ -61,4 +62,4 @@ if blurs~=0
   % Behavior is rather different if this is NOT done... knowing that it
   % will not blow up but rather be some numerically large value
   Lk(kzero)=NaN;
-end
+%end

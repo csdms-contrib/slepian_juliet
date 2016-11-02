@@ -9,10 +9,12 @@ function blurcheck(Sbar,params)
 % INPUT:
 %
 % Sbar    The unwrapped blurred spectral matrix being checked
+%         For univariate spectra, it's a column vector. 
+%         For bivariate spectra, it's [S_XX(k(:)) SXY(k(:)) SYY(k(:))]
 % params  Parameters of this experiment, the ones that are needed are:
 %         NyNx  number of samples in the y and x directions
 %
-% Last modified by fjsimons-at-alum.mit.edu, 05/04/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/02/2016
 
 % Target dimensions, the original ones
 NyNx=params.NyNx;
@@ -33,19 +35,19 @@ if size(Sbar,2)==3
     % Check the eigenvalues of the little matrix at that wavenumber
     egos=eig([Sbar(kk,1) Sbar(kk,2) ; Sbar(kk,2) Sbar(kk,3)]);
     if ~all(egos>0)
-      disp(sprintf('Some NEGATIVE eigenvalues'))
+      disp(sprintf('%s: some NEGATIVE eigenvalues',upper(mfilename)))
     end      
     if ~isreal(egos) 
-      disp(sprintf('Some IMAGINARY eigenvalues'))
+      disp(sprintf('%s: some IMAGINARY eigenvalues',upper(mfilename)))
       cpxity(kindex)=100*mean(abs(imag(egos(:))))./mean(abs(real(egos(:))));
     end
   end
   % Attempt a brief report
   try
     disp(sprintf(...
-        'BLUROS: Maximum im/re percentage out of %i tried is %5.0e%s',...
-        ntry,max(cpxity),'%'))
+        '%s: maximum IM/RE percentage out of %i tried is %5.0e%s',...
+        upper(mfilename),ntry,max(cpxity),'%'))
   catch
-    %disp(sprintf('BLUROS: No problems found'))
+    %disp(sprintf('%s: no problems found',upper(mfilename)))
   end
 end

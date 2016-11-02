@@ -1,5 +1,5 @@
-function [L,gam,momx,vr]=logliosl(k,th,params,Hk,scl)
-% [L,gam,momx,vr]=LOGLIOSL(k,th,params,Hk,scl)
+function [L,gam,momx,vr]=logliosl(k,th,params,Hk,scl,xver)
+% [L,gam,momx,vr]=LOGLIOSL(k,th,params,Hk,scl,xver)
 %
 % Calculates the full negative logarithmic likelihood and its
 % derivatives, i.e. minus LKOSL and minus GAMMAKOSL averaged over
@@ -9,10 +9,10 @@ function [L,gam,momx,vr]=logliosl(k,th,params,Hk,scl)
 % INPUT:
 %
 % k        The wavenumbers at which these are being evaluated [1/m]
-% th       The three-parameter vector argument [scaled]:
-%          th(1)=s2   The first Matern parameter, aka sigma^2
-%          th(2)=nu   The second Matern parameter
-%          th(3)=rho  The third Matern parameter
+% th       The SCALED three-parameter vector argument
+%          th(1)=s2   The first Matern parameter [variance in unit^2]
+%          th(2)=nu   The second Matern parameter [differentiability]
+%          th(3)=rho  The third Matern parameter [range in m]
 % params   A structure with AT LEAST these constants that are known:
 %          dydx  sampling interval in the y and x directions [m m]
 %          NyNx  number of samples in the y and x directions
@@ -20,8 +20,9 @@ function [L,gam,momx,vr]=logliosl(k,th,params,Hk,scl)
 %                N Blur likelihood using the Fejer window [default: N=2]
 %                -1 Blur likelihood using the exact BLUROSY procedure
 %          kiso   wavenumber beyond which we are not considering the likelihood
-% Hk       A [prod(params.NyNx)*1]-column vector of complex Fourier-domain observations
-% scl      The vector with any scalings applied to the parameter vector
+% Hk       A [prod(params.NyNx)*1]-column of complex Fourier-domain observations
+% scl      The SCALING factors applied, so that [scl.*thhat] is in units 
+% xver     Excessive verification [0 or 1]
 %
 % OUTPUT:
 %
@@ -35,7 +36,9 @@ function [L,gam,momx,vr]=logliosl(k,th,params,Hk,scl)
 %
 % HESSIOSL, FISHIOSL
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/18/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/02/2016
+
+defval('xver',1)
 
 % Default scaling is none
 defval('scl',ones(size(th)))
@@ -49,7 +52,7 @@ th=th.*scl;
 th([1 2 3])=abs(th([1 2 3]));
 
 % Filter, perhaps if-loop if extracting the Xk proves slower
-[Lk,Xk]=Lkosl(k,th,params,Hk);
+[Lk,Xk]=Lkosl(k,th,params,Hk,xver);
 
 if any(~isnan(params.kiso))
   Lk(k>params.kiso)=NaN;
@@ -79,8 +82,8 @@ end
 
 % I say, time to extract HESSIOSL here also?
 
-% Get the scores at the individual wavenumbers; average
-gam=gammiosl(k,th,params,Hk,0).*scl(:);
+% Get the appropriately scaled scores here
+gam=gammiosl(k,th,params,Hk,xver).*scl(:);
 
 % Print the trajectory, seems like one element at a time gets changed
 %disp(sprintf('Current theta: %8.3g %8.3g %8.3g %8.3g %8.3g %8.3g',th))

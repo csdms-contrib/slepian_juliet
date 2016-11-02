@@ -44,7 +44,9 @@ function b=varbias(th0,p,calx,calxo)
 % EXAMPLE: See usage in EGGERS1, EGGERS3, and so on 
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
-% Last modified by fjsimons-at-alum.mit.edu, 10/31/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/02/2016
+
+defval('xver',0)
 
 % Sadly, essentially, you really NEVER want to do option 2
 defval('calx',1)
@@ -101,7 +103,7 @@ if ~exist(fnams,'file')
     % Find the zero wavenumber
     kzero=sub2ind(NyNx,floor(NyNx(1)/2)+1,floor(NyNx(2)/2)+1);
     % Let's use the blurred spectral density
-    Sb=maternosp([],th0,p);
+    Sb=maternosp(th0,p,xver);
     % Pick out the zero-wavenumber blurred version... should be very good
     b=Sb(kzero)/prod(NyNx)/prod(dydx)*(2*pi)^2;
   elseif calx==4

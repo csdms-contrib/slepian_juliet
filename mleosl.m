@@ -68,7 +68,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %% One simulation and a chi-squared plot
 % mleosl('demo5',th0,params)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/18/2016
+% Last modified by fjsimons-at-alum.mit.edu, 10/31/2016
 
 % NEED TO CHANGE THE k(~~k) to proper accounting for kiso
 
@@ -78,7 +78,7 @@ if ~isstr(Hx)
   str0='%18s';
   str1='%13.0e ';
   str2='%13.5g %13.5g %13.5g';
-  str2='%13.0f %13.1f %13.0f';
+  str2='%13.0f %13.2f %13.0f';
   str3s='%13s ';
 
   % Supply the needed parameters, keep the givens, extract to variables
@@ -187,10 +187,10 @@ if ~isstr(Hx)
     % point that is a small random perturbation of the initial point". My
     % own "disp" output (further below) provides comparisons at the estimate
     % even when the below option is set to "off" and we don't use it for any
-    % aspect of the optimization. If you shoudl try this for blurred
-    % systems, you will fail the test and the whole thing will come to a
-    % halt. So after doing this interactively a few times, I've been
-    % setting the below to "off". 
+    % aspect of the optimization. If you should also try this for blurred
+    % systems (remove part of the condition above), you will fail the
+    % test and the whole thing will come to a halt. So after doing this
+    % interactively a few times, I've been setting the below to "off". 
     options.GradObj='off';
     % Leave the below "on" since it's inconsequential when the above is "off"
     options.DerivativeCheck='on';
@@ -203,7 +203,7 @@ if ~isstr(Hx)
       % disp('Using FMINUNC for unconstrained optimization of LOGLIOSL')
       t0=clock;
       [thhat,logli,eflag,oput,grd,hes]=...
-	  fminunc(@(theta) logliosl(k,theta,params,Hk,scl),...
+	  fminunc(@(theta) logliosl(k,theta,params,Hk,scl,xver),...
 		  thini,options);
       ts=etime(clock,t0);
      case 'con'
@@ -226,7 +226,7 @@ if ~isstr(Hx)
               nwi,nwh))
         end
         [thhat,logli,eflag,oput,lmd,grd,hes]=...
-            fmincon(@(theta) logliosl(k,theta,params,Hk,scl),...
+            fmincon(@(theta) logliosl(k,theta,params,Hk,scl,xver),...
                     thini,...
                     bounds{1},bounds{2},bounds{3},bounds{4},...
                     bounds{5}./scl,bounds{6}./scl,bounds{7},...
@@ -258,40 +258,38 @@ if ~isstr(Hx)
     return
   end
 
-  % Parameter covariance as calculated from numerical Hessian NEAR estimate
-  covh=hes2cov(-hes,scl,length(k)/2);
-
   % It is not impossible that a solution is reached which yields a
   % negative rho - which only appears in the square in MATERNOS. But if
   % we're going to calculate (approximately blurred) analytical
   % gradients and  Hessians (even using exact blurring of the spectral
   % densities) we are going to be using MATERNOSY, which will complain...
   if thhat(1)<0
-    error('Negative variance')
+    error(sprintf('%s Negative variance',upper(mfilename)))
+  end
+  if thhat(2)<0
+    thhat(2)=-thhat(2);
   end
   if thhat(3)<0
-    thhat(3)=abs(thhat(3))
+    thhat(3)=-thhat(3);
   end
 
-  % Parameter covariance as calculated from Fisher matrix AT estimate
-  [covF,F]=covthosl(thhat,k(knz),scl); 
+  % Covariance from FMINUNC/FMINCON's numerical scaled Hessian NEAR estimate
+  % Degrees of freedom for full-wavenumber domain (redundant for real data)
+  df=length(k(~~k))/2; matscl=[scl(:)*scl(:)'];
+  covh=inv(hes./matscl)/df;
 
-  keyboard
-  
-disp('scaling precision check')
+  % Fisher matrix AT the estimate, and covariance derived from it
+  [F,covF]=fishiosl(k,thhat.*scl,xver);
 
-  % Analytic (poorly blurred) Hessian, scaled for numerical comparison
-  H=Hessiosl(k,thhat.*scl,params,Hk).*[scl(:)*scl(:)'];
-  
-  % Parameter covariance as calculated from analytical Hessian at estimate
-  covH=hes2cov(H,scl,length(k)/2);
-  
+  % Analytic (poorly blurred) Hessian AT the estimate, and derived covariance
+  [H,covH]=hessiosl(k,thhat.*scl,params,Hk,xver);
+ 
   % Analytical calculations of the gradient and the Hessian poorly represent
   % the blurring (though it's much better than not trying at all), and thus,
   % are expected to be close to numerical results only without blurring
   if xver==1 
     % Analytic (unblurred) gradient, scaled for numerical comparison
-    gros=[gammiosl(k,thhat.*scl,params,Hk,xver)]'.*scl(:);
+    gros=gammiosl(k,thhat.*scl,params,Hk,xver).*scl(:);
 
     % Compare the analytic Hessian with the numerical Hessian and with
     % the Hessian expectation, which is the Fisher, at the estimate, and
@@ -303,7 +301,7 @@ disp('scaling precision check')
     disp(sprintf(sprintf('    Log-likelihood : %s',str3),logli))
 
     disp(sprintf(...
-	['\nThe numerical Hessians are usually at the penultimate iteration:']))
+	['\nThe numerical derivatives are usually at the penultimate iteration:']))
     if params.blurs~=0
       disp(sprintf(...
           ['\nWith blurring, the comparisons below are necessarily inexact:']))
@@ -316,8 +314,8 @@ disp('scaling precision check')
     disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3s,1,npp)),...
 	       ' ','(ds2)^2','(dnu)^2','(drho)^2','ds2dnu','ds2drho','dnudrho'))
     disp(sprintf(sprintf(' Numerical Hessian : %s',str3),trilos(hes)))
-    disp(sprintf(sprintf(' Analyticl Hessian : %s',str3),trilos(-H )))
-    disp(sprintf(sprintf(' Analytical Fisher : %s',str3),trilos(F  )))
+    disp(sprintf(sprintf(' Analyticl Hessian : %s',str3),trilos(-H.*matscl)))
+    disp(sprintf(sprintf(' Analytical Fisher : %s',str3),trilos( F.*matscl)))
 
     disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3s,1,npp)),...
 	       ' ','C(s2,s2)','C(nu,nu)','C(rho,rho)','C(s2,nu)','C(s2,rho)','C(nu,rho)'))
@@ -339,11 +337,10 @@ disp('scaling precision check')
 	       'Analy Hessi std',sqrt(diag(covH))))
   disp(sprintf(sprintf('%s : %s\n ',str0,str2),...
 	       'Anal Fisher std',sqrt(diag(covF))))
-  if xver==1
+  if xver==1 | xver==0
+    disp(sprintf('%s\n',repmat('_',119,1)))
     disp(sprintf('%8.3gs per %i iterations or %8.3gs per %i function counts',...
                  ts/oput.iterations*100,100,ts/oput.funcCount*1000,1000))
-  % else
-  %   disp(sprintf('\n'))
   end
 
   % Generate output as needed
@@ -438,7 +435,7 @@ elseif strcmp(Hx,'demo1')
 	fprintf(fid1,fmt1,thhat.*scl);
 	fprintf(fid2,fmt1,thini.*scl);
 	% Here we compute and write out the moments of the Xk
-	[L,~,momx]=logliosl(k,thhat,p,Hk,scl);
+	[L,~,momx]=logliosl(k,thhat,p,Hk,scl,xver);
 	% Print the optimization results and diagnostics to a different file 
 	oswdiag(fid3,fmt1,fmt3,logli,gr,hs,thhat,thini,scl,ts,e,o,....
 		var(Hx),momx,covF)
@@ -647,7 +644,7 @@ elseif strcmp(Hx,'demo5')
   % Maybe we should show different covariances than the predicted ones??
 
   % Time to rerun LOGLIOS one last time at the solution
-  [L,~,momx]=logliosl(k,thhat,p,Hk,scl);
+  [L,~,momx]=logliosl(k,thhat,p,Hk,scl,xver);
 
   disp('fjs feed this into the next one')
   disp('fjs here fits the likelihood contours')

@@ -56,13 +56,15 @@ Gk=nan(lk,np);
 
 % First compute the auxiliary parameters
 if xver==0
-  mth=mAosl(k,th);
+  mth=mAosl(k,th,xver);
 elseif xver==1
-  [mth,~,A]=mAosl(k,th);
+  [mth,~,A]=mAosl(k,th,xver);
 end
 
 % We need the (blurred) power spectrum and its ratio to the observations
-S=maternosp(k,th,params);
+[S,kk]=maternosp(th,params,xver);
+% Exclude the zero wavenumbers
+S=S(~~kk); 
 
 % The average of Xk needs to be close to one as will be tested 
 Xk=abs(Hk).^2./S;
@@ -87,8 +89,8 @@ elseif xver==1
     % Check for numerical indistinguishability ->>> MOVE TO ELSEWHERE
     gkalt1(:,j)=-mth{j}-hformos(S,A{j},Hk);
     gkalt2(:,j)=-mth{j}+hformos(S,mth{j},Hk);
-    diferm(gkalt1(:,j),Gk(:,j));
-    diferm(gkalt2(:,j),Gk(:,j));
+    diferm(gkalt1(:,j),Gk(:,j),7);
+    diferm(gkalt2(:,j),Gk(:,j),7);
   end
   % Now the wavenumber averaging
   G=-mean(Gk)';
