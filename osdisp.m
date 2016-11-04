@@ -20,7 +20,7 @@ function varargout=osdisp(th0,thhats,nl,avhs,Fisher,covF)
 %
 % The strings used 
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/19/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/02/2016
 
 % The necessary strings for formatting
 str0='%18s';
@@ -31,6 +31,7 @@ str3='%13s ';
 % Replicate to the size of the parameter vector
 str1s=repmat(str1,size(th0));
 str2s=repmat(str2,size(th0));
+%str1s='%13.0f %13.2f %13.0f';
 
 % Don't use STRUC2ARRAY since we want them in our own order
 % But see the reordering solution in OSWZEROB

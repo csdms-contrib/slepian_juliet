@@ -1,5 +1,5 @@
-function Sbar=bluros(S,params,xver)
-% Sbar=BLUROS(S,params,xver)
+function [Sbar,k]=bluros(S,params,xver)
+% [Sbar,k]=BLUROS(S,params,xver)
 %
 % Spectral blurring with periodogram of a boxcar. If we're talking about a
 % matrix, there are three columns, and there can be an eigenvalue check.
@@ -26,6 +26,7 @@ function Sbar=bluros(S,params,xver)
 %
 % Sbar    The blurred spectral matrix, interpolated to original requested
 %         dimension as identified by 'params' from the input
+% k       The wavenumber matrix (the norm of the wave vectors), unwrapped
 %
 % SEE ALSO:
 %
@@ -39,7 +40,7 @@ function Sbar=bluros(S,params,xver)
 %
 % Maybe should formally increase it in those cases so as to never worry?
 %
-% Last modified by fjsimons-at-alum.mit.edu, 09/29/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/02/2016
 
 if params.blurs<0
   error('You should be running BLUROSY, not BLUROS!')
@@ -52,19 +53,15 @@ defval('xver',1)
 NyNx=params.NyNx;
 dydx=params.dydx;
 
+% The unblurred-property wavenumber grid
+[k,dci,~,kx,ky]=knums(params);
+% The blurred-property wavenumber grid
+[~,kzero,~,kx2,ky2]=knums(params,1);
+
 if xver==1
-  % The unblurred wavenumbers
-  [k,dci,~,kx,ky]=knums(params);
-  % The blurred wavenumbers
-  [~,kzero,~,kx2,ky2]=knums(params,1);
   % Do the check, don't bother with dcn2 as that's done inside knum2
   diferm(k(dci(1),dci(2)))
   diferm(k(kzero))
-else
-  % The unblurred wavenumbers
-  [~,~,~,kx,ky]=knums(params);
-  % The blurred wavenumbers
-  [~,~,~,kx2,ky2]=knums(params,1);
 end
 
 % Find out what you've actually been given, remember S worked on KNUMS
@@ -88,10 +85,9 @@ end
 % Note that the kernel veluas are very different depending on even/odd dimensions
 Fejk=fftshift(abs(fft2(repmat(1/prod(NyNx)/blurs,NyNx),NyNx2(1),NyNx2(2))).^2);
 
-% Make sure it is unitary and norm-preserving
-difer(sum(Fejk(:))-1,[],[],NaN)
-
 if xver==1
+  % Make sure it is unitary and norm-preserving
+  difer(sum(Fejk(:))-1,[],[],NaN)
   % Check Hermiticity of the Fejer kernel, no reason to doubt it
   hermcheck(Fejk)
 end
@@ -116,16 +112,20 @@ for in=1:size(S,2)
   Sbar(:,in)=Hh(:);
 end
 
-% Check that no extrapolation was demanded, effectively
-% but know that griddedInterpolant would have EXTRApolated fine
-difer(sum(isnan(Sbar(:))),[],2,NaN)
+if xver==1
+  % Check that no extrapolation was demanded, effectively
+  % but know that griddedInterpolant would have EXTRApolated fine
+  difer(sum(isnan(Sbar(:))),[],2,NaN)
+% Check Hermiticity and positive-definiteness
+  blurcheck(Sbar,params)
+end
+
+% Produce the unwrapped wavenumbers if you've request them to be output
+if nargout>1
+  k=k(:);
+end
 
 % Should use the Claerbout helix! Not so, says Sergey Fomel.
 % convmtx2 needs more memory
 % Actually, should look into FFTW. But also limit to halfplane.
 % disp(sprintf('BLUROS %i %i %i',blurs,NyNx2(1),NyNx2(2)));
-
-% Check Hermiticity and positive-definiteness
-if xver==1
-  blurcheck(Sbar,params)
-end

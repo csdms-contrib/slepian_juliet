@@ -2,7 +2,9 @@ function [th0,thhats,params,covF,covHav,covHts,E,v,obscov,sclcovF,momx,covthpix]
 % [th0,thhats,params,covF,covHav,covHts,E,v,obscov,sclcovF,momx,covthpix]=OSLOAD(datum,perc)
 %
 % Loads all four of the output diagnostic files produced by the suite of
-% programs following Simons & Olhede (2013). 
+% programs following Simons & Olhede (2013). Data files are, like,
+% 'mleosl_thzro_16-Jun-2015-64-2', 'mleosl_thini_16-Jun-2015-64-2',
+% 'mleosl_thhat_16-Jun-2015-64-2', 'mleosl_diagn_16-Jun-2015-64-2', etc.
 %
 % INPUT:
 %
@@ -29,7 +31,7 @@ function [th0,thhats,params,covF,covHav,covHts,E,v,obscov,sclcovF,momx,covthpix]
 %
 % OSOPEN, DIAGNOS, TRIMIT, MLEOS etc
 %
-% Last modified by fjsimons-at-alum.mit.edu, 09/29/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/04/2016
 
 % Who called? Work this into the filenames
 [~,n]=star69;
@@ -54,6 +56,9 @@ thhats=load(f3);
 
 % The number of parameters solved
 np=size(thinis,2);
+
+% Could be instructive to ascertain no patterns are in
+% for i=1:np ; plot(thinis(:,i),thhats(:,i),'o'); pause; end
 
 % Report what it is trying to readd
 disp(sprintf('\n%s Reading log files:\n\n%s\n%s\n%s\n%s',...
@@ -96,30 +101,33 @@ avhs=median(hes,1);
 % Below is the covariance derived from the "grand average" over all runs
 % collected in the DIAGN file, expressed with a common scaling
 k=knums(params);
-covHav=hes2cov(trilosi(-avhs),sclth0,length(k(~~k))*2);
+
+disp('TRILOSI was changed so new runs need to undo this')
+df=length(k(~~k))*2; matscl=[sclth0(:)*sclth0(:)'];
+covHav=inv(trilosi_old(-avhs)./matscl)/df;
 
 % Below is the "partial average" over the last nh runs as reported in the
 % OSWZERO file, expressed with the same scaling again... NOT the median
 % If it was a "blank" filler shot at the end, ignore, ignore warnings
 warning off MATLAB:singularMatrix
-covHavz=hes2cov(trilosi(-avhsz),sclth0,length(k(~~k))*2);
+covHavz=inv(trilosi_old(-avhsz)./matscl)/df;
 warning on MATLAB:singularMatrix
 
 % Also pick some random ones from the list of Hessian-derived covariances
 pix=randi(size(covh,1));
-covHts=trilosi(covh(pix,:));
+covHts=trilosi_old(covh(pix,:));
 % Tell us what the three picked values were!
 disp(sprintf('\n%s solution %i %g %i picked for display in blur\n',...
              upper(mfilename),thhats(pix,1:3)))
-% The theoretical unblurred covariance evaluated at the specific solution
+% The Fisher-based unblurred covariance evaluated at the specific solution
 % that we picked at random from the set, which is not the same as the
 % theoretical covariance evaluated at the truth, which is not the same as
 % the Hessian observed at the estimate, but still, is probably the best 
-covthpix=covthosl(thhats(pix,:),k(~~k),1);
+[~,covthpix]=fishiosl(k,thhats(pix,:),1);
 % The below should be the same as covF since it came out of OSWZEROE, not at zero-k
-covth0=covthosl(th0,k(~~k),1);
+covth0=fishiosl(k,th0,1);
 
-% For simulations 9/29/2016 any message should start going away
+% For simulations past 9/29/2016 any message should start going away
 diferm(covth0(:),covF(:),3)
 % But the one taking out the wavenumber at zero is the right one
 covF=covth0;

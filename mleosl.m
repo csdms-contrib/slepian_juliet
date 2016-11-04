@@ -1,5 +1,5 @@
 function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
-% [thhat,covF,logli,thini,scl,params,eflag,oput,grd,hes,Hk,k,options,bounds]=...
+% [thhat,covFHh,lpars,scl,thini,params,Hk,k]=...
 %          MLEOSL(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % Performs a maximum-likelihood estimation for SINGLE FIELDS as in
@@ -34,19 +34,23 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % thhat    The maximum-likelihood estimate of the vector [scaled]:
 %          [s2 nu rho], in units of variance, "nothing", and distance, see SIMULOSL
-% covF     A covariance estimate, from the Fisher matrix, at the estimate
-% logli    The maximized value of the likelihood
-% thini    The scaled starting guess used in the optimization
+% covFHh   The covariance estimates:
+%          covFHh{1} ex Fisher matrix AT the estimate [FISHIOSL]
+%          covFHh{2} ex analytical Hessian matrix AT the estimate [HESSIOSL]
+%          covFHh{3} ex numerical Hessian matrix NEAR the estimate [FMINUNC/FMINCON]
+% lpars    The logarithmic likelihood and its derivatives AT or NEAR the estimate
+%          lpars{1} the numerical logarithmic likelihood [FMINUNC/FMINCON]
+%          lpars{2} the numerical scaled gradient, or score [FMINUNC/FMINCON]
+%          lpars{3} the numerical scaled second derivative, or Hessian [FMINUNC/FMINCON]
+%          lpars{4} the exit flag of the FMINUNC/FMINCON procedure [bad if 0]
+%          lpars{5} the output structure of the FMINUNC/FMINCON procedure
+%          lpars{6} the options used by the FMINUNC/FMINCON procedure
+%          lpars{7} any bounds used by the  FMINUNC/FMINCON procedure
 % scl      The scaling applied as part of the optimization procedure
-% params   The known constants used inside, see above
-% eflag    The exit flag of the optimization procedure [bad if 0]
-% oput     The output structure of the optimization procedure
-% grd      The scaled gradient of the misfit function at the estimate
-% hes      The scaled Hessian of the misfit function at the estimate
-% Hk       The spectral-domain interface topography after deconvolution
+% thini    The scaled starting guess used in the optimization procedure
+% params   The known constants used inside, see under INPUT
+% Hk       The spectral-domain version of the spatial-domian vector Hx
 % k        The wavenumbers on which the estimate is actually based
-% options  The options used by the optimization procedure
-% bounds   The bounds used by the optimization procedure
 %
 % NOTE: 
 %
@@ -343,8 +347,20 @@ if ~isstr(Hx)
                  ts/oput.iterations*100,100,ts/oput.funcCount*1000,1000))
   end
 
+  % Reorganize the output into cell arrays
+  covFHh{1}=covF;
+  covFHh{2}=covH;
+  covFHh{3}=covh;
+  lpars{1}=logli;
+  lpars{2}=grd;
+  lpars{3}=hes;
+  lpars{4}=eflag;
+  lpars{5}=oput;
+  lpars{6}=options;
+  lpars{7}=bounds;
+
   % Generate output as needed
-  varns={thhat,covF,logli,thini,scl,params,eflag,oput,grd,hes,Hk,k,options,bounds};
+  varns={thhat,covFHh,lpars,scl,thini,params,Hk,k,options,bounds};
   varargout=varns(1:nargout);
 elseif strcmp(Hx,'demo1')
   % Runs a series of simulations. See 'demo2' to display them.
@@ -371,7 +387,7 @@ elseif strcmp(Hx,'demo1')
   % The number of parameters to solve for
   np=3;
   
-  % Open files and return format strings
+  % Open 'thzro', 'thini', 'thhat' and 'diagn' files and return format strings
   [fid0,fid1,fid2,fid3,fmt1,fmt2,fmt3,fmtf,fmte,fmtd,fmtc]=...
       osopen(np);
 
@@ -391,14 +407,14 @@ elseif strcmp(Hx,'demo1')
     % Form the maximum-likelihood estimate, pass on the params, use th0
     % as the basis for the perturbed initial values. Remember hes is scaled.
     t0=clock;
-    [thhat,covF,logli,thini,scl,p,e,o,gr,hs,Hk,k,ops,bnds]=...
+    [thhat,covFHh,lpars,scl,thini,p,Hk,k]=...
 	mleosl(Hx,[],p,algo,[],th0);
     ts=etime(clock,t0);
 
     % Initialize the THZRO file... note that the bounds may change
     % between simulations, and only one gets recorded here
     if index==1 && labindex==1
-      oswzerob(fid0,th0,p,ops,bnds,fmt1,fmt2)
+      oswzerob(fid0,th0,p,lpars{6},lpars{7},fmt1,fmt2)
     end
     
     % If a model was found, keep the results, if not, they're all NaNs
@@ -423,22 +439,24 @@ elseif strcmp(Hx,'demo1')
     try
       % Maybe I'm too restrictive in throwing these out? Maybe the
       % Hessian can be slightly imaginary and I could still find thhat
-      if isreal([logli gr(:)']) ...
+      if isreal([lpars{1} lpars{2}']) ...
 	    && all(thhat>0) ...
 	    && all(~isnan(thhat)) ...
-	    && o.iterations > itmin ...
-	    && o.firstorderopt < optmin
+	    && lpars{5}.iterations > itmin ...
+	    && lpars{5}.firstorderopt < optmin
 	good=good+1;
 	% Build the average of the Hessians for printout later
-	avH=avH+hs./[scl(:)*scl(:)'];
+	avH=avH+lpars{3}./[scl(:)*scl(:)'];
 	% Reapply the scaling before writing it out
 	fprintf(fid1,fmt1,thhat.*scl);
 	fprintf(fid2,fmt1,thini.*scl);
 	% Here we compute and write out the moments of the Xk
-	[L,~,momx]=logliosl(k,thhat,p,Hk,scl,xver);
+	[L,~,momx]=logliosl(k,thhat,p,Hk,scl,0);
+        % This better be close
+        diferm(L,lpars{1})
 	% Print the optimization results and diagnostics to a different file 
-	oswdiag(fid3,fmt1,fmt3,logli,gr,hs,thhat,thini,scl,ts,e,o,....
-		var(Hx),momx,covF)
+	oswdiag(fid3,fmt1,fmt3,lpars{1},lpars{1},lpars{3},thhat,thini,scl,ts,lpars{4},lpars{5},....
+		var(Hx),momx,covFHh{1})
       end
     end
   end
@@ -449,8 +467,8 @@ elseif strcmp(Hx,'demo1')
   if N==0
     [Hx,th0,p,k]=simulosl(th0,params); 
     good=1; avH=avH+1; 
-    [~,~,~,~,~,~,~,~,~,~,~,~,ops,bnds]=mleosl(Hx,[],[],'klose');
-    oswzerob(fid0,th0,p,ops,bnds,fmt1,fmt2)
+    [~,~,lpars]=mleosl(Hx,[],[],'klose');
+    oswzerob(fid0,th0,p,lpars{6},lpars{7},fmt1,fmt2)
   end
   
   if good>=1 
@@ -461,12 +479,18 @@ elseif strcmp(Hx,'demo1')
     avH=avH.*[sclth0(:)*sclth0(:)']/good;
 
     % Now compute the theoretical covariance and scaled Fisher, avoid zero-k
-    [covF,F]=covthosl(th0./sclth0,k(knz),sclth0);
+    [F,covF]=fishiosl(k,th0);
+    matscl=[sclth0(:)*sclth0(:)'];
+    
+    
+    
+    error('fix and compare formatting issues')
+    
     % Of course when we don't have the truth we'll build the covariance
     % from the single estimate that we have just obtained. This
     % covariance would then be the only thing we'd have to save.
     if labindex==1
-      oswzeroe(fid0,sclth0,avH,good,F,covF,fmtc,fmte,fmtf)
+      oswzeroe(fid0,sclth0,avH,good,F./matscl,covFHh{1},fmtc,fmte,fmtf)
     end
   end
   
@@ -482,7 +506,6 @@ elseif strcmp(Hx,'demo2')
 
   % Load everything you know about this simulation
   [th0,thhats,p,covF,covHav,covHts,~,~,~,~,momx,covthpix]=osload(datum);
-
   % Report the findings of all of the moment parameters
   disp(sprintf('m(m(Xk)) %f m(v(Xk)) %f\nm(magic) %f v(magic) %f',...
 	      mean(momx),var(momx(:,end))))
@@ -529,7 +552,7 @@ elseif strcmp(Hx,'demo2')
     % See RB X, p. 51 about the skewness of a chi-squared - just sayin'.
     % We don't change the number of degrees of freedom! If you have used
     % twice the number, and given half correlated variables, you do not
-    % change the variance, that is the whole point. Unlike in COVTHOSL
+    % change the variance, that is the whole point. Unlike in FISHIOSL
     % where you make an analytical prediction that does depend on the
     % number and which therefore you need to adjust.
     k=knums(p); varpred=8/[length(k(~~k))];
@@ -604,10 +627,10 @@ elseif strcmp(Hx,'demo5')
   % Take a look at the unblurred theoretical covariance at the estimate,
   % to compare to the observed blurred Hessian; in the other demos we
   % compare how well this works after averaging
-  [covthat,F]=covthosl(thhat,k,scl);
+  [F,covthat]=fishiosl(k,thhat.*scl);
 
   % Collect the theoretical covariance for the truth for the title
-  covth=covthosl(th0./scl,k,scl);
+  covth=fishiosl(k,th0);
  
   % Take a look at the scaled Fisher to compare with the scaled Hessian  
   F;

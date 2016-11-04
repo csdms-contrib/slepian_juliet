@@ -1,5 +1,5 @@
-function Sbar=blurosy(th0,params,xver,method)
-% Sbar=blurosy(th0,params,xver,method)
+function [Sbar,k]=blurosy(th,params,xver,method)
+% [Sbar,k]=blurosy(th,params,xver,method)
 %
 % Spectral blurring with periodogram of a boxcar, for univariate cases.
 % This is the exact, fast, explicit way which requires no convolutional
@@ -7,10 +7,10 @@ function Sbar=blurosy(th0,params,xver,method)
 %
 % INPUT:
 %
-% th0      The true parameter vector with elements:
-%          th0(1)=s2   The first Matern parameter, aka sigma^2 
-%          th0(2)=nu   The second Matern parameter 
-%          th0(3)=rho  The third Matern parameter 
+% th      The true parameter vector with elements:
+%         th(1)=s2   The first Matern parameter, aka sigma^2 
+%         th(2)=nu   The second Matern parameter 
+%         th(3)=rho  The third Matern parameter 
 % params  Parameters of this experiment, the ones that are needed are:
 %         dydx  sampling interval in the y and x directions [m m]
 %         NyNx  number of samples in the y and x directions
@@ -23,12 +23,13 @@ function Sbar=blurosy(th0,params,xver,method)
 %
 % Sbar    The blurred spectral matrix, on the original requested
 %         dimension as identified by 'params' from the input
+% k       The wavenumber matrix (the norm of the wave vectors), unwrapped
 %
 % SEE ALSO:
 %
-% SIMULOSL, BLUROS
+% SIMULOSL, BLUROS, MATERNOSP, BLURCHECK
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/18/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/02/2016
 
 if params.blurs>=0
   error('Are you sure you should be running BLUROSY, not BLUROS?')
@@ -59,7 +60,7 @@ switch method
   % Here is the triangle grid
   t=bsxfun(@times,triy,trix);
   % Here is the blurred covariance on the 'double' grid
-  Hh=fftshift(realize(fft2(ifftshift(maternosy(y,th0).*t))));
+  Hh=fftshift(realize(fft2(ifftshift(maternosy(y,th).*t))));
 
   % Normalize so that the C(y) is the proper transform of S(k)
   Hh=Hh*prod(dydx)/(2*pi)^2;
@@ -83,14 +84,21 @@ switch method
   t=bsxfun(@times,triy,trix);
   % Need the Matern spatial covariance on the distance grid...
   % multiplied by the transform of the Fejer kernel
-  sxx=maternosy(y,th0).*t;
+  sxx=maternosy(y,th).*t;
   % Pick out a column and a row
   sxc=sxx(:,1); sxr=sxx(1,:);
   % Produce the exact blurred spectrum, adjust the normalization here also
-  Sbar=fftshift(4*realize(fft2(sxx))-2*realize(bsxfun(@plus,fft(sxc),fft(sxr)))-3*th0(1));
+  Sbar=fftshift(4*realize(fft2(sxx))-2*realize(bsxfun(@plus,fft(sxc),fft(sxr)))-3*th(1));
 end
 
 % Check Hermiticity
 if xver==1
   blurcheck(Sbar,params)
 end
+
+% Produce the unwrapped wavenumbers if you've request them to be output
+if nargout>1
+  k=knums(params);
+  k=k(:);
+end
+

@@ -31,7 +31,7 @@ function [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covh]=diagnos(fname,ddir,
 %
 % OSOPEN, OSLOAD (with which it needs to match!)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 09/29/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/04/2016
 
 defval('ddir','/u/fjsimons/PROGRAMS/MFILES/olhede4')
 defval('fname','mleosl_diagn_11-Jun-2015')
