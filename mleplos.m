@@ -14,9 +14,10 @@ function varargout=mleplos(thhats,th0,covF,covHav,covthpix,E,v,params,name)
 %            th0(3/4)=s2   The first Matern parameter, aka sigma^2 
 %            th0(4/5)=nu   The second Matern parameter 
 %            th0(5/6)=rho  The third Matern parameter 
-% covF       The covariance matrix based on the Fisher at the truth or estimate 
-% covHav     The covariance matrix based on the average Hessian matrix
-% covthpix   The covariance matrix based on the Fisher at a random estimate
+% covF       The covariance matrix based on the Fisher at the truth
+% covHav     The covariance matrix based on the average numerical Hessian
+%            matrix at the individual estimates
+% covthpix   The covariance matrix based on the numerical Hessian at a random estimate
 % E          Young's modulus (not used for single fields)
 % v          Poisson's ratio (not used for single fields)
 % params     The structure with the fixed parameters from the experiment
@@ -92,7 +93,7 @@ for ind=1:np
     stdH=NaN;
   end
   if ~isempty(covthpix)
-    % Error estimate based on one particular randomly picked Fisher
+    % Error estimate based on one particular randomly picked Hessian
     stdHts=real(sqrt(covthpix(ind,ind)));
   else
     stdHts=NaN;
@@ -119,24 +120,26 @@ for ind=1:np
   % What is the percentage captured within the range?
   nrx=20; nry=15;
   set(ah(ind),'xlim',stats([1 end]),'xtick',stats,'xtickl',nstats)
+
+  % Truth and range based on the Fisher matrix at the truth... 
   hold on
   p0(ind)=plot([th0i th0i],ylim,'k-');
   halfup=indeks(ylim,1)+range(ylim)/2;
-  % Covariance based on the Fisher matrix at the truth... didn't like this plot
   ps(ind)=plot(th0i+[-1 1]*stdF,...
 	       [halfup halfup],'k-'); 
+  % Didn't like this range bar in the end
   delete(ps(ind))
   
   % Estimate x-axis from observed means and variances
   xnorm=linspace(nstats(1),nstats(end),100)*sobs+mobs;
   % Normal distribution based on the Fisher matrix at the truth
-  ps(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdF));
+  psF(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdF));
   % Based on the average/median Hessian matrix
-  pha(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdH),'--');
-  % Based on one of them picked at random, Fisher at estimate
-  phats(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdHts),'-');
+  psH(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdH));
+  % Based on one of them picked at random, numerical Hessian at estimate
+  psh(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdHts));
   % Based on the actually observed covariance of these data
-  po(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,sobs),'-');
+  pth(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,sobs));
 
   % Some annotations
   % Experiment size, he giveth, then taketh away
@@ -218,32 +221,22 @@ shrink(ah(np+1:end),aps2(1),aps2(2))
 
 movev(ah(length(ah)/2+1:end),mv)
 axes(ah(1))
-yl=ylabel('posterior probability density');
+yl=ylabel('pthsterior probability density');
 longticks(ah)
 % Normal distribution based on the Fisher matrix at the truth
-set(ps,'linew',1,'color','k')
-% Based on the average/median Hessian matrix - will be deleted
-set(pha,'linew',1,'color','b')
+set(psF,'linew',1,'color','b')
+% Based on the average/median Hessian matrix
+set(psH,'linew',2,'color','k')
+% Based on the randomly picked Hessian matrix
+set(psh,'linew',1,'color','k')
 % Based on the actually observed covariance of these data
-set(po,'linew',2,'color',grey(3.5))
-% FOCUS ON THE COVF first and foremost, the mean/median Hessians are
-% sometimes out of control even though the solutions look really good and
-% to the eye the numbers look good also, sometimes
-
-% Sometimes really off, and still wonder why
-% Based on Fisher at the truth 
-delete(pha)
-% Based on Fisher at a randomly picked estimate 
-delete(phats)
-% Not interesting as it is well captured by the kde
-% delete(po)
-
-nolabels(ah(2:np),2)
-disp(sprintf('\n'))
-fig2print(gcf,'landscape')
+set(pth,'linew',2,'color',grey(3.5))
 
 % Do this so the reduction looks slightly better
 set(yl,'FontS',12)
+nolabels(ah(2:np),2)
+disp(sprintf('\n'))
+fig2print(gcf,'landscape')
 
 % Stick the params here somewhere so we can continue to judge
 movev(ah,-.1)
@@ -268,9 +261,9 @@ if np>3
 else
   movev(tt,-3.5)
 end
-% Also quote the Fisher prediction at a random estimate
+% Also quote the numerical Hessian prediction at a random estimate
 [answ,answs]=osansw(th0,covthpix,E,v);
-disp(sprintf('\n%s','Fisher-based covariance evaluated at a randomly picked estimate'))
+disp(sprintf('\n%s','Numerical-Hessian-based covariance evaluated at a randomly picked estimate'))
 disp(sprintf(answs,answ{:}))
 
 % Make a basic x-y plot
@@ -307,3 +300,5 @@ end
 % Output
 varns={ah,ha,yl,xl,tl};
 varargout=varns(1:nargout);
+
+% Subfunction to compute standard deviations

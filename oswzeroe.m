@@ -1,38 +1,38 @@
-function oswzeroe(fid,scl,avH,good,F,covF,fmtc,fmte,fmtf)
-% OSWZEROE(fid,scl,avH,good,F,covF,fmtc,fmte,fmtf)
+function oswzeroe(fid,scl,avH,good,F,covF,fmti)
+% OSWZEROE(fid,scl,avH,good,F,covF,fmti)
 % 
-% Writes the (e)nd of a THZRO file as we have come to use it 
+% Writes the (e)nd of a THZRO diagnostic file
 %
 % INPUT:
 %
 % fid          The file id (from FOPEN)
 % scl          The scaling factors for the Fisher matrix 
-% avH          The full-form sample-average Hessian matrix
+% avH          The full-form sample-average scaled Hessian matrix
 % good         The number of samples over which this was averaged
-% F            The full-form scaled Fisher matrix
+% F            The full-form scaled Fisher matrix, at the truth
 % covF         The full-form theoretical covariance matrix, based on F
-% fmtc/e/f     Strings containing formatting instructions    
+% fmti         Strings containing formatting instructions    
 %
 % SEE ALSO: 
 %
-% OSWZEROB, OSRZERO
+% OSWZEROB, OSRZERO, OSWDIAG, DIAGNOS
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/22/2015
+% Last modified by fjsimons-at-alum.mit.edu, 11/15/2016
 
 % Print the scaling of the theoretical values
-fprintf(fid,'%s\n','the scaling factors');
-fprintf(fid,fmtc,scl);
+fprintf(fid,'%s\n','The scaling factors');
+fprintf(fid,fmti{4},scl);
 
-% Now print the theoretical covariance to file also
-fprintf(fid,'%s\n','the theoretical covariance');
-fprintf(fid,fmtf,trilos(covF));
+% Now print the unscaled theoretical covariance to file also
+fprintf(fid,'%s\n','The covariance from the Fisher matrix at the truth');
+fprintf(fid,fmti{1},trilos(covF));
 
 % Print the scaled Fisher matrix, the expected value of the Hessian
-fprintf(fid,'%s\n','the unblurred scaled Fisher matrix');
-fprintf(fid,fmte,trilos(F));
+fprintf(fid,'%s\n','The unblurred scaled Fisher matrix at the truth');
+fprintf(fid,fmti{2},trilos(F));
 
-% Print the observed average of the Hessians (over last set of runs)
+% Print the observed scaled average of the Hessians (over last set of runs)
 fprintf(fid,'%s\n',...
-        sprintf('the scaled Hessian matrix averaged over whichever %i runs last output',...
+        sprintf('The scaled numerical Hessian matrix averaged over whichever %i runs last output',...
                 good));
-fprintf(fid,fmte,trilos(avH));
+fprintf(fid,fmti{2},trilos(avH));

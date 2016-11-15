@@ -14,16 +14,16 @@ function [th,p,scl,avH,F,covF,nh]=osrzero(fid,np)
 % th         The true parameter vector
 % p          The parameter structure of the simulation
 % scl        The scaling factors
-% avH        The average Hessian matrix
-% F          The unblurred Fisher matrix
-% covF       The predicted covariance matrix, based on F
+% avH        The average scaled numerical Hessian matrix at the estimates
+% F          The unblurred scaled Fisher matrix at the truth
+% covF       The covariance matrix, based on F at the truth
 % nh         The number of simulations yielding avH
 %
 % SEE ALSO: 
 %
 % OSWZEROE, OSWZEROB, OSLOAD
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/22/2015
+% Last modified by fjsimons-at-alum.mit.edu, 11/14/2016
 
 % The number of unique entries in an np*np symmetric matrix
 npp=np*(np+1)/2;
@@ -36,15 +36,15 @@ th=fscanf(fid,'%f',np)';
 % The other parameters of the experiment, see SIMULOS and MLEOS
 fgetl(fid); fgetl(fid);
 
-% If this involves gravity - or not
+% Whether this involves gravity - or not
 if np>=5
-  fields={'DEL','g','z2','dydx','NyNx','blurs','kiso'};
-  p=fscanf(fid,'%f',10)';
-  valjus={[p(1:2)] p(3) p(4) [p(5:6)] p(7:8) p(9) p(10)};
+  fields={'DEL','g','z2','dydx','NyNx','blurs','kiso','quart'};
+  p=fscanf(fid,'%f',11)';
+  valjus={[p(1:2)] p(3) p(4) [p(5:6)] p(7:8) p(9) p(10) p(11)};
 else
-  fields={               'dydx','NyNx','blurs','kiso'};
-  p=fscanf(fid,'%f',6)';
-  valjus={[p(1:2)] [p(3:4)] p(5) p(6)};
+  fields={               'dydx','NyNx','blurs','kiso','quart'};
+  p=fscanf(fid,'%f',7)';
+  valjus={[p(1:2)] [p(3:4)] p(5) p(6) p(7)};
 end
 % Structurize those values
 p=cell2struct(valjus,fields,2);
@@ -66,7 +66,7 @@ end
 % The scale used for the Fisher matrix
 scl=fscanf(fid,'%f',np)';
 
-% This is the theoretical covariance of the estimate
+% This is the Fisher-based covariance at the truth
 fgetl(fid); fgetl(fid);
 covF=trilosi(fscanf(fid,'%f',npp));
 
@@ -78,7 +78,7 @@ F=fscanf(fid,'%f',npp)';
 % Don't necessarily look at THIS partial average of the Hessians
 % through the iterations as it's just of the last few iterations that
 % add cumulatively to THINI and THHAT. We are getting this again from
-% the full file diagnos. So if we have interrupted a sequence of
+% the full file DIAGNOS. So if we have interrupted a sequence of
 % simulations we need run one more simulation to close out this
 % file properly, which we do by setting N=0 in MLEROS etc.
 fgetl(fid); 

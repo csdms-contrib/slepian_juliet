@@ -12,15 +12,15 @@ function varargout=osdisp(th0,thhats,nl,avhs,Fisher,covF)
 % thhats     Estimated parameter vector, OR
 % params     A structure with the fixed parameter settings
 % nl         Number of experiments over which the average Hessian is reported
-% avhs       Average Hessian matrix
-% Fisher     Fisher matrix
-% covF       The theoretical parameter covariance based on the Fisher matrix
+% avhs       Average Hessian matrix at the estimates
+% Fisher     Fisher matrix at the truth
+% covF       The covariance based on the Fisher matrix at the truth
 %
 % OUTPUT:
 %
 % The strings used 
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/02/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/15/2016
 
 % The necessary strings for formatting
 str0='%18s';
@@ -53,8 +53,9 @@ else
   % Estimated values
   disp(sprintf(sprintf('%s : %s \n',str0,str1s),...
 	       'Average estimated theta',mean(thhats,1)))
-  % Average Hessian and Fisher matrix
-   disp(sprintf('Over %i simulations, the average Hessian and the unblurred Fisher matrix are',nl))
+  % Average numerical Hessian and Fisher matrix at the truth
+   disp(sprintf(['Over %i simulations, the average numerical Hessian and' ...
+		 ' the Fisher matrix at the truth are'],nl))
    disp(sprintf(...
        '|%4.2f|%s apart on average (the relevant diagn file had the full information)',...
        1/100*round(100*mean(abs([avhs-Fisher]'./Fisher'*100))),'%'))

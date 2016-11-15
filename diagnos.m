@@ -1,5 +1,5 @@
-function [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covh]=diagnos(fname,ddir,np)
-% [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covh]=DIAGNOS(fname,ddir,np)
+function [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covFHh]=diagnos(fname,ddir,np)
+% [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covFHh]=DIAGNOS(fname,ddir,np)
 %
 % Reads in a single file with diagnostics from MLEOS, MLEROS0, MLEROS.
 %
@@ -20,18 +20,20 @@ function [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covh]=diagnos(fname,ddir,
 % thini    The starting guess used in the optimization
 % tseiter  Time taken, error code, number of iterations
 % scl      The scaling applied as part of the optimization procedure
-% L        The likelihood of this solution
-% gam      The score, or first derivative of the likelihood
-% hes      The Hessian, second derivative of the likelihood
-% optis    The first-order optimality condition returned by FMINUNC
+% L        The likelihood of this solution, by FMINUNC/FMINCON
+% gam      The score, or first derivative of the likelihood, by FMINUNC/FMINCON
+% hes      The Hessian, second derivative of the likelihood, by FMINUNC/FMINCON
+% optis    The first-order optimality condition, by FMINUNC/FMINCON
 % momx     The various moments of the quadratic piece of the likelihood
-% covh     The asymptotic covariances derived from the Hessian at the solution
+% covFHh   A covariance matrix for the estimate, watch the
+%          calling function (Anal Fisher-based? Anal
+%          Hessian-based? Numerical Hessian based? Evaluated where?)
 %
 % SEE ALSO:
 %
 % OSOPEN, OSLOAD (with which it needs to match!)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/04/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/14/2016
 
 defval('ddir','/u/fjsimons/PROGRAMS/MFILES/olhede4')
 defval('fname','mleosl_diagn_11-Jun-2015')
@@ -64,7 +66,7 @@ momx=nan(ndim,3);
 thhat=deal(nan(ndim,np+nvar));
 [thini,gam]=deal(nan(ndim,np));
 hes=nan(ndim,npp);
-covh=nan(ndim,npp);
+covFHh=nan(ndim,npp);
 
 % Rarely, in SPMD mode does the file get written too quickly and does a
 % confusion between labs happen - look into the file and fix easily
@@ -103,8 +105,8 @@ for index=1:ndim
   gam(index,:)=fscanf(fid,'%e',np);
   % The scaled Hessian elements at the solution
   hes(index,:)=fscanf(fid,'%f',npp);
-  % The unscaled covariance from the Hessian at the solution
-  covh(index,:)=fscanf(fid,'%f',npp);
+  % An unscaled covariance estimate
+  covFHh(index,:)=fscanf(fid,'%f',npp);
 end
 fclose(fid);
 
@@ -120,10 +122,10 @@ scl=scl(1:index,:);
 L=L(1:index,:);
 gam=gam(1:index,:);
 hes=hes(1:index,:);
-covh=covh(1:index,:);
+covFHh=covFHh(1:index,:);
 optis=optis(1:index,:);
 momx=momx(1:index,:);
 
 % Put out
-varns={thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covh};
+varns={thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covFHh};
 varargout=varns(1:nargout);
