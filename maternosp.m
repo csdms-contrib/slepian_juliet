@@ -28,7 +28,7 @@ function [Sk,k]=maternosp(th,params,xver)
 %
 % MATERNOS, MATERNOSY, MATERNPRC, KNUMS, BLUROS, BLUROSY, BLURCHECK
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/2/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/15/2016
 
 % Default is to oververify it all
 defval('xver','1')
@@ -68,5 +68,6 @@ switch blurs
   end
 end
 
-
+% Note: maybe put the check on there being no NaN's in here?
+% Note: maybe put the REALIZE in here?
 

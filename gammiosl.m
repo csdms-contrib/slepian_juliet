@@ -41,17 +41,16 @@ function g=gammiosl(k,th,params,Hk,xver)
 
 defval('xver',1)
 
-% Exclude the zero wavenumbers
-Hk=Hk(~~k);
-k=k(~~k);
-
 % The number of parameters to solve for
 np=length(th);
 
 % We need the (blurred) power spectrum and its ratio to the observations
 [S,kk]=maternosp(th,params,xver);
+
 % Exclude the zero wavenumbers
-S=S(~~kk); 
+Hk=Hk(~~k);
+S = S(~~kk); 
+k = k(~~k);
 
 % The statistics of Xk will be tested in LOGLIOS
 Xk=hformos(S,Hk,[],xver);
@@ -79,11 +78,11 @@ elseif xver==1
     gk(:,ind)=mth{ind}.*[1-Xk];
     % Eq. (A53) in doi: 10.1093/gji/ggt056
     g(ind)=mean(gk(:,ind));
-    % Check for numerical indistinguishability, link XKOS to HFORMOS
-    % Pick up the additional necessities
+    % A somewhat redundant alternative way of computing these things
+    diferm(gk(:,ind),mth{ind}-hformos(S,Hk,mth{ind}),7);
+    % Pick up the additional necessities for a third way...
     [~,~,A]=mAosl(k,th,xver);
     diferm(gk(:,ind),mth{ind}+hformos(S,Hk,A{ind}),7);
-    diferm(gk(:,ind),mth{ind}-hformos(S,Hk,mth{ind}),7);
   end
 end
 

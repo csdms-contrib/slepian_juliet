@@ -22,7 +22,7 @@ function [L,g,H,momx,vr]=logliosl(k,th,scl,params,Hk,xver)
 %                -1 Blur likelihood using the exact BLUROSY procedure
 %          kiso   wavenumber beyond which we are not considering the likelihood
 % Hk       A [prod(params.NyNx)*1]-column of complex Fourier-domain observations
-% xver     Excessive verification [0 or 1]
+% xver     Excessive verification [0 or 1, which also computes L(k)]
 %
 % OUTPUT:
 %
@@ -60,19 +60,43 @@ th=th.*scl;
 % hey. It means we can use FMINUNC also.
 th([1 2 3])=abs(th([1 2 3]));
 
-% Filter, perhaps if-loop if extracting the Xk proves slower
-[Lk,Xk]=Lkosl(k,th,params,Hk,xver);
+% We need the (blurred) power spectrum and its ratio to the observations
+[S,kk]=maternosp(th,params,xver);
 
+% Exclude the zero wavenumbers
+Hk=Hk(~~k);
+S = S(~~kk); 
+k = k(~~k);
+
+% The statistics of Xk will be tested in LOGLIOS below
+Xk=hformos(S,Hk,[],xver);
+
+% Radial wavenumber restrictions, these need to carry over elsewhere
 if any(~isnan(params.kiso))
-  Lk(k>params.kiso)=NaN;
-  Xk(k>params.kiso)=NaN;
+  ksel=k>params.kiso;
+  disp('Need to still build this selection in...')
+  disp('...depends if you want to look at Lk with the NaNs in there')
 end
 
-% Note: should we restrict this to the upper halfplane? or will mean do
-% Get the likelihood at the individual wavenumbers; average
-L=-nanmean(Lk);
+% Should make sure that this is real! Might remove REALIZE later
+% Note: should we restrict this to the upper halfplane? or will MEAN do
+% Should we use NANMEAN anywhere here? 
+
+% We're abusing the 'xver' switch to bypass saving wavenumber-dependencies
+if xver==0
+  % Do it all at once, don't save the wavenumber-dependent entities
+  % Eq. (A52) in doi: 10.1093/gji/ggt056
+  L=-mean(-log(S)-Xk);
+elseif xver==1
+  % Do save the wavenumber-dependent entities
+  Lk=realize(-log(S)-Xk);
+  % Eq. (A52) in doi: 10.1093/gji/ggt056
+  L=-mean(Lk);
+end
+
 % Attempt to reset if for some reason the whole thing failed
 if isnan(L)
+  % This may no longer be necessary% 
   L=1e100;
 end
 

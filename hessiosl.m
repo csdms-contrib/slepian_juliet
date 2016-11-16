@@ -49,10 +49,6 @@ function [H,covH,cH]=hessiosl(k,th,params,Hk,xver)
 % Early setup exactly as in FISHIOSL
 defval('xver',1)
 
-% Exclude the zero wavenumbers
-Hk=Hk(~~k);
-k=k(~~k);
-
 % The number of parameters to solve for
 np=length(th);
 % The number of unique entries in an np*np symmetric matrix
@@ -60,8 +56,11 @@ npp=np*(np+1)/2;
 
 % We need the (blurred) power spectrum and its ratio to the observations
 [S,kk]=maternosp(th,params,xver);
+
 % Exclude the zero wavenumbers
-S=S(~~kk);
+Hk=Hk(~~k);
+S = S(~~kk);
+k = k(~~k);
 
 % The statistics of Xk will be tested in LOGLIOS
 Xk=hformos(S,Hk,[],xver);
@@ -93,7 +92,7 @@ elseif xver==1
     % Eq. (135) in doi: 10.1093/gji/ggt056
     cH(ind)=mean(cHk(:,ind));
     % Can do an additional TRACECHECK here, using Option 2
-    % And other tests, using HFORMOS, save that for later
+    % And other tests, using HFORMOS, as in GAMMIOSL that for later
   end
 end
 
