@@ -1,5 +1,5 @@
-function [F,covF,cF]=hessiosl(k,th,params,Hk,xver)
-% [F,covF,cF]=HESSIOSL(k,th,params,Hk,xver)
+function [H,covH,cH]=hessiosl(k,th,params,Hk,xver)
+% [H,covH,cH]=HESSIOSL(k,th,params,Hk,xver)
 %
 % Calculates the entries in the Hessian matrix of Olhede & Simons (2013) for
 % the Whittle-likelihood under the UNIVARIATE ISOnTROPIC MATERN model, after
@@ -22,28 +22,29 @@ function [F,covF,cF]=hessiosl(k,th,params,Hk,xver)
 %          NOTE: It's not going to be a great derivative unless you could
 %          change MAOSL also. Still, the order of magnitude will be OK.
 % Hk       A complex matrix of Fourier-domain observations
-% xver     Excessive verification [0 or 1] where 1 also keeps option open
-%          to output wavenumber dependence
+% xver     Excessive verification [0 or 1, which also computes H(k)]
 %
 % OUTPUT:
 %
-% F        The full-form Hessian matrix, a symmetric 3x3 matrix
-% covF     A covariance estimate based on this Hessian matrix
-% cF       The uniquely relevant Hessian elements listed in this order:
-%          [1] Fs2s2   [2] Fnunu  [3] Frhorho
-%          [4] Fs2nu   [5] Fs2rho [6] Fnurho
+% H        The full-form Hessian matrix, a symmetric 3x3 matrix
+% covH     A covariance estimate based on this Hessian matrix
+% cH       The uniquely relevant Hessian elements listed in this order:
+%          [1] H_s2s2   [2] H_nunu  [3] H_rhorho
+%          [4] H_s2nu   [5] H_s2rho [6] H_nurho
 %
 % SEE ALSO:
 %
-% GAMMIOSL, FISHIOSL, HES2COV, TRILOS, TRILOSI
+% GAMMIOSL, FISHIOSL, LOGLIOSL
 %
 % EXAMPLE:
 % 
 % p.quart=0; p.blurs=0; p.kiso=NaN; clc; [~,th0,p,k,Hk]=simulosl([],p,1);
-% F=fishiosl(k,th0); G=gammiosl(k,th0,p,Hk); H=hessiosl(k,th0,p,Hk);
+% F=fishiosl(k,th0); g=gammiosl(k,th0,p,Hk); H=hessiosl(k,th0,p,Hk);
 % round(abs((F+H)./F)*100) % should be small numbers
+% [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
+% difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/2/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/15/2016
 
 % Early setup exactly as in FISHIOSL
 defval('xver',1)
@@ -54,26 +55,22 @@ k=k(~~k);
 
 % The number of parameters to solve for
 np=length(th);
-% The number of wavenumbers
-lk=length(k(:));
 % The number of unique entries in an np*np symmetric matrix
 npp=np*(np+1)/2;
+
+% We need the (blurred) power spectrum and its ratio to the observations
+[S,kk]=maternosp(th,params,xver);
+% Exclude the zero wavenumbers
+S=S(~~kk);
+
+% The statistics of Xk will be tested in LOGLIOS
+Xk=hformos(S,Hk,[],xver);
 
 % First compute the auxiliary parameters
 [mth,mththp]=mAosl(k,th,xver);
 
-% Extract the needed parameters of the simulation variables
-blurs=params.blurs;
-NyNx=params.NyNx;
-
-% We need the (blurred) power spectrum and its ratio to the observations
-S=maternosp(k,th,params);
-
-% The average of Xk needs to be close to one as will be tested 
-Xk=abs(Hk).^2./S;
-
 % Initialize
-cF=nan(npp,1);
+cH=nan(npp,1);
 
 % Creative indexing - compare NCHOOSEK elsewhere
 [i,j]=ind2sub([np np],trilos(reshape(1:np^2,np,np)));
@@ -83,27 +80,29 @@ if xver==0
   % Do it all at once, don't save the wavenumber-dependent entities
   for ind=1:npp
     % Eq. (135) in doi: 10.1093/gji/ggt056
-    cF(ind)=mean(-mththp{ind}-[mth{i(ind)}.*mth{j(ind)}-mththp{ind}].*Xk);
+    cH(ind)=mean(-mththp{ind}-[mth{i(ind)}.*mth{j(ind)}-mththp{ind}].*Xk);
   end
 elseif xver==1
+  % The number of wavenumbers
+  lk=length(k(:));
   % Initialize; no cell since all of them depend on the wave vectors
-  cFk=nan(lk,npp);
+  cHk=nan(lk,npp);
   % Do save the wavenumber-dependent entities
   for ind=1:npp
-    cFk(:,ind)=-mththp{ind}-[mth{i(ind)}.*mth{j(ind)}-mththp{ind}].*Xk;
+    cHk(:,ind)=-mththp{ind}-[mth{i(ind)}.*mth{j(ind)}-mththp{ind}].*Xk;
     % Eq. (135) in doi: 10.1093/gji/ggt056
-    cF(ind)=mean(cFk(:,ind));
+    cH(ind)=mean(cHk(:,ind));
+    % Can do an additional TRACECHECK here, using Option 2
+    % And other tests, using HFORMOS, save that for later
   end
 end
 
 % The full-form matrix
-F=trilosi(cF);
-
-% Can do an additional TRACECHECK here, using Option 2
+H=trilosi(cH);
 
 % Determine the degrees of freedom - could make sure to deduce this from
 % the Hermiticity
 df=lk/2;
 
 % Construct the covariance matrix
-covF=inv(-F)/df;
+covH=inv(-H)/df;

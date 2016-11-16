@@ -1,18 +1,19 @@
-function [L,gam,momx,vr]=logliosl(k,th,params,Hk,scl,xver)
-% [L,gam,momx,vr]=LOGLIOSL(k,th,params,Hk,scl,xver)
+function [L,g,H,momx,vr]=logliosl(k,th,scl,params,Hk,xver)
+% [L,g,H,momx,vr]=LOGLIOSL(k,th,scl,params,Hk,scl,xver)
 %
 % Calculates the full negative logarithmic likelihood and its
-% derivatives, i.e. minus LKOSL and minus GAMMAKOSL averaged over
-% wavenumber space. This is the function that we need to MINIMIZE! When
-% blurred, no consideration is given to the zero wavenumber, see LKOSL. 
+% derivatives as averaged over wavenumber space. This is the function
+% that we need to MINIMIZE! No consideration is given to the zero
+% wavenumber, see LKOSL.
 %
 % INPUT:
 %
 % k        The wavenumbers at which these are being evaluated [1/m]
-% th       The SCALED three-parameter vector argument
+% th       The three-parameter vector argument [scaled]
 %          th(1)=s2   The first Matern parameter [variance in unit^2]
 %          th(2)=nu   The second Matern parameter [differentiability]
 %          th(3)=rho  The third Matern parameter [range in m]
+% scl      The scaling factors applied, so that [scl.*thhat] is in units 
 % params   A structure with AT LEAST these constants that are known:
 %          dydx  sampling interval in the y and x directions [m m]
 %          NyNx  number of samples in the y and x directions
@@ -21,22 +22,30 @@ function [L,gam,momx,vr]=logliosl(k,th,params,Hk,scl,xver)
 %                -1 Blur likelihood using the exact BLUROSY procedure
 %          kiso   wavenumber beyond which we are not considering the likelihood
 % Hk       A [prod(params.NyNx)*1]-column of complex Fourier-domain observations
-% scl      The SCALING factors applied, so that [scl.*thhat] is in units 
 % xver     Excessive verification [0 or 1]
 %
 % OUTPUT:
 %
-% L        The loglihood, Lk averaged over all relevant wavenumbers
-% gam      The score, averaged over all wavenumbers
+% L        The logarithmic loglihood averaged over all nonzero wavenumbers
+% g        The score averaged over all nonzero wavenumbers
+% H        The Hessian averaged over all nonzero wavenumbers
 % momx     Moments of the quadratic piece Xk over relevant wavenumbers;
 %          the last one we use for a test on this being chi-squared
 % vr       Variance of momx(3) under the null hypothesis
 %
 % SEE ALSO:
 %
-% HESSIOSL, FISHIOSL
+% GAMMIOSL, HESSIOSL, FISHIOSL
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/02/2016
+% EXAMPLE:
+% 
+% p.quart=0; p.blurs=0; p.kiso=NaN; clc; [~,th0,p,k,Hk]=simulosl([],p,1);
+% F=fishiosl(k,th0); g=gammiosl(k,th0,p,Hk); H=hessiosl(k,th0,p,Hk);
+% round(abs((F+H)./F)*100) % should be small numbers
+% [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
+% difer(Lg-g); difer(LH-H); % should be passing the test
+%
+% Last modified by fjsimons-at-alum.mit.edu, 11/15/2016
 
 defval('xver',1)
 
@@ -67,7 +76,17 @@ if isnan(L)
   L=1e100;
 end
 
+if nargout>=2
+  % Get the appropriately scaled scores here
+  g=gammiosl(k,th,params,Hk,xver).*scl(:);
+end
+
 if nargout>=3
+  % Get the appropriately scaled Hessian values here
+  H=hessiosl(k,th,params,Hk,xver).*[scl(:)*scl(:)'];
+end
+
+if nargout>=4
   % Extract the moments we'll be needing for evaluation later
   df=2;
   % First should be close to df/2, second close to df/2, third is like
@@ -75,15 +94,10 @@ if nargout>=3
   % with mean df/2 and variance 8/K --- the "magic" parameter
   momx=[nanmean(Xk) nanvar(Xk) nanmean([Xk-df/2].^2)];
 end
-if nargout>3
+if nargout>=5
   % Compute the variance
   vr=8/sum(~isnan(Xk));
 end
-
-% I say, time to extract HESSIOSL here also?
-
-% Get the appropriately scaled scores here
-gam=gammiosl(k,th,params,Hk,xver).*scl(:);
 
 % Print the trajectory, seems like one element at a time gets changed
 %disp(sprintf('Current theta: %8.3g %8.3g %8.3g %8.3g %8.3g %8.3g',th))

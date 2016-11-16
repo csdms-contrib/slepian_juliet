@@ -1,5 +1,5 @@
-function G=gammiosl(k,th,params,Hk,xver)
-% G=GAMMIOSL(k,th,params,Hk,xver)
+function g=gammiosl(k,th,params,Hk,xver)
+% g=GAMMIOSL(k,th,params,Hk,xver)
 %
 % Calculates the entries in the score matrix of Olhede & Simons (2013) for
 % the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN model, after
@@ -22,20 +22,22 @@ function G=gammiosl(k,th,params,Hk,xver)
 %          NOTE: It's not going to be a great derivative unless you could
 %          change MAOSL also. Still, the order of magnitude will be OK.
 % Hk       A complex matrix of Fourier-domain observations
-% xver     Excessive verification [0 or 1]
+% xver     Excessive verification [0 or 1, which also computes g(k)]
 %
 % OUTPUT:
 %
-% G      The derivative of the log-likelihood, with elements
-%          [1] Gs2s2   [2] Gnunu  [3] Grhorho
+% g      The derivative of the log-likelihood, with elements
+%          [1] g_s2   [2] g_nu  [3] g_rhor
 %
 % EXAMPLE:
 % 
 % p.quart=0; p.blurs=0; p.kiso=NaN; clc; [~,th0,p,k,Hk]=simulosl([],p,1);
-% F=fishiosl(k,th0); G=gammiosl(k,th0,p,Hk); H=hessiosl(k,th0,p,Hk);
+% F=fishiosl(k,th0); g=gammiosl(k,th0,p,Hk); H=hessiosl(k,th0,p,Hk);
 % round(abs((F+H)./F)*100) % should be small numbers
+% [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
+% difer(Lg-g); difer(LH-H); % should be passing the test
 % 
-% Last modified by fjsimons-at-alum.mit.edu, 11/2/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/15/2016
 
 defval('xver',1)
 
@@ -45,53 +47,43 @@ k=k(~~k);
 
 % The number of parameters to solve for
 np=length(th);
-% The number of wavenumbers
-lk=length(k(:));
-
-% Extract the needed parameters of the simulation variables
-blurs=params.blurs;
-
-% Initialize the wavenumber-dependent score vector
-Gk=nan(lk,np);
-
-% First compute the auxiliary parameters
-if xver==0
-  mth=mAosl(k,th,xver);
-elseif xver==1
-  [mth,~,A]=mAosl(k,th,xver);
-end
 
 % We need the (blurred) power spectrum and its ratio to the observations
 [S,kk]=maternosp(th,params,xver);
 % Exclude the zero wavenumbers
 S=S(~~kk); 
 
-% The average of Xk needs to be close to one as will be tested 
-Xk=abs(Hk).^2./S;
+% The statistics of Xk will be tested in LOGLIOS
+Xk=hformos(S,Hk,[],xver);
+
+% First compute the auxiliary parameters
+mth=mAosl(k,th,xver);
 
 % Initialize
-G=nan(np,1);
+g=nan(np,1);
 
 % We're abusing the 'xver' switch to bypass saving wavenumber-dependencies
 if xver==0
   % Do it all at once, don't save the wavenumber-dependent entities
-  for j=1:np
+  for ind=1:np
     % Eq. (A53) in doi: 10.1093/gji/ggt056
-    G(j)=-mean(-mth{j}.*[1-Xk]);
+    g(ind)=-mean(-mth{ind}.*[1-Xk]);
   end
 elseif xver==1
+  % The number of wavenumbers
+  lk=length(k(:));
   % Initialize; no cell since all of them depend on the wave vectors
-  Gk=nan(lk,np);
+  gk=nan(lk,np);
   % Do save the wavenumber-dependent entities
-  for j=1:np
+  for ind=1:np
+    gk(:,ind)=mth{ind}.*[1-Xk];
     % Eq. (A53) in doi: 10.1093/gji/ggt056
-    Gk(:,j)=-mth{j}.*[1-Xk];
-    % Check for numerical indistinguishability ->>> MOVE TO ELSEWHERE
-    gkalt1(:,j)=-mth{j}-hformos(S,A{j},Hk);
-    gkalt2(:,j)=-mth{j}+hformos(S,mth{j},Hk);
-    diferm(gkalt1(:,j),Gk(:,j),7);
-    diferm(gkalt2(:,j),Gk(:,j),7);
+    g(ind)=mean(gk(:,ind));
+    % Check for numerical indistinguishability, link XKOS to HFORMOS
+    % Pick up the additional necessities
+    [~,~,A]=mAosl(k,th,xver);
+    diferm(gk(:,ind),mth{ind}+hformos(S,Hk,A{ind}),7);
+    diferm(gk(:,ind),mth{ind}-hformos(S,Hk,mth{ind}),7);
   end
-  % Now the wavenumber averaging
-  G=-mean(Gk)';
 end
+

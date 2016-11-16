@@ -38,7 +38,7 @@ function [F,covF,cF]=fishiosl(k,th,xver)
 % Last modified by fjsimons-at-alum.mit.edu, 11/2/2016
 
 % Early setup exactly as in HESSIOSL
-defval('xver',0)
+defval('xver',1)
 
 % Exclude the zero wavenumbers
 k=k(~~k);

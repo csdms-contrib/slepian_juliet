@@ -2,8 +2,8 @@ function [Lk,Xk]=Lkosl(k,th,params,Hk,xver)
 % [Lk,Xk]=Lkosl(k,th,params,Hk,xver)
 %
 % Computes the likelihood function for the SINGLE-FIELD isotropic Matern
-% model in Olhede & Simons (2013). When blurred, sets the zero
-% wavenumber-value to NaN.  
+% model in Olhede & Simons (2013). Always sets the zero wavenumber-value
+% of Lk to NaN.
 %
 % INPUT:
 %
@@ -31,13 +31,12 @@ function [Lk,Xk]=Lkosl(k,th,params,Hk,xver)
 %
 % LOGLIOSL
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/02/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/15/2016
 
 % Extra verification?
 defval('xver',1)
 
 % Extract the needed parameters of the simulation variables
-blurs=params.blurs;
 NyNx=params.NyNx;
 
 % We need the (blurred) power spectrum and its ratio to the observations
@@ -45,21 +44,17 @@ S=maternosp(th,params,xver);
 
 % The average of Xk needs to be close to one as will be tested 
 warning off MATLAB:log:logOfZero
-Xk=abs(Hk).^2./S;
+Xk=hformos(S,Hk,[],xver);
 warning on MATLAB:log:logOfZero
 % Should make sure that this is real! Don't take any chances
 Lk=realize(-log(S)-Xk);
 
-% Don't take out the zero wavenumber when there is no blurring, otherwise
-% the score won't verify if you should choose to do so. On the whole, you
-% won't want to run unblurred anything, so it won't be a big deal. 
-%if  blurs<=-1 || blurs>1
-   % Trouble is at the central wave numbers, we take those out 
-  % Find the zero wavenumber
-  kzero=sub2ind(NyNx,floor(NyNx(1)/2)+1,floor(NyNx(2)/2)+1);
-  % Check that this is correctly done
-  difer(k(kzero),[],[],NaN)
-  % Behavior is rather different if this is NOT done... knowing that it
-  % will not blow up but rather be some numerically large value
-  Lk(kzero)=NaN;
-%end
+% Always remove the zero wavenumber from consideration
+% Find the zero wavenumber
+kzero=sub2ind(NyNx,floor(NyNx(1)/2)+1,floor(NyNx(2)/2)+1);
+% Check that this is correctly done
+difer(k(kzero),[],[],NaN)
+% Behavior is rather different if this is NOT done... knowing that it
+% will not blow up but rather be some numerically large value
+Lk(kzero)=NaN;
+
