@@ -40,7 +40,7 @@ function [Sbar,k]=bluros(S,params,xver)
 %
 % Maybe should formally increase it in those cases so as to never worry?
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/02/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/15/2016
 
 if params.blurs<0
   error('You should be running BLUROSY, not BLUROS!')
@@ -116,7 +116,7 @@ if xver==1
   % Check that no extrapolation was demanded, effectively
   % but know that griddedInterpolant would have EXTRApolated fine
   difer(sum(isnan(Sbar(:))),[],2,NaN)
-% Check Hermiticity and positive-definiteness
+  % Check Hermiticity and positive-definiteness
   blurcheck(Sbar,params)
 end
 
@@ -129,3 +129,5 @@ end
 % convmtx2 needs more memory
 % Actually, should look into FFTW. But also limit to halfplane.
 % disp(sprintf('BLUROS %i %i %i',blurs,NyNx2(1),NyNx2(2)));
+
+% Should we put the check on NaN and REALIZE in here?

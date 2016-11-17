@@ -33,10 +33,14 @@ fmtx=repmat(' %9.3e',1,length(vHxs));
 fprintf(fid, fmts{1},                     thini.*scl      );
 % Second line: The estimate, scaled back to proper units, the sample variance
 fprintf(fid,[fmts{1}(1:end-2) fmtx '\n'],[thhat.*scl vHxs]);
-% Other lines: Three diagnostics, likelihood, diagnostic, moments, scales, and derivatives
+% Third line: Time spent, Exit flag, Iterations
+% Fourth line: Likelihood, First-order optimality , moments
+% Fifth line: Scales
+% Remaining lines: Numerical Score, Numerical Hessian, Covariance
 fprintf(fid,fmts{3},...
 	round(ts),lpars{4},lpars{5}.iterations,...
 	lpars{1},lpars{5}.firstorderopt,momx,...
-	scl,lpars{2},trilos(lpars{3}),trilos(covFHh));
+	scl,...
+        lpars{2},trilos(lpars{3}),trilos(covFHh));
 % Last line: Empty (only visuals, no effect on reading)
 fprintf(fid,'\n');

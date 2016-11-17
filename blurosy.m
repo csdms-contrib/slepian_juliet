@@ -29,7 +29,7 @@ function [Sbar,k]=blurosy(th,params,xver,method)
 %
 % SIMULOSL, BLUROS, MATERNOSP, BLURCHECK
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/02/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/15/2016
 
 if params.blurs>=0
   error('Are you sure you should be running BLUROSY, not BLUROS?')

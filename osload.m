@@ -1,5 +1,5 @@
-function [th0,thhats,params,covFHh,covHav,covFHhpix,E,v,obscov,sclcovF,momx,covthpix]=osload(datum,perc)
-% [th0,thhats,params,covFHh,covHav,covFHhpix,E,v,obscov,sclcovF,momx,covthpix]=OSLOAD(datum,perc)
+function [th0,thhats,params,covFHh,covHav,thpix,E,v,obscov,sclcovF,momx,covthpix]=osload(datum,perc)
+% [th0,thhats,params,covFHh,covHav,thpix,E,v,obscov,sclcovF,momx,covthpix]=OSLOAD(datum,perc)
 %
 % Loads all four of the output diagnostic files produced by the suite of
 % programs following Simons & Olhede (2013). Data files are, like,
@@ -20,7 +20,7 @@ function [th0,thhats,params,covFHh,covHav,covFHhpix,E,v,obscov,sclcovF,momx,covt
 %              calling function (Anal Fisher-based? Anal
 %              Hessian-based? Numerical Hessian based? Evaluated where?)
 % covHav       The covariance matrix based on the MEDIAN numerical Hessian matrix
-% covFHhpix    The covariance matrix based on a randomly picked numerical Hessian
+% thpix        The example estimate, randomly picked up
 % E            Young's modulus - for conversion to Te only
 % v            Poisson's ratio - for conversion to Te only
 % obscov       Scaled observed sample covariance (ones on the diagonal)
@@ -33,7 +33,7 @@ function [th0,thhats,params,covFHh,covHav,covFHhpix,E,v,obscov,sclcovF,momx,covt
 %
 % OSOPEN, DIAGNOS, TRIMIT, MLEOS etc
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/14/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/17/2016
 
 % Who called? Work this into the filenames
 [~,n]=star69;
@@ -73,7 +73,6 @@ fclose(fid);
 
 % Load the optimization diagnostics, which should duplicate f2 and f3
 [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covFHh]=diagnos(f4,pwd,np); 
-
 try
   % Could be off; know that DIAGNOS is the file of record
   difer(thhat(:,1:np)-thhats,[],[],NaN)
@@ -110,13 +109,10 @@ covHav=inv(trilosi(avhs)./matscl)/df;
 covHavz=inv(trilosi(avhsz)./matscl)/df;
 
 % A random pick from the set of maximum-likelihood estimates
-pix=randi(size(thhats,1));
+pix=randi(size(thhats,1)); thpix=thhats(pix,1:3);
 % Tell us what the three picked values were!
-disp(sprintf('\n%s solution %i %g %i picked for display in blue\n',...
-             upper(mfilename),thhats(pix,1:3)))
-
-% A random pick from the set of Fisher-derived covariances at the estimates
-covFHhpix=trilosi(covFHh(pix,:));
+disp(sprintf('\n%s solution %i %g %i picked as an example\n',...
+             upper(mfilename),thpix))
 
 % A random pick from the set of numerical-Hessian derived covariances
 covthpix=inv(trilosi(hes(pix,:))./matscl)/df;
@@ -125,12 +121,12 @@ covthpix=inv(trilosi(hes(pix,:))./matscl)/df;
 [~,covth0]=fishiosl(k,th0,1);
 
 % This needs to be close
-diferm(covth0(:),covF(:),3)
+diferm(covth0(:),covF(:),2)
 % But the one taking out the wavenumber at zero is the right one
 covF=covth0;
 
 % Remember the avhs is actually coming from the diagnostic file; below is untrimmed
-osdisp(th0,thhat(:,1:np),size(hes,1),avhs,Fisher,covF)
+osdisp(th0,thhat(:,1:np),size(hes,1),avhs,Fisher,covHav)
 
 if np>3
   % For display and later output only

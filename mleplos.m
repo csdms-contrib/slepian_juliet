@@ -1,5 +1,5 @@
-function varargout=mleplos(thhats,th0,covF,covHav,covthpix,E,v,params,name)
-% MLEPLOS(thhats,th0,covF,covHav,covthpix,E,v,params,name)
+function varargout=mleplos(thhats,th0,covF,covHav,covthpix,E,v,params,name,thpix)
+% MLEPLOS(thhats,th0,covF,covHav,covthpix,E,v,params,name,thpix)
 %
 % Graphical statistical evaluation of the maximum-likelihood inversion
 % results from the suite MLEOS, MLEROS, MLEROS0, MLEOSL. 
@@ -22,6 +22,7 @@ function varargout=mleplos(thhats,th0,covF,covHav,covthpix,E,v,params,name)
 % v          Poisson's ratio (not used for single fields)
 % params     The structure with the fixed parameters from the experiment
 % name       A name string for the title
+% thpix      The example estimate, randomly picked up
 %
 % OUTPUT:
 %
@@ -31,7 +32,9 @@ function varargout=mleplos(thhats,th0,covF,covHav,covthpix,E,v,params,name)
 %
 % This only gets used in MLEOS/MLEROS/MLEROS0/MLEOSL thus far
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/05/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/17/2016
+
+defval('xver',0)
 
 % Number of times the standard deviation for scale truncation
 nstats=[-3:3]; fax=3;
@@ -110,9 +113,11 @@ for ind=1:np
     bdens=bdens/indeks(diff(c),1)/size(thhats(:,ind),1);
   end
   % This number is close to one... it's a proper density!
-  disp(sprintf('%s pdf normalization check by summation %g',...
-               upper(mfilename),sum(bdens)*indeks(diff(c),1)))
-
+  if xver==1
+    disp(sprintf('%s pdf normalization check by summation %g',...
+                 upper(mfilename),sum(bdens)*indeks(diff(c),1)))
+  end
+  
   % Now plot it using a scale factor to remove the units from the y axis
   thhis(ind)=bar(c,sobs*bdens,1);
   set(ah(ind),'ylim',yls)
@@ -151,10 +156,10 @@ for ind=1:np
 
   % The percentage covered in the histogram that is being shown
   tt(ind)=text(stats(1)+range(stats)/nrx,indeks(ylim,2)-2*range(ylim)/nry,...
-	      sprintf('s/%s = %5.2f','\sigma',sobs/stdF)); 
+	      sprintf('s/%s = %5.2f','\sigma',sobs/stdH)); 
   fb=fillbox(ext2lrtb(tt(ind),[],0.8),'w'); delete(tt(ind)); set(fb,'EdgeC','w')
   tt(ind)=text(stats(1)+range(stats)/nrx,indeks(ylim,2)-2*range(ylim)/nry,...
-	      sprintf('s/%s = %5.2f','\sigma',sobs/stdF));
+	      sprintf('s/%s = %5.2f','\sigma',sobs/stdH));
 
   % The ratio of the observed to the theoretical standard deviation
   t(ind)=text(stats(1)+range(stats)/nrx,indeks(ylim,2)-range(ylim)/nry,...
@@ -224,7 +229,7 @@ axes(ah(1))
 yl=ylabel('pthsterior probability density');
 longticks(ah)
 % Normal distribution based on the Fisher matrix at the truth
-set(psF,'linew',1,'color','b')
+set(psF,'linew',1,'color','k','LineS','--')
 % Based on the average/median Hessian matrix
 set(psH,'linew',2,'color','k')
 % Based on the randomly picked Hessian matrix
@@ -235,7 +240,7 @@ set(pth,'linew',2,'color',grey(3.5))
 % Do this so the reduction looks slightly better
 set(yl,'FontS',12)
 nolabels(ah(2:np),2)
-disp(sprintf('\n'))
+%disp(sprintf('\n'))
 fig2print(gcf,'landscape')
 
 % Stick the params here somewhere so we can continue to judge
@@ -245,30 +250,27 @@ if isstruct(params)
   t=ostitle(ah,params,name); movev(t,.4)
 end
 
-% We are quoting the TRUTHS and the THEORETICAL standard deviation with
-% which it can be known using the available data... this is close to the
-% average behavior, and we'll use it for the titles
+% Here is the TRUTH and the FISHER-BASED standard deviation
 [answ,answs]=osansw(th0,covF,E,v);
-disp(sprintf('\n%s','Fisher-based covariance evaluated at the truth'))
+disp(sprintf('%s',...
+             'Truth and Fisher-covariance standard deviation at the truth'))
 disp(sprintf(answs,answ{:}))
-% On the figure we should quote the actually observed sample variance?
+% Here is the mean estimate and its covariance-based standard deviation
 [answ,answs]=osansw(mean(thhats),cov(thhats),E,v);
-disp(sprintf('\n%s','Sample-based covariance for the ensemble simulations'))
+disp(sprintf('\n%s',...
+             'Mean estimate and ensemble-covariance standard deviation'))
 disp(sprintf(answs,answ{:}))
 tt=supertit(ah(np+1:2*np),sprintf(answs,answ{:}));
-if np>3
-  movev(tt,-4)
-else
-  movev(tt,-3.5)
-end
-% Also quote the numerical Hessian prediction at a random estimate
-[answ,answs]=osansw(th0,covthpix,E,v);
-disp(sprintf('\n%s','Numerical-Hessian-based covariance evaluated at a randomly picked estimate'))
+% Here is the random estimate and its numerical-Hessian based standard deviation
+[answ,answs]=osansw(thpix,covthpix,E,v);
+disp(sprintf('\n%s',...
+             'Example estimate and numerical-Hessian covariance standard deviation'))
 disp(sprintf(answs,answ{:}))
 
-% Make a basic x-y plot
-xy=0;
-if xy==1
+if np>3; movev(tt,-4); else; movev(tt,-3.5); end
+keyboard
+% Make basic x-y plots of the parameters
+if xver==1
   figure
   clf
   pstats=[-2 2]; pcomb=nchoosek(1:np,2);

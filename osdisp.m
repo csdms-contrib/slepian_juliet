@@ -1,5 +1,5 @@
-function varargout=osdisp(th0,thhats,nl,avhs,Fisher,covF)
-% OSDISP(th0,thhats,nl,avhs,Fisher,covF)
+function varargout=osdisp(th0,thhats,nl,avhs,Fisher,covHav)
+% OSDISP(th0,thhats,nl,avhs,Fisher,covHav)
 % OSDISP(th0,params)
 % [str0,str1,str2,str3]=OSDISP(...)
 %
@@ -14,7 +14,7 @@ function varargout=osdisp(th0,thhats,nl,avhs,Fisher,covF)
 % nl         Number of experiments over which the average Hessian is reported
 % avhs       Average Hessian matrix at the estimates
 % Fisher     Fisher matrix at the truth
-% covF       The covariance based on the Fisher matrix at the truth
+% covHav     The covariance based on the average numerical Hessian matrix
 %
 % OUTPUT:
 %
@@ -57,17 +57,17 @@ else
    disp(sprintf(['Over %i simulations, the average numerical Hessian and' ...
 		 ' the Fisher matrix at the truth are'],nl))
    disp(sprintf(...
-       '|%4.2f|%s apart on average (the relevant diagn file had the full information)',...
+       '|%4.2f|%s apart on average (the relevant diagn file had the full information)\n',...
        1/100*round(100*mean(abs([avhs-Fisher]'./Fisher'*100))),'%'))
 
   % Covariance, relative, empirical, and theoretical
   disp(sprintf(sprintf('%s : %s',str0,str1s),...
 	       'Observed standard deviation',std(thhats)))
   disp(sprintf(sprintf('%s : %s',str0,str1s),...
-	       'Theortcl standard deviation',sqrt(diag(covF))))
+	       'Theortcl standard deviation',sqrt(diag(covHav))))
   disp(sprintf(sprintf('%s : %s',str0,str2s),...
 	       'Perct of obs to pred stnddv',...
-	       round(100*std(thhats)./sqrt(diag(covF)'))))
+	       round(100*std(thhats)./sqrt(diag(covHav)'))))
   disp(sprintf(sprintf('%s : %s\n',str0,str2s),...
 	       'Observed percent stand devn',...
 	       round(100*std(thhats)./th0)))

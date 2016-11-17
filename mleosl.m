@@ -35,9 +35,9 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 % thhat    The maximum-likelihood estimate of the vector [scaled]:
 %          [s2 nu rho], in units of variance, "nothing", and distance, see SIMULOSL
 % covFHh   The covariance estimates:
-%          covFHh{1} ex Fisher matrix AT the estimate [FISHIOSL]
-%          covFHh{2} ex analytical Hessian matrix AT the estimate [HESSIOSL]
-%          covFHh{3} ex numerical Hessian matrix NEAR the estimate [FMINUNC/FMINCON]
+%          covFHh{1} from Fisher matrix AT the estimate [FISHIOSL]
+%          covFHh{2} from analytical Hessian matrix AT the estimate [HESSIOSL]
+%          covFHh{3} from numerical Hessian matrix NEAR the estimate [FMINUNC/FMINCON]
 % lpars    The logarithmic likelihood and its derivatives AT or NEAR the estimate
 %          lpars{1} the numerical logarithmic likelihood [FMINUNC/FMINCON]
 %          lpars{2} the numerical scaled gradient, or score [FMINUNC/FMINCON]
@@ -72,7 +72,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %% One simulation and a chi-squared plot
 % mleosl('demo5',th0,params)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/31/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/17/2016
 
 % NEED TO CHANGE THE k(~~k) to proper accounting for kiso
 
@@ -207,7 +207,7 @@ if ~isstr(Hx)
       % disp('Using FMINUNC for unconstrained optimization of LOGLIOSL')
       t0=clock;
       [thhat,logli,eflag,oput,grd,hes]=...
-	  fminunc(@(theta) logliosl(k,theta,params,Hk,scl,xver),...
+	  fminunc(@(theta) logliosl(k,theta,scl,params,Hk,xver),...
 		  thini,options);
       ts=etime(clock,t0);
      case 'con'
@@ -230,7 +230,7 @@ if ~isstr(Hx)
               nwi,nwh))
         end
         [thhat,logli,eflag,oput,lmd,grd,hes]=...
-            fmincon(@(theta) logliosl(k,theta,params,Hk,scl,xver),...
+            fmincon(@(theta) logliosl(k,theta,scl,params,Hk,xver),...
                     thini,...
                     bounds{1},bounds{2},bounds{3},bounds{4},...
                     bounds{5}./scl,bounds{6}./scl,bounds{7},...
@@ -279,9 +279,22 @@ if ~isstr(Hx)
 
   % Covariance from FMINUNC/FMINCON's numerical scaled Hessian NEAR estimate
   % Degrees of freedom for full-wavenumber domain (redundant for real data)
-  df=length(k(~~k))/2; matscl=[scl(:)*scl(:)'];
+  % Not including the zero wavenumber, since Lkosl
+  df=length(k(~~k))/2; 
+  matscl=[scl(:)*scl(:)'];
   covh=inv(hes./matscl)/df;
-
+  
+  if xver==1
+    % Try variable-precision arithmetic?
+    vh=sym('vh',[np np]);
+    for index=1:prod(size(vh))
+      vh(index)=sprintf('%0.16e/%0.1e ',hes(index),matscl(index));
+    end
+    % Could try even more digits with VPA but in the end it didn't all seem
+    % to matter much
+    vcovh=inv(vh)/df;
+  end
+    
   % Fisher matrix AT the estimate, and covariance derived from it
   [F,covF]=fishiosl(k,thhat.*scl,xver);
 
@@ -388,8 +401,7 @@ elseif strcmp(Hx,'demo1')
   np=3;
   
   % Open 'thzro', 'thini', 'thhat' and 'diagn' files and return format strings
-  [fid0,fid1,fid2,fid3,fmt1,fmt2,fmt3,fmtf,fmte,fmtd,fmtc]=...
-      osopen(np);
+  [fids,fmts,fmti]=osopen(np);
 
   % Do it!
   good=0; 
@@ -414,9 +426,9 @@ elseif strcmp(Hx,'demo1')
     % Initialize the THZRO file... note that the bounds may change
     % between simulations, and only one gets recorded here
     if index==1 && labindex==1
-      oswzerob(fid0,th0,p,lpars{6},lpars{7},fmt1,fmt2)
+      oswzerob(fids(1),th0,p,lpars{6},lpars{7},fmts)
     end
-    
+
     % If a model was found, keep the results, if not, they're all NaNs
     % Ignore the fact that it may be at the maximum number of iterations
     % e=1
@@ -448,15 +460,17 @@ elseif strcmp(Hx,'demo1')
 	% Build the average of the Hessians for printout later
 	avH=avH+lpars{3}./[scl(:)*scl(:)'];
 	% Reapply the scaling before writing it out
-	fprintf(fid1,fmt1,thhat.*scl);
-	fprintf(fid2,fmt1,thini.*scl);
+	fprintf(fids(2),fmts{1},thhat.*scl);
+	fprintf(fids(3),fmts{1},thini.*scl);
 	% Here we compute and write out the moments of the Xk
-	[L,~,momx]=logliosl(k,thhat,p,Hk,scl,0);
-        % This better be close
+	[L,~,~,momx]=logliosl(k,thhat,scl,p,Hk,0);
+        % This better be close if we know what's going on
         diferm(L,lpars{1})
+        % We don't compare the second and third outputs of LOGLIOSL
+        % since these are analytical, poorly approximately blurred,
+        % derivates, and we be writing the numerical versions 
 	% Print the optimization results and diagnostics to a different file 
-	oswdiag(fid3,fmt1,fmt3,lpars{1},lpars{1},lpars{3},thhat,thini,scl,ts,lpars{4},lpars{5},....
-		var(Hx),momx,covFHh{1})
+	oswdiag(fids(4),fmts,lpars,thhat,thini,scl,ts,var(Hx),momx,covFHh{1})
       end
     end
   end
@@ -468,29 +482,25 @@ elseif strcmp(Hx,'demo1')
     [Hx,th0,p,k]=simulosl(th0,params); 
     good=1; avH=avH+1; 
     [~,~,lpars]=mleosl(Hx,[],[],'klose');
-    oswzerob(fid0,th0,p,lpars{6},lpars{7},fmt1,fmt2)
+    oswzerob(fids(1),th0,p,lpars{6},lpars{7},fmts)
   end
   
   if good>=1 
     % This is the scaling based on the truth which we use here 
     sclth0=10.^round(log10(th0));
 
-    % This is the average of the Hessians, should be closer to the Fisher
+    % This is the average of the numerical Hessians, should be closer to the Fisher
     avH=avH.*[sclth0(:)*sclth0(:)']/good;
 
-    % Now compute the theoretical covariance and scaled Fisher, avoid zero-k
+    % Now compute the Fisher and Fisher-derived covariance at the truth
     [F,covF]=fishiosl(k,th0);
     matscl=[sclth0(:)*sclth0(:)'];
-    
-    
-    
-    error('fix and compare formatting issues')
     
     % Of course when we don't have the truth we'll build the covariance
     % from the single estimate that we have just obtained. This
     % covariance would then be the only thing we'd have to save.
     if labindex==1
-      oswzeroe(fid0,sclth0,avH,good,F./matscl,covFHh{1},fmtc,fmte,fmtf)
+      oswzeroe(fids(1),sclth0,avH,good,F.*matscl,covF,fmti)
     end
   end
   
@@ -505,9 +515,10 @@ elseif strcmp(Hx,'demo2')
   np=3;
 
   % Load everything you know about this simulation
-  [th0,thhats,p,covF,covHav,covHts,~,~,~,~,momx,covthpix]=osload(datum);
+  [th0,thhats,p,covFHh,covHav,thpix,~,~,~,~,momx,covthpix]=osload(datum);
+
   % Report the findings of all of the moment parameters
-  disp(sprintf('m(m(Xk)) %f m(v(Xk)) %f\nm(magic) %f v(magic) %f',...
+  disp(sprintf('\nm(m(Xk)) %f m(v(Xk)) %f\nm(magic) %f v(magic) %f',...
 	      mean(momx),var(momx(:,end))))
   
   % Plot it all - perhaps some outlier selection?
@@ -515,20 +526,15 @@ elseif strcmp(Hx,'demo2')
   figure(1)
   fig2print(gcf,'landscape')
   clf
-  trims=98;
+  trims=100;
   % disp(sprintf('%s estimates trimmed at %i percentile',...
   %      upper(mfilename),trims))
   
-  % covF is the Fisher-based covariance evaluate at the truth
-  % covthpix is the Fisher-based covariance at one of the randomly picked estimates
-
   % If the above two are close, we need to start using the second one
   % Yep!
-  [ah,ha]=mleplos(trimit(thhats,trims,1),th0,covF,covHav,covthpix,[],[],p,...
-                  sprintf('MLEOSL-%s',datum));
+  [ah,ha]=mleplos(trimit(thhats,trims,1),th0,covFHh,covHav,covthpix,[],[],p,...
+                  sprintf('MLEOSL-%s',datum),thpix);
   
-  % Soon, we will be able to start loading different numbers
-
   % Return some output, how about just the empirically observed
   % means and covariance matrix of the estimates, and the number of
   % reported trials
@@ -590,7 +596,7 @@ elseif strcmp(Hx,'demo4')
   np=3;
   
   % Load everything you know about this simulation
-  [th0,thhats,params,covF,~,~,E,v,obscov,sclcov]=osload(datum);
+  [th0,thhats,params,covF,~,pix,E,v,obscov,sclcov]=osload(datum);
 
   % Make the plot
   ah=covplos(2,sclcov,obscov,covF,params,thhats,th0,[],[],'ver');
@@ -667,7 +673,7 @@ elseif strcmp(Hx,'demo5')
   % Maybe we should show different covariances than the predicted ones??
 
   % Time to rerun LOGLIOS one last time at the solution
-  [L,~,momx]=logliosl(k,thhat,p,Hk,scl,xver);
+  [L,~,~,momx]=logliosl(k,thhat,scl,p,Hk,xver);
 
   disp('fjs feed this into the next one')
   disp('fjs here fits the likelihood contours')
