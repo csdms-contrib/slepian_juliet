@@ -32,7 +32,7 @@ function varargout=mleplos(thhats,th0,covF,covHav,covthpix,E,v,params,name,thpix
 %
 % This only gets used in MLEOS/MLEROS/MLEROS0/MLEOSL thus far
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/17/2016
+% Last modified by fjsimons-at-alum.mit.edu, 03/03/2017
 
 defval('xver',0)
 
@@ -226,16 +226,16 @@ shrink(ah(np+1:end),aps2(1),aps2(2))
 
 movev(ah(length(ah)/2+1:end),mv)
 axes(ah(1))
-yl=ylabel('pthsterior probability density');
+yl=ylabel('posterior probability density');
 longticks(ah)
 % Normal distribution based on the Fisher matrix at the truth
-set(psF,'linew',1,'color','k','LineS','--')
+set(psF,'linew',0.5,'color','k','LineS','--')
 % Based on the average/median Hessian matrix
-set(psH,'linew',2,'color','k')
+set(psH,'linew',1.5,'color','k')
 % Based on the randomly picked Hessian matrix
-set(psh,'linew',1,'color','k')
+set(psh,'linew',0.5,'color','k')
 % Based on the actually observed covariance of these data
-set(pth,'linew',2,'color',grey(3.5))
+set(pth,'linew',1.5,'color',grey(3.5))
 
 % Do this so the reduction looks slightly better
 set(yl,'FontS',12)
@@ -268,7 +268,7 @@ disp(sprintf('\n%s',...
 disp(sprintf(answs,answ{:}))
 
 if np>3; movev(tt,-4); else; movev(tt,-3.5); end
-keyboard
+
 % Make basic x-y plots of the parameters
 if xver==1
   figure
