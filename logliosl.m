@@ -1,10 +1,9 @@
 function [L,g,H,momx,vr]=logliosl(k,th,scl,params,Hk,xver)
 % [L,g,H,momx,vr]=LOGLIOSL(k,th,scl,params,Hk,scl,xver)
 %
-% Calculates the full negative logarithmic likelihood and its
-% derivatives as averaged over wavenumber space. This is the function
-% that we need to MINIMIZE! No consideration is given to the zero
-% wavenumber, see LKOSL.
+% Calculates the full negative logarithmic likelihood and its derivatives as
+% averaged over wavenumber space. This is the function that we need to
+% MINIMIZE! No consideration is given to the zero wavenumbers.
 %
 % INPUT:
 %
@@ -45,7 +44,7 @@ function [L,g,H,momx,vr]=logliosl(k,th,scl,params,Hk,xver)
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/15/2016
+% Last modified by fjsimons-at-alum.mit.edu, 08/16/2017
 
 defval('xver',1)
 
