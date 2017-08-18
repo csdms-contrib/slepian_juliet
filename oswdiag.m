@@ -18,13 +18,15 @@ function oswdiag(fid,fmts,lpars,thhat,thini,scl,ts,vHxs,momx,covFHh)
 % ts               Optimization timing
 % vHxs             Spatial (sample) variance
 % momx             Moments of the quadratic portion of the likelihood
-% covFHh           A covariance matrix for the estimate, watch the
-%                  calling function (Anal Fisher-based? Anal
-%                  Hessian-based? Numerical Hessian based? Evaluated where?)
+% covFHh           A single covariance matrix for the estimate, watch the calling
+%                  function (Analytical Fisher-based? Analytical
+%                  blurred-Hessian-based? Numerical Hessian based? Evaluated
+%                  where exactly? Only one is requested as input and
+%                  written to file)
 %
-% SEE ALSO¨ DIAGNOS
+% SEE ALSO: OSRDIAG
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/15/2016
+% Last modified by fjsimons-at-alum.mit.edu, 08/18/2017
 
 % There may be one, there may be two sample variances incoming
 fmtx=repmat(' %9.3e',1,length(vHxs));
