@@ -74,13 +74,13 @@ covF=trilosi(fscanf(fid,'%f',npp));
 fgetl(fid); fgetl(fid);
 F=fscanf(fid,'%f',npp)';
 
-% And the average Hessian could be close to the Fisher if you're lucky
-% Don't necessarily look at THIS partial average of the Hessians
-% through the iterations as it's just of the last few iterations that
-% add cumulatively to THINI and THHAT. We are getting this again from
-% the full file DIAGNOS. So if we have interrupted a sequence of
-% simulations we need run one more simulation to close out this
-% file properly, which we do by setting N=0 in MLEROS etc.
+% And the average Hessian could be close to the Fisher if you're lucky Don't
+% necessarily look at THIS partial average of the Hessians through the
+% iterations as it's just of the last few iterations that add cumulatively
+% to THINI and THHAT. We are getting this later again from the full file
+% DIAGN. So if we have interrupted a sequence of simulations we need run one
+% more simulation to close out this file properly, which we do by setting
+% N=0 in MLEROS etc.
 fgetl(fid); 
 % Pick out the number that got reported
 t=fgetl(fid); nh=str2num(t([abs(t)<58 & abs(t)>47]));
