@@ -15,9 +15,9 @@ function oswzeroe(fid,scl,avH,good,F,covF,fmti)
 %
 % SEE ALSO: 
 %
-% OSWZEROB, OSRZERO, OSWDIAG, DIAGNOS
+% OSWZEROB, OSRZERO, OSWDIAG, OSRDIAG
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/15/2016
+% Last modified by fjsimons-at-alum.mit.edu, 08/18/2017
 
 % Print the scaling of the theoretical values
 fprintf(fid,'%s\n','The scaling factors');
