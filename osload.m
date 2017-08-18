@@ -1,7 +1,7 @@
 function [th0,thhats,params,covFHh,covHav,thpix,E,v,obscov,sclcovF,momx,covthpix]=osload(datum,perc)
 % [th0,thhats,params,covFHh,covHav,thpix,E,v,obscov,sclcovF,momx,covthpix]=OSLOAD(datum,perc)
 %
-% Loads all four of the output diagnostic files produced by the suite of
+% Loads ALL FOUR of the output diagnostic files produced by the suite of
 % programs following Simons & Olhede (2013). Data files are, like,
 % 'mleosl_thzro_16-Jun-2015-64-2', 'mleosl_thini_16-Jun-2015-64-2',
 % 'mleosl_thhat_16-Jun-2015-64-2', 'mleosl_diagn_16-Jun-2015-64-2', etc.
@@ -16,9 +16,7 @@ function [th0,thhats,params,covFHh,covHav,thpix,E,v,obscov,sclcovF,momx,covthpix
 % th0          The true parameter vector
 % thhats       The maximum-likelihood estimates from the series of saved MLEOSL runs 
 % params       The parameter structure of the SIMULOSL simulations
-% covFHh       A covariance matrix for the estimate, watch the
-%              calling function (Anal Fisher-based? Anal
-%              Hessian-based? Numerical Hessian based? Evaluated where?)
+% covFHh       A covariance matrix for the estimate as written by OSWDIAG
 % covHav       The covariance matrix based on the MEDIAN numerical Hessian matrix
 % thpix        The example estimate, randomly picked up
 % E            Young's modulus - for conversion to Te only
@@ -31,9 +29,9 @@ function [th0,thhats,params,covFHh,covHav,thpix,E,v,obscov,sclcovF,momx,covthpix
 %
 % SEE ALSO:
 %
-% OSOPEN, DIAGNOS, TRIMIT, MLEOS etc
+% OSOPEN, OSRDIAG, TRIMIT, MLEOS etc
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/17/2016
+% Last modified by fjsimons-at-alum.mit.edu, 08/18/2017
 
 % Who called? Work this into the filenames
 [~,n]=star69;
@@ -72,9 +70,9 @@ fid=fopen(f1,'r');
 fclose(fid);
 
 % Load the optimization diagnostics, which should duplicate f2 and f3
-[thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covFHh]=diagnos(f4,pwd,np); 
+[thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covFHh]=osrdiag(f4,pwd,np); 
 try
-  % Could be off; know that DIAGNOS is the file of record
+  % Could be off; know that DIAGN is the file of record
   difer(thhat(:,1:np)-thhats,[],[],NaN)
   difer(thini        -thinis,[],[],NaN)
 catch
