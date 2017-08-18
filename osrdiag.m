@@ -1,5 +1,5 @@
-function [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covFHh]=diagnos(fname,ddir,np)
-% [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covFHh]=DIAGNOS(fname,ddir,np)
+function [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covFHh]=osrdiag(fname,ddir,np)
+% [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covFHh]=OSRDIAG(fname,ddir,np)
 %
 % Reads in a single file with diagnostics from MLEOS, MLEROS0, MLEROS.
 %
@@ -31,9 +31,9 @@ function [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covFHh]=diagnos(fname,ddi
 %
 % SEE ALSO:
 %
-% OSOPEN, OSLOAD (with which it needs to match!)
+% OSOPEN, OSLOAD, OSWDIAG
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/14/2016
+% Last modified by fjsimons-at-alum.mit.edu, 08/18/2017
 
 defval('ddir','/u/fjsimons/PROGRAMS/MFILES/olhede4')
 defval('fname','mleosl_diagn_11-Jun-2015')
