@@ -1,7 +1,11 @@
 function [fids,fmts,fmti]=osopen(np)
 % [fids,fmts,fmti]=OSOPEN(np,npp)
 %
-% Opens diagnostic files and returns identifiers and format strings
+% Opens ALL FOUR diagnostic files for writing by the suite of
+% programs following Simons & Olhede (2013). Data files are, like,
+% 'mleosl_thzro_16-Jun-2015-64-2', 'mleosl_thini_16-Jun-2015-64-2',
+% 'mleosl_thhat_16-Jun-2015-64-2', 'mleosl_diagn_16-Jun-2015-64-2', etc, 
+%  and returns identifiers and format strings. 
 %
 % INPUT:
 %
