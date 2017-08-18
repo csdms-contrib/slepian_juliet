@@ -33,7 +33,7 @@ function varargout=mleos(Hx,Gx,thini,params,algo,bounds,aguess)
 %
 % thhat    The maximum-likelihood estimate of the vector [scaled]:
 %          [D f2 s2 nu rho], in Nm, and "nothing", see SIMULOS
-% covh     The asymptotic covariance matrix of this estimate
+% covh     The numerical-Hessian based covariance matrix of this estimate
 % logli    The maximized value of the likelihood
 % thini    The starting guess used in the optimization
 % scl      The scaling applied as part of the optimization procedure
@@ -65,7 +65,7 @@ function varargout=mleos(Hx,Gx,thini,params,algo,bounds,aguess)
 %% One simulation and a chi-squared plot
 % mleos('demo5')
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/25/2015
+% Last modified by fjsimons-at-alum.mit.edu, 08/18/2017
 
 if ~isstr(Hx)
   defval('algo','con')
