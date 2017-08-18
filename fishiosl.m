@@ -14,28 +14,29 @@ function [F,covF,cF]=fishiosl(k,th,xver)
 %          th(1)=s2   The first Matern parameter [variance in unit^2]
 %          th(2)=nu   The second Matern parameter [differentiability]
 %          th(3)=rho  The third Matern parameter [range in m]
-% xver     Excessive verification [0 or 1] where 1 also keeps option open
-%          to output wavenumber dependence
+% xver     Excessive verification [0 or 1, which also computes F(k)]
 %
 % OUTPUT:
 %
 % F        The full-form Fisher matrix, a symmetric 3x3 matrix
-% covF     A covariance estimate based on this Hessian matrix
+% covF     A covariance estimate based on this matrix
 % cF       The uniquely relevant Fisher elements listed in this order:
-%          [1] Fs2s2   [2] Fnunu  [3] Frhorho
-%          [4] Fs2nu   [5] Fs2rho [6] Fnurho
+%          [1] F_s2s2   [2] F_nunu  [3] F_rhorho
+%          [4] F_s2nu   [5] F_s2rho [6] F_nurho
 %
 % SEE ALSO: 
 %
-% GAMMIOSL, HESSIOSL, FISH2COV, TRILOS, TRILOSI
+% GAMMIOSL, HESSIOSL, LOGLIOSL
 % 
 % EXAMPLE:
 % 
 % p.quart=0; p.blurs=0; p.kiso=NaN; clc; [~,th0,p,k,Hk]=simulosl([],p,1);
-% F=fishiosl(k,th0); G=gammiosl(k,th0,p,Hk); H=hessiosl(k,th0,p,Hk);
+% F=fishiosl(k,th0); g=gammiosl(k,th0,p,Hk); H=hessiosl(k,th0,p,Hk);
 % round(abs((F+H)./F)*100) % should be small numbers
+% [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
+% difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/2/2016
+% Last modified by fjsimons-at-alum.mit.edu, 08/18/2017
 
 % Early setup exactly as in HESSIOSL
 defval('xver',1)
@@ -45,8 +46,6 @@ k=k(~~k);
 
 % The number of parameters to solve for
 np=length(th);
-% The number of wavenumbers
-lk=length(k(:));
 % The number of unique entries in an np*np symmetric matrix
 npp=np*(np+1)/2;
 
@@ -55,6 +54,9 @@ mth=mAosl(k,th,xver);
 
 % Initialize
 cF=nan(npp,1);
+
+% The number of wavenumbers
+lk=length(k(:));
 
 % Creative indexing - compare NCHOOSEK elsewhere
 [i,j]=ind2sub([np np],trilos(reshape(1:np^2,np,np)));
