@@ -1,5 +1,5 @@
-function [th,p,scl,avH,F,covF,nh]=osrzero(fid,np)
-% [th,p,scl,scl,avH,F,covF,nh]=OSRZERO(fid,np)
+function [th,p,scl,avH,F0,covF0,nh]=osrzero(fid,np)
+% [th,p,scl,scl,avH,F0,covF0,nh]=OSRZERO(fid,np)
 %
 % Reads a THZRO file as produced by the olhede? suite of
 % programs following Simons & Olhede (2013).
@@ -15,15 +15,15 @@ function [th,p,scl,avH,F,covF,nh]=osrzero(fid,np)
 % p          The parameter structure of the simulation
 % scl        The scaling factors
 % avH        The average scaled numerical Hessian matrix at the estimates
-% F          The unblurred scaled Fisher matrix at the truth
-% covF       The covariance matrix, based on F at the truth
+% F0         The unblurred scaled Fisher matrix at the truth
+% covF0      The covariance matrix, based on F0 at the truth
 % nh         The number of simulations yielding avH
 %
 % SEE ALSO: 
 %
 % OSWZEROE, OSWZEROB, OSLOAD
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/14/2016
+% Last modified by fjsimons-at-alum.mit.edu, 08/18/2017
 
 % The number of unique entries in an np*np symmetric matrix
 npp=np*(np+1)/2;

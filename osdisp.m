@@ -1,5 +1,5 @@
-function varargout=osdisp(th0,thhats,nl,avhs,Fisher,covHav)
-% OSDISP(th0,thhats,nl,avhs,Fisher,covHav)
+function varargout=osdisp(th0,thhats,nl,avhs,F0,covHav)
+% OSDISP(th0,thhats,nl,avhs,F0,covHav)
 % OSDISP(th0,params)
 % [str0,str1,str2,str3]=OSDISP(...)
 %
@@ -12,15 +12,15 @@ function varargout=osdisp(th0,thhats,nl,avhs,Fisher,covHav)
 % thhats     Estimated parameter vector, OR
 % params     A structure with the fixed parameter settings
 % nl         Number of experiments over which the average Hessian is reported
-% avhs       Average Hessian matrix at the estimates
-% Fisher     Fisher matrix at the truth
+% avhs       Average numerical Hessian matrix at the estimates
+% F0         Fisher matrix evaluated at at the truth
 % covHav     The covariance based on the average numerical Hessian matrix
 %
 % OUTPUT:
 %
 % The strings used 
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/15/2016
+% Last modified by fjsimons-at-alum.mit.edu, 08/18/2017
 
 % The necessary strings for formatting
 str0='%18s';
@@ -58,7 +58,7 @@ else
 		 ' the Fisher matrix at the truth are'],nl))
    disp(sprintf(...
        '|%4.2f|%s apart on average (the relevant diagn file had the full information)\n',...
-       1/100*round(100*mean(abs([avhs-Fisher]'./Fisher'*100))),'%'))
+       1/100*round(100*mean(abs([avhs-F0]'./F0'*100))),'%'))
 
   % Covariance, relative, empirical, and theoretical
   disp(sprintf(sprintf('%s : %s',str0,str1s),...

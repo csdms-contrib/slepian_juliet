@@ -11,7 +11,7 @@ function Xk=hformos(S,Hk,A,xver)
 %       a complex 1-column vector of Fourier-domain observations, [Nx1]
 % A     A wavenumber-dependent SYMMETRIC matrix, e.g. Tinv, [Nx3], or
 %       a wavenumber-dependent vector, [Nx1]
-% xver  1 Extra verification in case nargin==2 
+% xver  1 Extra verification for the univariate case, when A=1
 %
 % OUTPUT:
 %
@@ -37,6 +37,6 @@ end
 % Still may have a tiny imaginary part, get rid of it if it is small 
 Xk=realize(Xk);
 
-if nargin==1 && A==1
-  difer(Xk,abs(Hk).^2./S);
+if A==1
+  diferm(Xk,abs(Hk).^2./S);
 end

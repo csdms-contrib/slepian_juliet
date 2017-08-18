@@ -1,5 +1,5 @@
-function varargout=mleplos(thhats,th0,covF,covHav,covthpix,E,v,params,name,thpix)
-% MLEPLOS(thhats,th0,covF,covHav,covthpix,E,v,params,name,thpix)
+function varargout=mleplos(thhats,th0,covF0,covHav,covHpix,E,v,params,name,thpix)
+% MLEPLOS(thhats,th0,covF0,covHav,covHpix,E,v,params,name,thpix)
 %
 % Graphical statistical evaluation of the maximum-likelihood inversion
 % results from the suite MLEOS, MLEROS, MLEROS0, MLEOSL. 
@@ -14,10 +14,10 @@ function varargout=mleplos(thhats,th0,covF,covHav,covthpix,E,v,params,name,thpix
 %            th0(3/4)=s2   The first Matern parameter, aka sigma^2 
 %            th0(4/5)=nu   The second Matern parameter 
 %            th0(5/6)=rho  The third Matern parameter 
-% covF       The covariance matrix based on the Fisher at the truth
+% covF0      The covariance matrix based on the Fisher matrix at the truth
 % covHav     The covariance matrix based on the average numerical Hessian
 %            matrix at the individual estimates
-% covthpix   The covariance matrix based on the numerical Hessian at a random estimate
+% covHpix   The covariance matrix based on the numerical Hessian at a random estimate
 % E          Young's modulus (not used for single fields)
 % v          Poisson's ratio (not used for single fields)
 % params     The structure with the fixed parameters from the experiment
@@ -32,7 +32,7 @@ function varargout=mleplos(thhats,th0,covF,covHav,covthpix,E,v,params,name,thpix
 %
 % This only gets used in MLEOS/MLEROS/MLEROS0/MLEOSL thus far
 %
-% Last modified by fjsimons-at-alum.mit.edu, 03/03/2017
+% Last modified by fjsimons-at-alum.mit.edu, 08/17/2017
 
 defval('xver',0)
 
@@ -80,9 +80,9 @@ for ind=1:np
 
   % The theoretical means and standard deviations for any one estimate
   th0i=th0(ind);
-  if ~isempty(covF)
+  if ~isempty(covF0)
     % Error estimate based on the Fisher matrix 
-    stdF=real(sqrt(covF(ind,ind)));
+    stdF=real(sqrt(covF0(ind,ind)));
   else
     stdF=NaN;
   end
@@ -95,9 +95,9 @@ for ind=1:np
   else
     stdH=NaN;
   end
-  if ~isempty(covthpix)
+  if ~isempty(covHpix)
     % Error estimate based on one particular randomly picked Hessian
-    stdHts=real(sqrt(covthpix(ind,ind)));
+    stdHts=real(sqrt(covHpix(ind,ind)));
   else
     stdHts=NaN;
   end
@@ -251,7 +251,7 @@ if isstruct(params)
 end
 
 % Here is the TRUTH and the FISHER-BASED standard deviation
-[answ,answs]=osansw(th0,covF,E,v);
+[answ,answs]=osansw(th0,covF0,E,v);
 disp(sprintf('%s',...
              'Truth and Fisher-covariance standard deviation at the truth'))
 disp(sprintf(answs,answ{:}))
@@ -262,7 +262,7 @@ disp(sprintf('\n%s',...
 disp(sprintf(answs,answ{:}))
 tt=supertit(ah(np+1:2*np),sprintf(answs,answ{:}));
 % Here is the random estimate and its numerical-Hessian based standard deviation
-[answ,answs]=osansw(thpix,covthpix,E,v);
+[answ,answs]=osansw(thpix,covHpix,E,v);
 disp(sprintf('\n%s',...
              'Example estimate and numerical-Hessian covariance standard deviation'))
 disp(sprintf(answs,answ{:}))

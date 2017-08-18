@@ -1,5 +1,5 @@
-function oswdiag(fid,fmts,lpars,thhat,thini,scl,ts,vHxs,momx,covFHh)
-% OSWDIAG(fid,fmts,lpars,thhat,thini,scl,ts,vHxs,momx,covFHh)
+function oswdiag(fid,fmts,lpars,thhat,thini,scl,ts,vHxs,momx,covX)
+% OSWDIAG(fid,fmts,lpars,thhat,thini,scl,ts,vHxs,momx,covX)
 %
 % Writes an entry in the DIAGN file for the Olhede & Simons (2013) suite
 %
@@ -18,13 +18,9 @@ function oswdiag(fid,fmts,lpars,thhat,thini,scl,ts,vHxs,momx,covFHh)
 % ts               Optimization timing
 % vHxs             Spatial (sample) variance
 % momx             Moments of the quadratic portion of the likelihood
-% covFHh           A single covariance matrix for the estimate, watch the calling
-%                  function (Analytical Fisher-based? Analytical
-%                  blurred-Hessian-based? Numerical Hessian based? Evaluated
-%                  where exactly? Only one is requested as input and
-%                  written to file)
+% covX             A certain covariance matrix estimate for the estimate
 %
-% SEE ALSO: OSRDIAG
+% SEE ALSO: OSRDIAG, OSRZERO
 %
 % Last modified by fjsimons-at-alum.mit.edu, 08/18/2017
 
@@ -43,6 +39,6 @@ fprintf(fid,fmts{3},...
 	round(ts),lpars{4},lpars{5}.iterations,...
 	lpars{1},lpars{5}.firstorderopt,momx,...
 	scl,...
-        lpars{2},trilos(lpars{3}),trilos(covFHh));
+        lpars{2},trilos(lpars{3}),trilos(covX));
 % Last line: Empty (only visuals, no effect on reading)
 fprintf(fid,'\n');

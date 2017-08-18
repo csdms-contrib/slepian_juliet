@@ -64,14 +64,13 @@ end
 fmti{6}='%3i %3i %3i\n';
 % For the likelihood, first-order optimality, and moments
 fmti{5}='%15.8e %15.8e %15.8e %15.8e %15.8e\n';
-% For the scale
+% For the scale applied to the parameters during optimzation
 fmti{4}=[repmat('%15.0e ',1,np) '\n'];
-% For the score, the gradient of the misfit function
+% For the score, the gradient of the likelihood, with np elements
 fmti{3}=[repmat('%15.8e ',1,np) '\n']; 
-% For the Hessian of the misfit function, with npp unique elements 
+% For Hessians, second derivative of the likelihood, with npp unique elements 
 fmti{2}=repmat([repmat('%15.12f ',1,npp/3) '\n'],1,3);
-% For the unscaled Hessian-derived covariance matrix, or 
-% for the unscaled theoretical covariance matrix
+% For covariance matrices of the estimate
 fmti{1}=repmat([repmat('%19.12e ',1,npp/3) '\n'],1,3);
 
 % Lumps some of the formats together

@@ -1,5 +1,5 @@
-function [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covFHh]=osrdiag(fname,ddir,np)
-% [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covFHh]=OSRDIAG(fname,ddir,np)
+function [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covX]=osrdiag(fname,ddir,np)
+% [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covX]=OSRDIAG(fname,ddir,np)
 %
 % Reads in a single file with diagnostics from MLEOS, MLEROS0, MLEROS.
 %
@@ -25,9 +25,7 @@ function [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covFHh]=osrdiag(fname,ddi
 % hes      The Hessian, second derivative of the likelihood, by FMINUNC/FMINCON
 % optis    The first-order optimality condition, by FMINUNC/FMINCON
 % momx     The various moments of the quadratic piece of the likelihood
-% covFHh   A covariance matrix for the estimate, watch the
-%          calling function (Anal Fisher-based? Anal
-%          Hessian-based? Numerical Hessian based? Evaluated where?)
+% covX     A certain covariance matrix estimate for the estimate
 %
 % SEE ALSO:
 %
@@ -66,7 +64,7 @@ momx=nan(ndim,3);
 thhat=deal(nan(ndim,np+nvar));
 [thini,gam]=deal(nan(ndim,np));
 hes=nan(ndim,npp);
-covFHh=nan(ndim,npp);
+covX=nan(ndim,npp);
 
 % Rarely, in SPMD mode does the file get written too quickly and does a
 % confusion between labs happen - look into the file and fix easily
@@ -106,7 +104,7 @@ for index=1:ndim
   % The scaled Hessian elements at the solution
   hes(index,:)=fscanf(fid,'%f',npp);
   % An unscaled covariance estimate
-  covFHh(index,:)=fscanf(fid,'%f',npp);
+  covX(index,:)=fscanf(fid,'%f',npp);
 end
 fclose(fid);
 
@@ -122,10 +120,10 @@ scl=scl(1:index,:);
 L=L(1:index,:);
 gam=gam(1:index,:);
 hes=hes(1:index,:);
-covFHh=covFHh(1:index,:);
+covX=covX(1:index,:);
 optis=optis(1:index,:);
 momx=momx(1:index,:);
 
 % Put out
-varns={thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covFHh};
+varns={thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covX};
 varargout=varns(1:nargout);
