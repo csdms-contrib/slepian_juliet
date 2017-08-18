@@ -15,9 +15,9 @@ function [fids,fmts,fmti]=osopen(np)
 %
 % SEE ALSO:
 %
-% OSLOAD, DIAGNOS (with which it needs to match!)
+% OSLOAD, OSRDIAG (with which it needs to match!)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/15/2016
+% Last modified by fjsimons-at-alum.mit.edu, 08/18/2017
 
 % Who called? Work this into the filenames
 [~,n]=star69;
