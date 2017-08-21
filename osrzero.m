@@ -23,7 +23,7 @@ function [th,p,scl,avH,F0,covF0,nh]=osrzero(fid,np)
 %
 % OSWZEROE, OSWZEROB, OSLOAD
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/18/2017
+% Last modified by fjsimons-at-alum.mit.edu, 08/21/2017
 
 % The number of unique entries in an np*np symmetric matrix
 npp=np*(np+1)/2;
@@ -68,11 +68,11 @@ scl=fscanf(fid,'%f',np)';
 
 % This is the Fisher-based covariance at the truth
 fgetl(fid); fgetl(fid);
-covF=trilosi(fscanf(fid,'%f',npp));
+covF0=trilosi(fscanf(fid,'%f',npp));
 
 % This is the right scaled Fisher matrix from which the above derives 
 fgetl(fid); fgetl(fid);
-F=fscanf(fid,'%f',npp)';
+F0=fscanf(fid,'%f',npp)';
 
 % And the average Hessian could be close to the Fisher if you're lucky Don't
 % necessarily look at THIS partial average of the Hessians through the
