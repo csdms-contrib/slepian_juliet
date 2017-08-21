@@ -72,7 +72,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %% One simulation and a chi-squared plot
 % mleosl('demo5',th0,params)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/17/2016
+% Last modified by fjsimons-at-alum.mit.edu, 08/21/2017
 
 % NEED TO CHANGE THE k(~~k) to proper accounting for kiso
 
@@ -190,7 +190,7 @@ if ~isstr(Hx)
     % the analytics. According to the manual, "solvers check the match at a
     % point that is a small random perturbation of the initial point". My
     % own "disp" output (further below) provides comparisons at the estimate
-    % even when the below option is set to "off" and we don't use it for any
+    % even when the option below is set to "off" and we don't use it for any
     % aspect of the optimization. If you should also try this for blurred
     % systems (remove part of the condition above), you will fail the
     % test and the whole thing will come to a halt. So after doing this
@@ -277,11 +277,12 @@ if ~isstr(Hx)
     thhat(3)=-thhat(3);
   end
 
-  % Covariance from FMINUNC/FMINCON's numerical scaled Hessian NEAR estimate
   % Degrees of freedom for full-wavenumber domain (redundant for real data)
-  % Not including the zero wavenumber, since Lkosl
+  % Not including the zero wavenumber, since LOGLIOS doesn't either
   df=length(k(~~k))/2; 
   matscl=[scl(:)*scl(:)'];
+
+  % Covariance from FMINUNC/FMINCON's numerical scaled Hessian NEAR estimate
   covh=inv(hes./matscl)/df;
   
   if xver==1
@@ -364,6 +365,7 @@ if ~isstr(Hx)
   covFHh{1}=covF;
   covFHh{2}=covH;
   covFHh{3}=covh;
+  % Likelihood attributes
   lpars{1}=logli;
   lpars{2}=grd;
   lpars{3}=hes;
@@ -405,8 +407,8 @@ elseif strcmp(Hx,'demo1')
 
   % Do it!
   good=0; 
-  % Initialize the average Hessian
-  avH=zeros(np,np);
+  % Initialize the average Hessian that will be saved by OSWZEROE 
+  avhsz=zeros(np,np);
 
   % Set N to zero to simply close THZERO out
   for index=1:N
@@ -458,7 +460,7 @@ elseif strcmp(Hx,'demo1')
 	    && lpars{5}.firstorderopt < optmin
 	good=good+1;
 	% Build the average of the Hessians for printout later
-	avH=avH+lpars{3}./[scl(:)*scl(:)'];
+	avhsz=avhsz+lpars{3}./[scl(:)*scl(:)'];
 	% Reapply the scaling before writing it out
 	fprintf(fids(2),fmts{1},thhat.*scl);
 	fprintf(fids(3),fmts{1},thini.*scl);
@@ -469,7 +471,12 @@ elseif strcmp(Hx,'demo1')
         % We don't compare the second and third outputs of LOGLIOSL
         % since these are analytical, poorly approximately blurred,
         % derivates, and we be writing the numerical versions 
-	% Print the optimization results and diagnostics to a different file 
+	% Print the optimization results and diagnostics to a different
+        % file 
+	% FJS WATCH THE LAST ENTRY - IS THAT THE ONE WE WANT TO WRITE?
+        % WE SHOULD BE WRITING covFHh{2} or covFHh{3}, really, since the
+        % Fisher matrix, at least, unblurred, isn't going to be good
+        % enough; I do have ideas about blurring it, so watch this space
 	oswdiag(fids(4),fmts,lpars,thhat,thini,scl,ts,var(Hx),momx,covFHh{1})
       end
     end
@@ -480,7 +487,7 @@ elseif strcmp(Hx,'demo1')
   % Initialize if all you want is to close the file
   if N==0
     [Hx,th0,p,k]=simulosl(th0,params); 
-    good=1; avH=avH+1; 
+    good=1; avhsz=avhsz+1; 
     [~,~,lpars]=mleosl(Hx,[],[],'klose');
     oswzerob(fids(1),th0,p,lpars{6},lpars{7},fmts)
   end
@@ -490,17 +497,17 @@ elseif strcmp(Hx,'demo1')
     sclth0=10.^round(log10(th0));
 
     % This is the average of the numerical Hessians, should be closer to the Fisher
-    avH=avH.*[sclth0(:)*sclth0(:)']/good;
+    avhsz=avhsz.*[sclth0(:)*sclth0(:)']/good;
 
     % Now compute the Fisher and Fisher-derived covariance at the truth
-    [F,covF]=fishiosl(k,th0);
+    [F0,covF0]=fishiosl(k,th0);
     matscl=[sclth0(:)*sclth0(:)'];
     
     % Of course when we don't have the truth we'll build the covariance
     % from the single estimate that we have just obtained. This
     % covariance would then be the only thing we'd have to save.
     if labindex==1
-      oswzeroe(fids(1),sclth0,avH,good,F.*matscl,covF,fmti)
+      oswzeroe(fids(1),sclth0,avhsz,good,F0.*matscl,covF0,fmti)
     end
   end
   
@@ -515,7 +522,7 @@ elseif strcmp(Hx,'demo2')
   np=3;
 
   % Load everything you know about this simulation
-  [th0,thhats,p,covFHh,covHav,thpix,~,~,~,~,momx,covthpix]=osload(datum);
+  [th0,thhats,p,~,covavhs,thpix,~,~,~,~,momx,covhpix,covF0]=osload(datum);
 
   % Report the findings of all of the moment parameters
   disp(sprintf('\nm(m(Xk)) %f m(v(Xk)) %f\nm(magic) %f v(magic) %f',...
@@ -531,8 +538,8 @@ elseif strcmp(Hx,'demo2')
   %      upper(mfilename),trims))
   
   % If the above two are close, we need to start using the second one
-  % Yep!
-  [ah,ha]=mleplos(trimit(thhats,trims,1),th0,covFHh,covHav,covthpix,[],[],p,...
+  % Let us feed it the Fisher covariance at the TRUTH
+  [ah,ha]=mleplos(trimit(thhats,trims,1),th0,covF0,covavhs,covhpix,[],[],p,...
                   sprintf('MLEOSL-%s',datum),thpix);
   
   % Return some output, how about just the empirically observed
@@ -545,6 +552,7 @@ elseif strcmp(Hx,'demo2')
   varargout=varns(1:nargout);
 
   % Print the figure! Don't forget the degs.pl script
+  disp(' ')
   figna=figdisp([],sprintf('%s_%s',Hx,datum),[],1);
   system(sprintf('degs %s.eps',figna));
   system(sprintf('epstopdf %s.eps',figna)); 
@@ -596,10 +604,10 @@ elseif strcmp(Hx,'demo4')
   np=3;
   
   % Load everything you know about this simulation
-  [th0,thhats,params,covF,~,pix,E,v,obscov,sclcov]=osload(datum);
+  [th0,thhats,params,covX,~,pix,E,v,obscov,sclcov]=osload(datum);
 
   % Make the plot
-  ah=covplos(2,sclcov,obscov,covF,params,thhats,th0,[],[],'ver');
+  ah=covplos(2,sclcov,obscov,covX,params,thhats,th0,[],[],'ver');
 
   % Make the plot
   figna=figdisp([],sprintf('%s_%s',Hx,datum),[],1);
@@ -631,8 +639,6 @@ elseif strcmp(Hx,'demo5')
   grobs=[gammiosl(k,thhat.*scl,p,Hk)]';
   
   % Take a look at the unblurred theoretical covariance at the estimate,
-  % to compare to the observed blurred Hessian; in the other demos we
-  % compare how well this works after averaging
   [F,covthat]=fishiosl(k,thhat.*scl);
 
   % Collect the theoretical covariance for the truth for the title

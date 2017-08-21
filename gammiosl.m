@@ -37,7 +37,7 @@ function g=gammiosl(k,th,params,Hk,xver)
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 % 
-% Last modified by fjsimons-at-alum.mit.edu, 11/15/2016
+% Last modified by fjsimons-at-alum.mit.edu, 08/21/2017
 
 defval('xver',1)
 
@@ -51,6 +51,9 @@ np=length(th);
 Hk=Hk(~~k);
 S = S(~~kk); 
 k = k(~~k);
+
+% The number of nonzero wavenumbers
+lk=length(k(:));
 
 % The statistics of Xk will be tested in LOGLIOS
 Xk=hformos(S,Hk,[],xver);
@@ -69,8 +72,6 @@ if xver==0
     g(ind)=-mean(-mth{ind}.*[1-Xk]);
   end
 elseif xver==1
-  % The number of wavenumbers
-  lk=length(k(:));
   % Initialize; no cell since all of them depend on the wave vectors
   gk=nan(lk,np);
   % Do save the wavenumber-dependent entities

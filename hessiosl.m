@@ -2,7 +2,7 @@ function [H,covH,cH]=hessiosl(k,th,params,Hk,xver)
 % [H,covH,cH]=HESSIOSL(k,th,params,Hk,xver)
 %
 % Calculates the entries in the Hessian matrix of Olhede & Simons (2013) for
-% the Whittle-likelihood under the UNIVARIATE ISOnTROPIC MATERN model, after
+% the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN model, after
 % wavenumber averaging. Blurring is only approximately possible here, we
 % work with analytical expressions for some of the derivatives, see
 % LOGLIOSL. Zero-wavenumber excluded. No scaling asked or applied.
@@ -44,7 +44,7 @@ function [H,covH,cH]=hessiosl(k,th,params,Hk,xver)
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/15/2016
+% Last modified by fjsimons-at-alum.mit.edu, 08/21/2017
 
 % Early setup exactly as in FISHIOSL
 defval('xver',1)
@@ -61,6 +61,9 @@ npp=np*(np+1)/2;
 Hk=Hk(~~k);
 S = S(~~kk);
 k = k(~~k);
+
+% The number of nonzero wavenumbers
+lk=length(k(:));
 
 % The statistics of Xk will be tested in LOGLIOS
 Xk=hformos(S,Hk,[],xver);
@@ -82,8 +85,6 @@ if xver==0
     cH(ind)=mean(-mththp{ind}-[mth{i(ind)}.*mth{j(ind)}-mththp{ind}].*Xk);
   end
 elseif xver==1
-  % The number of wavenumbers
-  lk=length(k(:));
   % Initialize; no cell since all of them depend on the wave vectors
   cHk=nan(lk,npp);
   % Do save the wavenumber-dependent entities

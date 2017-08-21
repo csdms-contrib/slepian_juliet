@@ -36,13 +36,16 @@ function [F,covF,cF]=fishiosl(k,th,xver)
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/18/2017
+% Last modified by fjsimons-at-alum.mit.edu, 08/21/2017
 
 % Early setup exactly as in HESSIOSL
 defval('xver',1)
 
 % Exclude the zero wavenumbers
 k=k(~~k);
+
+% The number of nonzero wavenumbers
+lk=length(k(:));
 
 % The number of parameters to solve for
 np=length(th);
@@ -54,9 +57,6 @@ mth=mAosl(k,th,xver);
 
 % Initialize
 cF=nan(npp,1);
-
-% The number of wavenumbers
-lk=length(k(:));
 
 % Creative indexing - compare NCHOOSEK elsewhere
 [i,j]=ind2sub([np np],trilos(reshape(1:np^2,np,np)));
