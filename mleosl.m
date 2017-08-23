@@ -302,6 +302,8 @@ if ~isstr(Hx)
   % Analytic (poorly blurred) Hessian AT the estimate, and derived covariance
   [H,covH]=hessiosl(k,thhat.*scl,params,Hk,xver);
  
+% FJS keyboard
+
   % Analytical calculations of the gradient and the Hessian poorly represent
   % the blurring (though it's much better than not trying at all), and thus,
   % are expected to be close to numerical results only without blurring
@@ -473,11 +475,9 @@ elseif strcmp(Hx,'demo1')
         % derivates, and we be writing the numerical versions 
 	% Print the optimization results and diagnostics to a different
         % file 
-	% FJS WATCH THE LAST ENTRY - IS THAT THE ONE WE WANT TO WRITE?
-        % WE SHOULD BE WRITING covFHh{2} or covFHh{3}, really, since the
-        % Fisher matrix, at least, unblurred, isn't going to be good
-        % enough; I do have ideas about blurring it, so watch this space
-	oswdiag(fids(4),fmts,lpars,thhat,thini,scl,ts,var(Hx),momx,covFHh{1})
+	% FJS until 08/20/2017, I wrote out covFHh{1}
+	% FJS now I write out covFHh{2} (and still, we have hes to turn later)
+	oswdiag(fids(4),fmts,lpars,thhat,thini,scl,ts,var(Hx),momx,covFHh{2})
       end
     end
   end

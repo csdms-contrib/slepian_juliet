@@ -1,5 +1,5 @@
-function [L,g,H,momx,vr]=logliosl(k,th,scl,params,Hk,xver)
-% [L,g,H,momx,vr]=LOGLIOSL(k,th,scl,params,Hk,scl,xver)
+function [L,g,H,momx,vr,Lk]=logliosl(k,th,scl,params,Hk,xver)
+% [L,g,H,momx,vr,Lk]=LOGLIOSL(k,th,scl,params,Hk,scl,xver)
 %
 % Calculates the full negative logarithmic likelihood and its derivatives as
 % averaged over wavenumber space. This is the function that we need to
@@ -31,6 +31,7 @@ function [L,g,H,momx,vr]=logliosl(k,th,scl,params,Hk,xver)
 % momx     Moments of the quadratic piece Xk over relevant wavenumbers;
 %          the last one we use for a test on this being chi-squared
 % vr       Variance of momx(3) under the null hypothesis
+% Lk       The logarithmic loglihood prior to averaging over the wavenumbers
 %
 % SEE ALSO:
 %
@@ -44,7 +45,7 @@ function [L,g,H,momx,vr]=logliosl(k,th,scl,params,Hk,xver)
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/16/2017
+% Last modified by fjsimons-at-alum.mit.edu, 08/23/2017
 
 defval('xver',1)
 
@@ -86,6 +87,7 @@ if xver==0
   % Do it all at once, don't save the wavenumber-dependent entities
   % Eq. (A52) in doi: 10.1093/gji/ggt056
   L=-mean(-log(S)-Xk);
+  Lk=NaN;
 elseif xver==1
   % Do save the wavenumber-dependent entities
   Lk=realize(-log(S)-Xk);
