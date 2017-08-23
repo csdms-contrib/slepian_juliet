@@ -2,10 +2,12 @@ function eggers6
 % EGGERS6
 %
 % Makes FIGURE 5 of Olhede et al. (2017), illustrating the chi-squaredness
-% of the residuals and the normality of the test statistic for
+% of the ratio residuals and the normality of the test statistic for
 % chi-squaredness. May have to run it twice for proper proportions.
 %
-% Last modified by fjsimons-at-alum.mit.edu, 07/07/2015
+% Tested on 8.3.0.532 (R2014a)
+%
+% Last modified by fjsimons-at-alum.mit.edu, 08/23/2017
 
 % Set the experimental parameters
 th0=[1e6 2.5 2e4];
@@ -20,23 +22,29 @@ defstruct('params',fields,{[10 10]*1e3,[64 64],2,NaN,0});
 diferm(Hk1(~~k1),Hk2(~~k1),5)
 diferm(k1,k2)
 
-% Must make some decent axes
+% Must make some decent axes - MUST start with figure 2 (thanks, MLEOSL)
+figure(2)
 clf
 ah=krijetem(subnum(2,3));
 
 % Plot these guys bjutifooly
 [cb,xl,t,tt]=mlechiplos(4,Hk1,thhat,scl,params,ah(1:3));
-
-keyboard
-
 delete(t)
 
-% Then here plot the results from the series of tests in a new figure
-% that we pillage and kill afterwards
-figure
+% Kind of an old simulation, some of the additional goodies must be off
+% especially in comparing covariance matrices, about which we changed our mind
 whatscreated='16-Jun-2015-64-2';
-[cobs,mobs,nobs,th0,p,momx]=mleosl('demo2',whatscreated);
-close(gcf)
+% Then here plot the results from the series of tests in a new figure
+% that we pillage and kill afterwards, only to collect momx
+%figure(1)
+% MIGHT JUST GET THIS OUT OF OSLOAD, BUT STILL IT IS PERHAPS NICE TO SEE
+%[~,~,~,th0,p,momx]=mleosl('demo2',whatscreated);
+% using OSLOAD
+[~,thhats,pp,~,~,~,~,~,~,~,momx]=osload(whatscreated,[],'mleosl');
+% using LOGLIOSL cannot do since we didn't save the data Hk!
+% momxxx=nan(size(momxx)); for index=1:size(thhats,1); 
+%   [~,~,~,momxxx(index,:)]=logliosl(k1,thhats(index,:),1,p,Hk1); end
+% close(1)
 % Now plot what we reaped, i.e. momx(:,3)
 
 % HISTOGRAM PLOT
@@ -163,7 +171,7 @@ movev([ah(4:6) cb(2)],-0.01)
 for ind=1:3
   axes(ah(3+ind))
   yls=ylim; xls=xlim;
-  movev(xl(ind),-range(xls)/25)
+  movev(xl(ind),-range(yls)/25)
   if ind==2
     moveh(yl(ind),range(xls)/25)
   end
