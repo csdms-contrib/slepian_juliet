@@ -1,19 +1,21 @@
 function eggers6
 % EGGERS6
 %
-% Plots some things to convince us of chi-squarednes.
-% May have to run it twice for proper proportions.
+% Makes FIGURE 5 of Olhede et al. (2017), illustrating the chi-squaredness
+% of the residuals and the normality of the test statistic for
+% chi-squaredness. May have to run it twice for proper proportions.
 %
 % Last modified by fjsimons-at-alum.mit.edu, 07/07/2015
 
+% Set the experimental parameters
 th0=[1e6 2.5 2e4];
 fields={'dydx','NyNx','blurs','kiso','quart'};
 defstruct('params',fields,{[10 10]*1e3,[64 64],2,NaN,0});
 
-% Do one mle simulation and recovery
+% Do one SIMULOSL simulation and MLEOSL recovery
 [Hx,th0,params,k1,Hk1,Sb,Lb]=simulosl(th0,params);
-[thhat,~,~,thini,scl,p,e,o,g,h,Hk2,k2,ops,bnds]=...
-           mleosl(Hx,[],params,[],[],[]);
+[thhat,~,~,scl,~,p,Hk2,k2]=mleosl(Hx,[],params,[],[],[]);
+
 % Checks and balances... note that Hk2 has been demeaned
 diferm(Hk1(~~k1),Hk2(~~k1),5)
 diferm(k1,k2)
@@ -24,9 +26,13 @@ ah=krijetem(subnum(2,3));
 
 % Plot these guys bjutifooly
 [cb,xl,t,tt]=mlechiplos(4,Hk1,thhat,scl,params,ah(1:3));
+
+keyboard
+
 delete(t)
-% Then here plot the results from the series of tests
-% Off to a plot we won't want to see again
+
+% Then here plot the results from the series of tests in a new figure
+% that we pillage and kill afterwards
 figure
 whatscreated='16-Jun-2015-64-2';
 [cobs,mobs,nobs,th0,p,momx]=mleosl('demo2',whatscreated);
