@@ -34,10 +34,16 @@ function varargout=mlechipsdosl(Hk,thhat,params,stit,ah)
 %
 % mlechipsdosl('demo1') % Runs itself for an example and a picture
 %
+% NOTE: 
+%
+% This is a lightly changed version of Gabe's original with the demo2
+% options removed. The original is saved in $MFILES/retired. Maybe should
+% integrate my own MLECHIPLOS into this one. 
+%
 % See also BLUROS, IMAGEFNAN, MATERNOS, LOGLIOSL, SIMULOSL, QQPLOT
 %
 % Last modified by gleggers-at-princeton.edu, 04/17/2014
-% Last modified by fjsimons-at-alum.mit.edu, 07/08/2015
+% Last modified by fjsimons-at-alum.mit.edu, 08/23/2017
 
 % Default values for conducting demos
 defval('Hk','demo1')
@@ -63,6 +69,8 @@ if ~ischar(Hk)
         getfieldr(Hk,{'Hx' 'thhat' 'params' 'logli'});
     
         % Recover Fourier domain data and filter the wavenumbers
+        % Check 2pi in FJS-MLEOSL
+        disp('Check 2pi')
         Hk=reshape(tospec(Hx,params.NyNx),params.NyNx);
         k=knums(params);
         Hk(k>params.kiso)=NaN;
@@ -75,7 +83,7 @@ if ~ischar(Hk)
     % Bounds of X residuals to show (functions as coloraxis in panel 3)
     boundsX0=[0 3*df];
     % Bounds of 2X residuals to how (functions as axis bounds in panel 1)
-    bounds2X0=2*boundsX0;
+    bounds2X=2*boundsX0;
     % Color axis for the power spectral densities (panels 2 and 4)
     caxPSD=[-5 0];
     % Contours to be plotted on the power spectral density plots
@@ -84,7 +92,7 @@ if ~ischar(Hk)
     % Generate the 2D wavenumber axis for "Hk"
     [k,kx,ky]=knum2(params.NyNx,[(params.NyNx(1)-1)*params.dydx(1) ...
                      (params.NyNx(2)-1)*params.dydx(2)]);
-        % Get order of magnitude of last wavenumber for scaling
+    % Get order of magnitude of last wavenumber for scaling
     om=round(log10(ky(end)));
     
     % Set up the wavenumber/wavelength axes labels for panels 2-4
@@ -129,12 +137,12 @@ if ~ischar(Hk)
     hold on
     
     % Plot the ideal chi-squared distribution
-    refs=linspace(0,max(bounds2X0),100);
+    refs=linspace(0,max(bounds2X),100);
     plot(refs,chi2pdf(refs,df),'Linew',1.5,'Color','k')
     hold off
     
     % Labeling and cosmetic adjustments
-    xlim(bounds2X0)
+    xlim(bounds2X)
     xl1(1)=xlabel('quadratic residual 2X');
     ylim([0 max(bdens)*1.05])
     yl1(1)=ylabel('probability density');
@@ -150,7 +158,7 @@ if ~ischar(Hk)
     delete(h)
     
     % Make the qq-plot
-    qq0=plot(bounds2X0,bounds2X0,'k'); hold on
+    qq0=plot(bounds2X,bounds2X,'k'); hold on
     qq=plot(hx,hy,'LineS','none','Marker','o','MarkerF','r',...
                     'MarkerE','r','MarkerS',2);
     
@@ -161,7 +169,7 @@ if ~ischar(Hk)
     
     % Add labels and tickmarks
     ylr(1)=ylabel('quantile-quantile prediction');
-    tkmks=bounds2X0(1):2*df:bounds2X0(2);
+    tkmks=bounds2X(1):2*df:bounds2X(2);
     set([ah(1) ah2(1)],'xtick',tkmks)
     set(ah2(1),'ytick',tkmks)
     
@@ -173,17 +181,28 @@ if ~ischar(Hk)
     % For an info textbox, calculate the percent of 2X residuals
     % displayed, the maximum, mean, and variance of the 2X residuals
     tbstr{1}=sprintf('%5.2f%%',100*sum(binWidth*bdens(1:end-1)));
-    tbstr{2}=sprintf('max(2X)=%5.2f',max(2*Xk));
-    tbstr{3}=sprintf('mean(2X)=%5.2f',nanmean(2*Xk));
-    tbstr{4}=sprintf('var(2X)=%5.2f',nanvar(2*Xk));
+    tbstr{2}=sprintf('max(2X) = %5.2f',max(2*Xk));
+    tbstr{3}=sprintf('mean(2X) = %5.2f',nanmean(2*Xk));
+    tbstr{4}=sprintf('var(2X) = %5.2f',nanvar(2*Xk));
         
     % Calculate the mean of (X-df/2)^2 so it can be passed as output
     mag=nanmean((Xk-df/2).^2);
-    tbstr{5}=sprintf('mean([X-%d]^2)=%5.2f',df/2,mag);
+    tbstr{5}=sprintf('mean([X-%d]^2) = %5.2f',df/2,mag);
+
+    % Do the test whether you accept this as a good fit, or not
+    vr=8/sum(~isnan(Xk));
+    
+    % check the pixelation
+    
+    [a,b,c,d]=normtest(mag,1,vr,0.05);
+    disp(sprintf('NORMTEST %i %5.3f %i',a,b,round(c)))
+    if a==0; stp='accept'; else stp='reject'; end
+    tbstr{6}=sprintf(' %s at %4.2f',stp,d);
+    tbstr{7}=sprintf('p = %5.2f',b);
        
     % Give the x- and y-positions of the textbox
-    tbx=repmat(bounds2X0(2)-bounds2X0(2)/30,1,length(tbstr));
-    tby=[7.5 6.35-[0 1 2 3.5  ]];
+    tbx=repmat(bounds2X(2)-bounds2X(2)/30,1,length(tbstr));
+    tby=[7.5 6.35-[0 1 2 3.5 4.5 5.5]];
     
     % Make the textbox(es) with unbordered fillboxes around them
     for i=1:length(tbstr)
@@ -253,14 +272,15 @@ if ~ischar(Hk)
     axes(ah(3))
     
     % Plot the X residuals
-    imagefnan(c11,cmn,reshape(Xk,params.NyNx),'gray',boundsX0,[],1);
-    axis image
-    
+    imagefnan(c11,cmn,reshape(Xk,params.NyNx),'gray',boundsX0,[],1,0);
+
+    % The BOXTEX messes up the neat flat shading from imagefnan... or
+    % does it?
     if ~isnan(params.kiso)
       % Place a box giving the wavelength of the isotropic wavenumber cutoff
-     [~,zy]=boxtex('ll',ah(3),sprintf('%2.0f km',2*pi./params.kiso/1000),...
-                   12,[],[],1.1);
-     set(zy,'fonts',get(zy,'fonts')-1)
+      [~,zy]=boxtex('ll',ah(3),sprintf('%2.0f km',2*pi./params.kiso/1000),...
+                    12,[],[],1.1);
+      set(zy,'fonts',get(zy,'fonts')-1)
     end
     
     % Label the wavenumber axes
@@ -289,7 +309,7 @@ if ~ischar(Hk)
     axes(ah(4))
     
     % Convert (roughly) spectral domain topography to a power spectrum
-    Sk=abs(Hk).^2;
+    Sk=abs(reshape(Hk(:),params.NyNx).^2);
     
     % Remove the zero wavenumber value (to avoid issues with the
     % colorscale) and those at wavenubmers above the isotropic cutoff
@@ -352,7 +372,7 @@ elseif strcmp(Hk,'demo1')
     fields={'dydx','NyNx','blurs'};
     defstruct('params',fields,{[20 20]*1e3,128*[1 1],2});
     % Random random parameters
-    th0=max(round(rand(1,3).*[1 1 1]*10),[1 1 1])./[1e-4 1 1e-4];
+    th0=max(round(rand(1,3).*[1 1 4]*10),[1 1 1])./[1e-4 1 1e-4];
     th0(2)=2+rand(1,1)*2;
     
     % Create the data patch, both in spatial and Fourier domain
@@ -360,10 +380,8 @@ elseif strcmp(Hk,'demo1')
     
     % Set the isotropic wavenumber cutoff to some random fraction
     params.kiso=k(1,randi([params.NyNx(1)/2,params.NyNx(1)]));
-    
+
     % Estimate the parameters via maximum-likelihood
-    % Initial values are now handled well inside of it
-    % thini=[10000 1 1e5];
     thini=[];
     [th,~,~,~,scl]=mleosl(Hx,thini,params);
     thhat=th.*scl;
@@ -377,182 +395,8 @@ elseif strcmp(Hk,'demo1')
     clf
     mlechipsdosl(reshape(Hk,params.NyNx),thhat,params,stit);
     
-    % Plot the figure!
+    % Plot the figure! EPSTOPDF doesn't do well
     figna=figdisp([],[],[],1);
-    system(sprintf('epstopdf %s.eps',figna));
+    system(sprintf('ps2raster -Tf %s.eps',figna));
     system(sprintf('rm -rf %s.eps',figna));
-    
-elseif strcmp(Hk,'demo2')
-  % Rename demo number/ID, and free up the input variables for reuse
-    demoNum=Hk; Hk=[];
-    defval('thhat',1)
-    demoID=thhat; thhat=[];
-    
-    % If a string, "demoID" points toward a previously ran, saved demo
-    if ischar(demoID)
-        % Load the demo 2 structure from the demos savefile
-        demo=modload(demoFile,demoNum);
-        
-        % If specific demo, load its variables
-        if isfield(demo,demoID)
-            fields={'Hk' 'params' 'thhat' 'kisos' 'pstit'};
-            [Hk,params,thhat,kisos,pstit]=getfieldr(demo.(demoID),fields);
-        
-            % Generate the wavenumber grid
-            k=knums(params);
-            
-        % If not, the requested demo does not exist
-        else
-            disp(sprintf('Requested %s %s cannot be found',demoNum,demoID))
-        end
-        
-    % If not a string, do a fresh run of this demo
-    else
-      % For this condition, assume a custom field is being passed
-        if exist('params','var')
-            % Rename in the input variables to their proper variable names
-            [Hx,params,pstit]=deal(params,stit,ah);
-            % Convert the datafield to the spectral domain
-            Hk=reshape(tospec(Hx,params.NyNx),params.NyNx);
-            % Generate this variable for completeness when saving
-            th0=[NaN NaN NaN];
-            % Generate the wavenumber grid
-            k=knums(params);
-            % Otherwise, generate a random field
-        else
-            % Set parameters for creation of a data patch
-            fields={'dydx','NyNx','blurs','kiso'};
-            defstruct('params',fields,{[20 20]*1e3,128*[1 1],2,NaN});
-            
-            % Set the "true" data patch Matern parameter values
-            th0=max(round(rand(1,3).*[1 1 1]*10),[1 1 1])./[1e-4 1 1e-4];
-            th0(2)=2+rand(1,1)*2;
-            
-            % Create the data patch, both in spatial and Fourier domain
-            [Hx,~,~,k,Hk]=simulosl(th0,params);
-            Hk=reshape(Hk,params.NyNx);
-            
-            % Create a pretitle for late figures
-            pstit=sprintf('%s_0=[%9.3e %6.3f %6.0f]\n %s_0=[%9.3e %6.3f %6.0f]',...
-                   '\theta',th0(1),th0(2),th0(3));
-        end
-        
-        keyboard
-        
-        % Get the isotropic cutoff wavenumbers at no corners and all
-        % corners removed, and at approximate fourths in between
-        kisos=k(1,round(params.NyNx(1)/2*(1+[1 0.75 0.5 0.25 0])));
-        
-        % Make a new "params" structure for varying the isotropic cutoff
-        nparams=params;
-        
-        % For each isotropic cutoff, calculate the Matern parameters that
-        % best describe the data field
-        for i=1:length(kisos)
-            nparams.kiso=kisos(i);
-            [th,~,~,~,scl]=mleosl(Hx,[0.01 1 1e5],nparams);
-            thhat(i,:)=th.*scl;
-        end
-        
-        % For this condition, save the run as a new demo
-        if demoID == 1
-          % If the demos savefile doesn't exist, create it
-            if exist(demoFile,'file') == 0
-                readme='Stored data for MLECHIPSDOSL demos';
-                save(demoFile,'readme');
-            end
-            
-            % If a particular demo structure is in the demos savefile, load
-            % it.  Otherwise, create an empty structure for the new demo
-            if inMat(demoNum,demoFile)
-                demo=modload(demoFile,demoNum);
-            else
-                demo=struct;
-            end
-            
-            % Get identifying datestring for this demo, save the demo
-            % results to the structure, and save the structure
-            demo.(datestr(now,'mmmdd_yyyy'))=struct('Hx',Hx,'Hk',Hk,...
-                'th0',th0,'params',params,'thhat',thhat,'kisos',kisos,...
-                'pstit',pstit);
-            modSave(demoFile,demoNum,demo,'-append')
-        end
-    end
-    
-    % Set a range of colors for plots
-    clrs={'b' 'g' 'r' 'c' 'm'};
-
-    % Find the x- and y-coordinates of the zero wavenumber
-    [zx,zy]=find(~k);
-    difer(k(zx,zy),[],[],NaN)
-    
-    % Get the 1D, radial wavenumber axis
-    kk=k(zx,zx:end);
-    
-    % Get the "true" 1D, radially averaged power spectrum
-    [~,Hk1d]=radavg(abs(Hk.^2));
-    
-    % Figure of how the 1D power spectrum changes as corners are cut off
-    figure
-    for i=1:length(kisos)
-        
-        % Plot the 1D power spectrum from the estimated Matern parameters
-        semilogx(kk,maternos(kk,thhat(i,:)),clrs{i});
-        hold on
-        legtxt{i}=sprintf('kiso=%0.4g',kisos(i));
-    end
-
-    % Plot the "true" 1D power spectrum
-    semilogx(kk,Hk1d,'ko-')
-    hold on
-    legtxt{end+1}='Rad. ave. spectrum';
-    
-    % Plot vertical lines showing where each wavenumber cutoff occurs
-    for i=1:length(kisos)
-        plot([kisos(i) kisos(i)],ylim,clrs{i})
-    end
-    
-    % Annotate the figure
-    legend(legtxt)
-    xlabel('wavenumber')
-    ylabel('power')
-    title('1D power spectrum as corners are removed')
-    
-    % Figure of how the 1D power spectrum normalized by the estimated s2 
-    % changes as corners are cut off
-    figure
-    for i=1:length(kisos)
-        
-        % Plot the 1D power spectrum from the estimated Matern parameters
-        semilogx(kk,maternos(kk,thhat(i,:))/thhat(i,1),clrs{i});
-        hold on
-        legtxt{i}=sprintf('kiso=%0.4g',kisos(i));
-    end
-    
-    % Plot vertical lines showing where each wavenumber cutoff occurs
-    for i=1:length(kisos)
-        plot([kisos(i) kisos(i)],ylim,clrs{i})
-    end
-    
-    % Annotate the figure
-    legend(legtxt{1:end-1})
-    xlabel('wavenumber')
-    ylabel('power')
-    title('1D power spectrum/s2 as corners are removed')
-    
-    % Make series of MLECHIPSDOSL plots for each wavenumber cutoff
-    for i=1:length(kisos)
-        
-        % Set the isotropic wavenumber cutoff
-        params.kiso=kisos(i);
-        
-        % Create the supertitle for the figure
-        stit=sprintf('%s\n %s=[%9.3e %6.3f %6.0f]; kiso=%0.4g',...
-                       pstit,'\theta',thhat(i,1),thhat(i,2),thhat(i,3),kisos(i));
-        
-        % Make the figure
-        figure  
-        ah=krijetem(subnum(2,2));
-        mlechipsdosl(Hk,thhat(i,:),params,stit,ah)
-    end
 end
