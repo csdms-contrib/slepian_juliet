@@ -1,11 +1,10 @@
-function varargout=mlechiplos(witsj,Hk,thhat,scl,params,ah,pertur,th0,covv,E,v)
+function varargout=mlechiplos(witsj,Hk,thhat,scl,params,ah,pertur,th0,covX,E,v)
 % [cb,xl,t,tt]=MLECHIPLOS(witsj,Hk,thhat,scl,params,ah,pertur)
-% [cb,xl,t,tt]=MLECHIPLOS(witsj,Hk,thhat,scl,params,ah,pertur,th0,covv,E,v)
+% [cb,xl,t,tt]=MLECHIPLOS(witsj,Hk,thhat,scl,params,ah,pertur,th0,covX,E,v)
 %
 % Makes a plot of the quadratic residual and its interpretation for a
-% likelihood model evaluated at its estimate. Overkill in
-% completeness. Watch what happens when you've filtered and whether the
-% warnings in those cases are relevant - blur/filter etc.
+% likelihood model evaluated at its estimate. Watch what happens when you've
+% filtered and check the warnings related to blurring, filtering, etc.
 %
 % INPUT:
 %
@@ -22,7 +21,7 @@ function varargout=mlechiplos(witsj,Hk,thhat,scl,params,ah,pertur,th0,covv,E,v)
 % pertur   A flag identifying "bad" results for axis scaling [default 0]
 %          The following options only when calling from OLHEDESIMONS5
 % th0      The true vector
-% covv     The parameter covariance that you want quoted
+% covX     The parameter covariance that you want quoted
 % E,v      Young's modulus and Poisson's ratio, should you require them
 %
 % OUTPUT:
@@ -34,11 +33,11 @@ function varargout=mlechiplos(witsj,Hk,thhat,scl,params,ah,pertur,th0,covv,E,v)
 %
 % MLECHIPSDOSL, MLEOSL, EGGERS6
 %
-% Last modified by fjsimons-at-alum.mit.edu, 07/13/2015
+% Last modified by fjsimons-at-alum.mit.edu, 08/23/2017
 
 defval('pertur',0)
 defval('th0',[])
-defval('covv',[])
+defval('covX',[])
 defval('E',[])
 defval('v',[])
 
@@ -76,21 +75,21 @@ switch witsj
    % really do this already, this is nothing more than the distribution of
    % the coefficients that go into their sum to make the likelihood
    % itself. And I just put those bits in there - will be able to take
-   % them out here!
+   % them out from here later!
    
    % Remember it's X being chi-2_4 divided by 2
    % Multiply to obtain a variable which should follow the rules
    Zk=[invLb(:,1).*Hk(:,1) [invLb(:,2).*Hk(:,1)+invLb(:,3).*Hk(:,2)]];
    % And then form the product Zk^H*Zk but instead
-   Xk0=hformos(1,[1 0 1],Zk);
+   Xk0=hformos(1,Zk,[1 0 1]);
    % Same thing
-   Xk=hformos(1,invSb,Hk);
+   Xk=hformos(1,Hk,invSb);
    % This should be the degrees of freedom of the chi-squared of 2*Xk
    df=4;
  case 4
   % Multiply to obtain a variable which should follow the rules 
   Zk=[Hk(:)./Lb(:)];
-  Xk0=hformos(1,[1 0 1],Zk);
+  Xk0=hformos(1,Zk,[1 0 1]);
   % Same thing
   Xk=abs(Hk(:)).^2./Sb(:);
   % This should be the degrees of freedom of the chi-squared of 2*Xk
@@ -98,7 +97,7 @@ switch witsj
 end
 
 % And this should be the same thing again, except for the k=0 which is NaN
-% Note that if you HAVE a solution already, you'll find the logli you had
+% Note that if you HAVE a solution already, you'll find the loglik you had
 switch witsj
   case 1
    Xk1=-Lkos(k,thhat.*scl,params,Hk)-log(detSb);
@@ -110,8 +109,10 @@ switch witsj
    Xk1=-Lkros0(k,thhat.*scl,params,Hk)-log(detSb);
    Lbar=logliros0(thhat,params,Hk,k,scl);
  case 4
-   Xk1=-Lkosl(k,thhat.*scl,params,Hk)-log(Sb);
-   [Lbar,~,momx]=logliosl(thhat,params,Hk,k,scl);
+   % We nixed the next line but recreated it after
+   %Xk1=-Lkosl(k,thhat.*scl,params,Hk)-log(Sb);
+   [Lbar,~,~,momx,~,Xk1]=logliosl(k,thhat,scl,params,Hk);
+   Xk1=-Xk1-log(Sb(~~k));
    % Update to check with what's in the titles, they are recalculated later
    % disp(sprintf('MOMENTS %8.5f  %8.5f %8.5f',momx))
 end
@@ -125,12 +126,11 @@ switch witsj
   varibal='X';
 end
 
-% Check we're doing the same thing to tolerance
-% LOGLI?OS? puts a NaN at zero wavenumber
-% BLUROS gets rid of zeros at zero wavenumber
-% So either method may turn up some NaNs 
+% Check we're doing the same thing to tolerance, depending on whether
+% some prior codes put a NaN at zero wavenumber or got rid of the
+% zero-wavenumber values altogether; these checks will be removed
 difer(Xk(~isnan(Xk0))-Xk0(~isnan(Xk0)),9,[],NaN)
-difer(Xk(~isnan(Xk1))-Xk1(~isnan(Xk1)),9,[],NaN)
+difer(Xk(~~k)-Xk1,9,[],NaN)
 
 % First make the wavenumbers, give the data size and the data length
 k=knums(params);
@@ -138,6 +138,7 @@ k=knums(params);
 % Evaluate the likelihood
 disp(sprintf('The loglihood is %8.3f',Lbar))
 
+% Craft some labels
 xll=[0 3*2*df];
 xlls=[xll(1):df:xll(2)];
 lx=sqrt(length(Xk));
@@ -161,7 +162,7 @@ axes(ah(1))
 bdens=bdens/indeks(diff(c),1)/length(Xk(allg));
 bb=bar(c,bdens,1);
 % Each of the below should be df/2
-t(1)=title(sprintf('m(2%s) =  %5.3f   v(2%s) =  %5.3f',...
+t(1)=title(sprintf('m(%s) =  %5.3f   v(%s) =  %5.3f',...
 		   varibal,nanmean(Xk(allg)),...
 		   varibal,nanvar(Xk(allg))));
 set(bb,'FaceC',grey)
@@ -244,7 +245,7 @@ set(ah(2),'xtick',xlls,'ytick',xlls)
 longticks([ah cb])
 set(t,'FontS',9)
 
-% This will reset everything that is plot under hold on
+% This will reset everything that is plot under HOLD ON
 set([cat(1,findobj('FontSize',10)); yl(:); xl(:); xcb(:)],'FontSize',12)
 
 % Any off-putting motions would have been due to using underscores in titles
@@ -283,7 +284,7 @@ if ~strcmp(b,'olhedesimons5')
   movev(t,.25)
   % E.g. quote  the TRUTHS and the THEORETICAL standard deviation with
   % which it can be known using the available data... as you wish
-  [answ,answs]=osansw(th0,covv,E,v);
+  [answ,answs]=osansw(th0,covX,E,v);
   tt=supertit(ah,sprintf(answs,answ{:}));
   movev(tt,-4.25)
 
