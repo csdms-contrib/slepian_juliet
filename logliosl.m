@@ -1,5 +1,5 @@
 function [L,g,H,momx,vr,Lk]=logliosl(k,th,scl,params,Hk,xver)
-% [L,g,H,momx,vr,Lk]=LOGLIOSL(k,th,scl,params,Hk,scl,xver)
+% [L,g,H,momx,vr,Lk]=LOGLIOSL(k,th,scl,params,Hk,xver)
 %
 % Calculates the full negative logarithmic likelihood and its derivatives as
 % averaged over wavenumber space. This is the function that we need to
@@ -45,7 +45,7 @@ function [L,g,H,momx,vr,Lk]=logliosl(k,th,scl,params,Hk,xver)
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/23/2017
+% Last modified by fjsimons-at-alum.mit.edu, 08/24/2017
 
 defval('xver',1)
 

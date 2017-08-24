@@ -1,12 +1,13 @@
 function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah)
 % [mag,ah,ah2,cb,ch,spt]=MLESCHIPSDOSL(Hk,thhat,scl,params,stit,ah)
 %
-% Makes a plot of the quadratic residuals and their interpretation for a
-% Matern likelihood model of a single-field Fourier-domain data patch, as
-% well as plots of the actual power spectral density of that data patch and
-% its predicted power spectral density based on the model. These residuals
-% should have a chi-squared distribution, so the produced figure is useful
-% in determining how well the Matern likelihood model fits the data.
+% Makes a four-panel plot of the quadratic residuals and their
+% interpretation for a Matern likelihood model of a single-field
+% Fourier-domain data patch, as well as plots of the actual power spectral
+% density of that data patch and its predicted power spectral density based
+% on the model. These residuals should have a chi-squared distribution, so
+% the produced figure is useful in determining how well the Matern
+% likelihood model fits the data.
 % 
 % The figure produced consists of four panels:  
 %    (TL) Histogram and qq-plot of the chi-squared residuals
@@ -19,7 +20,7 @@ function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah)
 % Hk         The Fourier-domain data, e.g. from SIMULOSL
 % thhat      The evaluated scaled Matern parameter vector
 % scl        The scale factors
-% params     Parameter set pertaining to the data, e.g. from SIMULOSL
+% params     The structure with the fixed parameters from the experiment
 % stit       Title for the overall figure [defaulted]
 % ah         A quartet of axis handles [defaulted]
 %
@@ -46,10 +47,50 @@ function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah)
 defval('stit','Chi-squared residuals')
 defval('ah',krijetem(subnum(2,2)))
 
-%% TAKE CARE OF A FEW THINGS UPFRONT
+% The following is as in MLECHIPLOS
+
+% So now you have found a solution and you evaluate it at thhat
+[~,~,~,k,~,Sb,Lb]=simulosl(thhat.*scl,params,0);
+% Get just a little more information
+[kk,~,~,kx,ky]=knums(params); 
 
 % Degrees of freedom for 2X system (assuming a single field)
 df=2;
+
+% Get the quadratic residuals, any of a number of ways
+
+% Multiply to obtain a variable which should follow the rules 
+%Zk=[Hk(:)./Lb(:)];
+%Xk0=hformos(1,Zk,[1 0 1]);
+% Same thing
+Xk=abs(Hk(:)).^2./Sb(:);
+
+% Calculate residuals, removing values at the zero wavenumber and
+% wavenumbers above the minimum wavenumber "params.kiso"
+Xk(k==0)=NaN;
+Xk(k>params.kiso)=NaN;
+
+% And this should be the same thing again, except how it treats k=0
+[Lbar,~,~,momx,~,Xk1]=logliosl(k,thhat,scl,params,Hk,1);
+Xk1=-Xk1-log(Sb(~~k));
+% The oldest way, using a since retired function
+% Xkk1=-Lkosl(k,thhat.*scl,params,Hk)-log(Sb);
+% difer(Xkk1(~~k)-Xk1,9,[],NaN)
+
+% Check we're doing the same thing to tolerance, depending on whether
+% some prior codes put a NaN at zero wavenumber or got rid of the
+% zero-wavenumber values altogether; these checks will be removed
+%difer(Xk(~isnan(Xk0))-Xk0(~isnan(Xk0)),9,[],NaN)
+%difer(Xk(~~k)-Xk1,9,[],NaN)
+
+% Labeling  thing
+varibal='X';
+xstr2v=sprintf('quadratic residual 2%s',varibal);
+
+% Evaluate the likelihood
+disp(sprintf('The loglihood is %8.3f',Lbar))
+
+%% TAKE CARE OF A FEW THINGS UPFRONT
 % Bounds of X residuals to show (functions as color axis in panel 3)
 boundsX0=[0 3*df];
 % Bounds of 2X residuals to how (functions as axis bounds in panel 1)
@@ -58,12 +99,8 @@ bounds2X=2*boundsX0;
 caxPSD=[-5 0];
 % Contours to be plotted on the power spectral density plots
 conPSD=[-5:-1];
-
-% Generate the 2D wavenumber axis for "Hk"
-[k,kx,ky]=knum2(params.NyNx,[(params.NyNx(1)-1)*params.dydx(1) ...
-		    (params.NyNx(2)-1)*params.dydx(2)]);
 % Get order of magnitude of last wavenumber for scaling
-om=round(log10(ky(end)));
+om=round(log10(max(k(:))));
 
 % Set up the wavenumber/wavelength axes labels for panels 2-4
 xstr1=sprintf('x wavenumber (rad/m) %s10^{%i}','\times',om);
@@ -76,37 +113,29 @@ fh=gcf;
 fig2print(fh,'landscape')
 set(fh,'PaperPositionMode','auto')
 
+% Select non-ridiculous values
+if any(isinf(Xk)); error('Adapt as in MLECHIPLOS and reconcile'); end
+allg=~isnan(Xk);
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% PANEL 1: TWICE CHI-SQUARED RESIDUALS AND QQ-PLOT [Top-left]
 axes(ah(1))
 
-% Get the spectral matrix used in evaluating "thhat"
-[~,~,~,~,~,Sb]=simulosl(thhat,params,0);
-
-% Calculate residuals, removing values at the zero wavenumber and
-% wavenumbers above the minimum wavenumber "params.kiso"
-Xk=abs(Hk(:)).^2./Sb(:);
-Xk(k==0)=NaN;
-Xk(k>params.kiso)=NaN;
-
-keyboard
-
-% Evaluate the loglihood (need scaled "thhat") and report it
-scl=10.^round(log10(abs(thhat)));
-L=logliosl(k,thhat./scl,params,Hk(:),k);
-disp(sprintf('The loglihood is %8.3f',L))
-
 % Get binning info for the twice chi-squared residuals histogram
-binWidth=df/4;
-binCent=0.25*(1:2:49);
-[bdens,c]=hist(2*Xk(~isnan(Xk)),binCent);
-
+binos=5*round(log(length(Xk(allg))));
+% Rather this, to hit the grid lines
+binos=df/8*(1:2:49);
+[bdens,c]=hist(2*Xk(allg),binos);
 % Plot the histogram as a bar graph
-bdens=bdens/indeks(diff(c),1)/length(Xk(~isnan(Xk)));
+bdens=bdens/indeks(diff(c),1)/length(Xk(allg));
 bb=bar(c,bdens,1);
+% Each of the below should be df/2
+disp(sprintf('m(%s) =  %5.3f   v(%s) =  %5.3f',...
+		   varibal,nanmean(Xk(allg)),...
+		   varibal,nanvar(Xk(allg))));
+
 set(bb,'FaceC',grey)
 hold on
-
 % Plot the ideal chi-squared distribution
 refs=linspace(0,max(bounds2X),100);
 plot(refs,chi2pdf(refs,df),'Linew',1.5,'Color','k')
@@ -114,11 +143,11 @@ hold off
 
 % Labeling and cosmetic adjustments
 xlim(bounds2X)
-xl1(1)=xlabel('quadratic residual 2X');
+xl1(1)=xlabel(xstr2v);
 ylim([0 max(bdens)*1.05])
 yl1(1)=ylabel('probability density');
 
-% Prepare a new axis for the quantile-quantile plot
+% Prepare an overlay axis for the quantile-quantile plot
 ah2(1)=laxis(ah(1),0,0);
 axes(ah2(1))
 
@@ -146,25 +175,24 @@ set(ah2(1),'ytick',tkmks)
 
 % Add gridlines
 try
+  % (c) Jos van der Geest
   gh=gridxy([4 8],[4 8],'LineStyle',':');
 end
 
 % For an info textbox, calculate the percent of 2X residuals
 % displayed, the maximum, mean, and variance of the 2X residuals
+binWidth=df/4;
 tbstr{1}=sprintf('%5.2f%%',100*sum(binWidth*bdens(1:end-1)));
 tbstr{2}=sprintf('max(2X) = %5.2f',max(2*Xk));
 tbstr{3}=sprintf('mean(2X) = %5.2f',nanmean(2*Xk));
 tbstr{4}=sprintf('var(2X) = %5.2f',nanvar(2*Xk));
 
 % Calculate the mean of (X-df/2)^2 so it can be passed as output
-mag=nanmean((Xk-df/2).^2);
+mag=nanmean((Xk(allg)-df/2).^2);
 tbstr{5}=sprintf('mean([X-%d]^2) = %5.2f',df/2,mag);
 
 % Do the test whether you accept this as a good fit, or not
-vr=8/sum(~isnan(Xk));
-
-% check the pixelation
-
+vr=8/sum(allg);
 [a,b,c,d]=normtest(mag,1,vr,0.05);
 disp(sprintf('NORMTEST %i %5.3f %i',a,b,round(c)))
 if a==0; stp='accept'; else stp='reject'; end
@@ -193,22 +221,16 @@ axes(ah(2))
 c11=[kx(1) ky(end)]/10^om;
 cmn=[kx(end) ky(1)]/10^om;
 
-% Create a blurred wavenumber grid
-kb=knum2(params.blurs*params.NyNx,...
-         [(params.blurs*params.NyNx(1)-1)*params.dydx(1) ...
-	  (params.blurs*params.NyNx(2)-1)*params.dydx(2)]);
-
-% Generate predicted, blurred power spectrum based on "thhat"
-Skpred=reshape(bluros(maternos(kb,thhat),params,1),params.NyNx);
-
 % Remove the zero wavenumber value (to avoid issues with the
-% colorscale) and those at wavenubmers above the isotropic cutoff
-Skpred(k==0)=NaN;
-Skpred(k>params.kiso)=NaN;
+% colorscale) and those at wavenumbers above the isotropic cutoff
+Sb(k==0)=NaN;
+Sb(k>params.kiso)=NaN;
+
+Sb=reshape(Sb,params.NyNx);
 
 % Scale to the largest predicted value and plot the power spectrum
-sclSkpred=log10(Skpred./max(Skpred(:)));
-imagefnan(c11,cmn,sclSkpred,'jet',caxPSD,[],[],0);
+sclSb=log10(Sb./max(Sb(:)));
+imagefnan(c11,cmn,sclSb,'jet',caxPSD,[],[],0);
 
 % Label the wavenumber axes
 xl1(2)=xlabel(xstr1);
@@ -232,7 +254,7 @@ ytkl(isinf(ytkl))=[params.NyNx(1)-1]*params.dydx(1)/1000;
 axes(ah(2)); hold on
 
 % Calculate and plot contours
-[~,ch(1)]=contour(kx/10^om,fliplr(ky/10^om),sclSkpred,conPSD,'LineW',2);
+[~,ch(1)]=contour(kx/10^om,fliplr(ky/10^om),sclSb,conPSD,'LineW',2);
 caxis(caxPSD)
 
 % Option to set the contours to black for visibility
@@ -279,7 +301,7 @@ set(ah(3),'position',[getpos(ah(3),1) getpos(ah(3),2) ...
 %% PANEL 4: 2D TRUE POWER SPECTRUM [Bottom-right]
 axes(ah(4))
 
-% Convert (roughly) spectral domain topography to a power spectrum
+% Calculate the periodogram of the edata
 Sk=abs(reshape(Hk(:),params.NyNx).^2);
 
 % Remove the zero wavenumber value (to avoid issues with the
@@ -288,7 +310,7 @@ Sk(k==0)=NaN;
 Sk(k>params.kiso)=NaN;
 
 % Scale to the largest predicted value and plot the power spectrum
-sclSk=log10(Sk./max(Skpred(:)));
+sclSk=log10(Sk./max(Sb(:)));
 imagefnan(c11,cmn,sclSk,'jet',caxPSD,[],[],0);
 
 % Label the wavenumber axes
@@ -303,7 +325,7 @@ ah2(4)=xtraxis(ah(4),xtk/10^om,round(xtkl),xstr2,...
 axes(ah(4)); hold on
 
 % Place contours from the predicted power spectrum onto this true one
-[~,ch(2)]=contour(kx/10^om,fliplr(ky/10^om),sclSkpred,conPSD,'LineW',2);
+[~,ch(2)]=contour(kx/10^om,fliplr(ky/10^om),sclSb,conPSD,'LineW',2);
 caxis(caxPSD)
 
 % Option to set the contours to black for visibility
