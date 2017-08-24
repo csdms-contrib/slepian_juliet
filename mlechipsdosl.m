@@ -1,5 +1,5 @@
-function varargout=mlechipsdosl(Hk,thhat,params,stit,ah)
-% [mag,ah,ah2,cb,ch,spt]=MLESCHIPSDOSL(Hk,thhat,params,stit,ah)
+function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah)
+% [mag,ah,ah2,cb,ch,spt]=MLESCHIPSDOSL(Hk,thhat,scl,params,stit,ah)
 %
 % Makes a plot of the quadratic residuals and their interpretation for a
 % Matern likelihood model of a single-field Fourier-domain data patch, as
@@ -17,10 +17,11 @@ function varargout=mlechipsdosl(Hk,thhat,params,stit,ah)
 % INPUT:
 %
 % Hk         The Fourier-domain data, e.g. from SIMULOSL
-% thhat      The three Matern parameters
+% thhat      The evaluated scaled Matern parameter vector
+% scl        The scale factors
 % params     Parameter set pertaining to the data, e.g. from SIMULOSL
 % stit       Title for the overall figure [defaulted]
-% ah         A 4x4 group of axis handles [defaulted]
+% ah         A quartet of axis handles [defaulted]
 %
 % OUTPUT:
 %
@@ -30,30 +31,19 @@ function varargout=mlechipsdosl(Hk,thhat,params,stit,ah)
 % ch          Contour (panels 2 and 4) handles
 % spt         Supertitle handle
 %
-% EXAMPLES:
+% SEE ALSO:
 %
-% mlechipsdosl('demo1') % Runs itself for an example and a picture
+% EGGERS8, MATERNOS, LOGLIOSL, SIMULOSL, QQPLOT
 %
 % NOTE: 
 %
-% This is a lightly changed version of Gabe's original with the demo2
-% options removed. The original is saved in $MFILES/retired. Maybe should
-% integrate my own MLECHIPLOS into this one. 
-%
-% See also BLUROS, IMAGEFNAN, MATERNOS, LOGLIOSL, SIMULOSL, QQPLOT
+% Maybe should integrate MLECHIPLOS into this one. 
 %
 % Last modified by gleggers-at-princeton.edu, 04/17/2014
-% Last modified by fjsimons-at-alum.mit.edu, 08/23/2017
+% Last modified by fjsimons-at-alum.mit.edu, 08/24/2017
 
-% Default values for conducting demos
-defval('Hk','demo1')
-
-% Other defaults
+% Some defaults
 defval('stit','Chi-squared residuals')
-
-% Normal use of the function
-
-% More default values
 defval('ah',krijetem(subnum(2,2)))
 
 %% TAKE CARE OF A FEW THINGS UPFRONT
@@ -99,9 +89,11 @@ Xk=abs(Hk(:)).^2./Sb(:);
 Xk(k==0)=NaN;
 Xk(k>params.kiso)=NaN;
 
+keyboard
+
 % Evaluate the loglihood (need scaled "thhat") and report it
 scl=10.^round(log10(abs(thhat)));
-L=logliosl(thhat./scl,params,Hk(:),k,scl);
+L=logliosl(k,thhat./scl,params,Hk(:),k);
 disp(sprintf('The loglihood is %8.3f',L))
 
 % Get binning info for the twice chi-squared residuals histogram
