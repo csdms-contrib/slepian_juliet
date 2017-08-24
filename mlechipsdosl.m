@@ -1,5 +1,5 @@
 function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah)
-% [mag,ah,ah2,cb,ch,spt]=MLESCHIPSDOSL(Hk,thhat,scl,params,stit,ah)
+% [a,mag,ah,ah2,cb,ch,spt]=MLECHIPSDOSL(Hk,thhat,scl,params,stit,ah)
 %
 % Makes a four-panel plot of the quadratic residuals and their
 % interpretation for a Matern likelihood model of a single-field
@@ -26,6 +26,7 @@ function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah)
 %
 % OUTPUT:
 %
+% a           1 or 0 whether the model was accepted or not
 % mag         The "magic" parameter which I've come to call s_X^2
 % ah,ah1      Main and secondary axis (panels 1-4) handles
 % cb          Colorbar (panel 3) handle
@@ -88,7 +89,7 @@ varibal='X';
 xstr2v=sprintf('quadratic residual 2%s',varibal);
 
 % Evaluate the likelihood
-disp(sprintf('The loglihood is %8.3f',Lbar))
+% disp(sprintf('The loglihood is %8.3f',Lbar))
 
 %% TAKE CARE OF A FEW THINGS UPFRONT
 % Bounds of X residuals to show (functions as color axis in panel 3)
@@ -124,15 +125,16 @@ axes(ah(1))
 % Get binning info for the twice chi-squared residuals histogram
 binos=5*round(log(length(Xk(allg))));
 % Rather this, to hit the grid lines
-binos=df/8*(1:2:49);
+binWidth=df/4;
+binos=(binWidth/2)*[1:2:bounds2X(2)*2/binWidth+1];
 [bdens,c]=hist(2*Xk(allg),binos);
 % Plot the histogram as a bar graph
 bdens=bdens/indeks(diff(c),1)/length(Xk(allg));
 bb=bar(c,bdens,1);
 % Each of the below should be df/2
-disp(sprintf('m(%s) =  %5.3f   v(%s) =  %5.3f',...
-		   varibal,nanmean(Xk(allg)),...
-		   varibal,nanvar(Xk(allg))));
+%disp(sprintf('m(%s) =  %5.3f   v(%s) =  %5.3f',...
+%		   varibal,nanmean(Xk(allg)),...
+%		   varibal,nanvar(Xk(allg))));
 
 set(bb,'FaceC',grey)
 hold on
@@ -173,28 +175,26 @@ tkmks=bounds2X(1):2*df:bounds2X(2);
 set([ah(1) ah2(1)],'xtick',tkmks)
 set(ah2(1),'ytick',tkmks)
 
-% Add gridlines
+% Add gridlines  % (c) Jos van der Geest
 try
-  % (c) Jos van der Geest
   gh=gridxy([4 8],[4 8],'LineStyle',':');
 end
 
-% For an info textbox, calculate the percent of 2X residuals
-% displayed, the maximum, mean, and variance of the 2X residuals
-binWidth=df/4;
+% Information is power
 tbstr{1}=sprintf('%5.2f%%',100*sum(binWidth*bdens(1:end-1)));
 tbstr{2}=sprintf('max(2X) = %5.2f',max(2*Xk));
-tbstr{3}=sprintf('mean(2X) = %5.2f',nanmean(2*Xk));
-tbstr{4}=sprintf('var(2X) = %5.2f',nanvar(2*Xk));
+tbstr{3}=sprintf('m(X) = %5.2f',nanmean(Xk));
+tbstr{4}=sprintf('v(X) = %5.2f',nanvar(Xk));
 
 % Calculate the mean of (X-df/2)^2 so it can be passed as output
-mag=nanmean((Xk(allg)-df/2).^2);
-tbstr{5}=sprintf('mean([X-%d]^2) = %5.2f',df/2,mag);
+magx=nanmean((Xk(allg)-df/2).^2);
+%tbstr{5}=sprintf('mean([X-%d]^2) = %5.2f',df/2,magx);
+tbstr{5}=sprintf('s_X^2 = %5.2f',magx);
 
 % Do the test whether you accept this as a good fit, or not
 vr=8/sum(allg);
-[a,b,c,d]=normtest(mag,1,vr,0.05);
-disp(sprintf('NORMTEST %i %5.3f %i',a,b,round(c)))
+[a,b,c,d]=normtest(magx,1,vr,0.05);
+% disp(sprintf('NORMTEST %i %5.3f %i',a,b,round(c)))
 if a==0; stp='accept'; else stp='reject'; end
 tbstr{6}=sprintf(' %s at %4.2f',stp,d);
 tbstr{7}=sprintf('p = %5.2f',b);
@@ -206,8 +206,8 @@ tby=[7.5 6.35-[0 1 2 3.5 4.5 5.5]];
 % Make the textbox(es) with unbordered fillboxes around them
 for i=1:length(tbstr)
   tb(i)=text(tbx(i),tby(i),tbstr{i},'HorizontalA','Right');
-  gg=ext2lrtb(tb(i),[0.85],[0.9]); delete(tb(i)); hold on
-  fb(i)=fillbox(gg+[0.8 0.8 0 0],'w');
+  gg=ext2lrtb(tb(i),1.1,1.1); delete(tb(i)); hold on
+  fb(i)=fillbox(gg+[-0.1 0.08 0 0]);
   tb(i)=text(tbx(i),tby(i),tbstr{i},'HorizontalA','Right');
   hold off
   set(fb(i),'EdgeC','w','FaceC','w')
@@ -347,14 +347,15 @@ set(ah(2:4),'Box','On')
 
 % Give the overall figure a title
 axes(ah2(1))
-spt=title(ah2(1),stit);
+%spt=title(ah2(1),stit);
+%movev(spt,-.05)
+spt=text(df,bounds2X(2)-df+1/2,stit);
 
 movev([ah ah2 cb],-.02)
-movev(spt,-.05)
 
 % Set figure background color to white
 set(gcf,'color','W','InvertH','off')
 
 % Collect output
-vars={mag,ah,ah2,cb,ch,spt};
+vars={a,magx,ah,ah2,cb,ch,spt};
 varargout=vars(1:nargout);

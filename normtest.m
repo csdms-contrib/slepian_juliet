@@ -36,7 +36,7 @@ function [pf,pv,pr,alfa]=normtest(stat,mn,vr,alfa)
 %
 % ZTEST, VARTEST
 %
-% Last modified by fjsimons-at-alum.mit.edu, 09/27/2016
+% Last modified by fjsimons-at-alum.mit.edu, 08/24/2017
 
 % Default confidence limit
 defval('alfa',0.05)
@@ -51,5 +51,8 @@ pf=pv<alfa;
 pr=sum(pf)/length(pf)*100;
 
 % Provide an uplifting message
-disp(sprintf('\n%s %i%% rejected at the %i%% confidence level',...
-             upper(mfilename),round(pr),round(alfa*100))) 
+if length(stat)>1
+  disp(sprintf('\n%s %i%% rejected at the %i%% confidence level',...
+	       upper(mfilename),round(pr),round(alfa*100))) 
+end
+
