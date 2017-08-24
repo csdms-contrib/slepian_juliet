@@ -302,8 +302,6 @@ if ~isstr(Hx)
   % Analytic (poorly blurred) Hessian AT the estimate, and derived covariance
   [H,covH]=hessiosl(k,thhat.*scl,params,Hk,xver);
  
-% FJS keyboard
-
   % Analytical calculations of the gradient and the Hessian poorly represent
   % the blurring (though it's much better than not trying at all), and thus,
   % are expected to be close to numerical results only without blurring
@@ -563,6 +561,7 @@ elseif strcmp(Hx,'demo2')
 
   if xver==1
     % Take a look a the distribution of the residual moments
+    % This now is a full part of MLECHIPLOS
     % See RB X, p. 51 about the skewness of a chi-squared - just sayin'.
     % We don't change the number of degrees of freedom! If you have used
     % twice the number, and given half correlated variables, you do not
@@ -625,7 +624,7 @@ elseif strcmp(Hx,'demo5')
   % Figure name
   figna=sprintf('%s_%s_%s',mfilename,Hx,date);
   
-  % Simulate data, watch the blurring, verify COLCHECK inside
+  % Simulate data, watch the blurring, verify CHOLCHECK inside
   [Hx,th0,p,k,Hk]=simulosl(th0,params,1);
   
   % Initialize, take defaulted inside MLEOSL for now
@@ -687,7 +686,7 @@ elseif strcmp(Hx,'demo5')
   % Better feed this to the next code, now it's redone inside
   mlechiplos(4,Hk,thhat,scl,p,ah,0,th0,covth);
    
-  % Better put in mlelcontsol and mlepsdosl
+  % Better put in MLELCONTSOL and MLEPSDOSL here also
 
   % Print the figure! Don't forget the degs.pl script
   figna=figdisp(figna,[],[],1);
