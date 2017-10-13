@@ -29,7 +29,8 @@ function [Sbar,k]=blurosy(th,params,xver,method)
 %
 % SIMULOSL, BLUROS, MATERNOSP, BLURCHECK
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/15/2016
+% Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
+% Last modified by fjsimons-at-alum.mit.edu, 10/15/2017
 
 if params.blurs>=0
   error('Are you sure you should be running BLUROSY, not BLUROS?')
@@ -67,10 +68,10 @@ switch method
 
   % Could play with a culled DFTMTX but rather now subsample
   Hh=Hh(1:2:end,1:2:end);
+
   % Vectorize the argument
   Sbar=Hh(:);    
  case 'efs'
-  error('Exploiting the symmetry --- not quite working yet')
   % Fully exact and trying to be faster for advanced symmetry
   % Distance grid
   ycol=[0:NyNx(1)-1]';
@@ -78,17 +79,28 @@ switch method
   % The triangles coming out of the convolution
   triy=1-ycol/NyNx(1);
   trix=1-xrow/NyNx(2);
+
   % Here is the distance grid
   y=sqrt(bsxfun(@plus,[ycol*dydx(1)].^2,[xrow*dydx(2)].^2));
   % Here is the triangle grid
   t=bsxfun(@times,triy,trix);
+  
   % Need the Matern spatial covariance on the distance grid...
   % multiplied by the transform of the Fejer kernel
   sxx=maternosy(y,th).*t;
+
   % Pick out a column and a row
-  sxc=sxx(:,1); sxr=sxx(1,:);
-  % Produce the exact blurred spectrum, adjust the normalization here also
-  Sbar=fftshift(4*realize(fft2(sxx))-2*realize(bsxfun(@plus,fft(sxc),fft(sxr)))-3*th(1));
+  sxc=sxx(:,1); 
+  sxr=sxx(1,:);
+
+  % Produce the exact blurred spectrum, adjust the normalization also
+  [q1,q2]=deal(fft2(sxx));
+  q2(:,2:end) = fliplr(q2(:,2:end));
+  q4 = q1+q2-repmat(fft(sxc),1,NyNx(1));
+  
+  Sbar=fftshift(abs(2*real(q4)-repmat(2*real(fft(sxr))-sxx(1,1),NyNx(2),1)));
+  % Normalize and vectorize
+  Sbar=Sbar(:)*prod(dydx)/(2*pi)^2;
 end
 
 % Check Hermiticity
