@@ -72,7 +72,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %% One simulation and a chi-squared plot
 % mleosl('demo5',th0,params)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/21/2017
+% Last modified by fjsimons-at-alum.mit.edu, 10/17/2017
 
 % NEED TO CHANGE THE k(~~k) to proper accounting for kiso
 
@@ -473,9 +473,8 @@ elseif strcmp(Hx,'demo1')
         % derivates, and we be writing the numerical versions 
 	% Print the optimization results and diagnostics to a different
         % file 
-	% FJS until 08/20/2017, I wrote out covFHh{1}
-	% FJS now I write out covFHh{2} (and still, we have hes to turn later)
-	oswdiag(fids(4),fmts,lpars,thhat,thini,scl,ts,var(Hx),momx,covFHh{2})
+        % FJS Oct 17 now changed to writing out covFHh{3}
+	oswdiag(fids(4),fmts,lpars,thhat,thini,scl,ts,var(Hx),momx,covFHh{3})
       end
     end
   end
@@ -528,10 +527,11 @@ elseif strcmp(Hx,'demo2')
   
   % Plot it all - perhaps some outlier selection?
   disp(sprintf('\n'))
-  figure(1)
+  %figure(1)
   fig2print(gcf,'landscape')
   clf
-  trims=100;
+  % Looks like more trimming is needed for 'con' rather than 'unc'
+  trims=90;
   % disp(sprintf('%s estimates trimmed at %i percentile',...
   %      upper(mfilename),trims))
   
@@ -601,12 +601,14 @@ elseif strcmp(Hx,'demo4')
 
   % The number of parameters to solve for
   np=3;
-  
+
   % Load everything you know about this simulation
-  [th0,thhats,params,covX,~,pix,E,v,obscov,sclcov]=osload(datum);
+  % Looks like more trimming is needed for 'con' rather than 'unc'
+  trims=90;
+  [th0,thhats,params,covX,~,pix,~,~,obscov,sclcovX,~,covXpix]=osload(datum,trims);
 
   % Make the plot
-  ah=covplos(2,sclcov,obscov,covX,params,thhats,th0,[],[],'ver');
+  ah=covplos(2,sclcovX,obscov,sclcovX,params,thhats,th0,[],[],'ver');
 
   % Make the plot
   figna=figdisp([],sprintf('%s_%s',Hx,datum),[],1);
@@ -615,6 +617,7 @@ elseif strcmp(Hx,'demo4')
   system(sprintf('rm -f %s.eps',figna)); 
 elseif strcmp(Hx,'demo5')  
   % What th-parameter set? The SECOND argument after the demo id
+
   defval('thini',[]);
   % If there is no preference, then that's OK, it gets taken care of
   th0=thini; clear thini
