@@ -67,7 +67,7 @@ function varargout=simulosl(th0,params,xver,varargin)
 % MLEOSL, LOADING, SIMULOS, EGGERS1, EGGERS2, EGGERS4, etc
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
-% Last modified by fjsimons-at-alum.mit.edu, 11/04/2016
+% Last modified by fjsimons-at-alum.mit.edu, 10/11/2017
 
 % Here is the true parameter vector and the only variable that gets used 
 defval('th0',[1e6 2.5 2e4]);
@@ -149,7 +149,9 @@ if ~isstr(th0)
   end
 
   % Return the output if requested
-  varns={Hx,   th0,params,k,Hk,   Sb,Lb};
+  defval('gane',[])
+  defval('miy',[])
+  varns={Hx,   th0,params,k,Hk,   Sb,Lb,gane,miy};
   varargout=varns(1:nargout);
 elseif strcmp(th0,'demo1')
   % Pulls out the demo name
@@ -713,6 +715,7 @@ elseif strcmp(th0,'demo6')
   figna=figdisp([],sprintf('%i_%i_%i',p.blurs,p.quart,N),[],1);
   system(sprintf('epstopdf %s.eps',figna));
 end
+
 
 % Plotting routine %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [tls,cbs,xcb,xa]=plotit(aha,dats,nm,stronk,strink,unid)
