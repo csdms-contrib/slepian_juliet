@@ -1,15 +1,16 @@
-function [th0,thhats,params,covX,covHav,thpix,E,v,obscov,sclcovF0,momx,covthpix]=osload(datum,perc)
-% [th0,thhats,params,covX,covHav,thpix,E,v,obscov,sclcovF0,momx,covthpix]=OSLOAD(datum,perc)
+function [th0,thhats,params,covX,covavhs,thpix,E,v,obscov,sclcovX,momx,covthpix,covF0]=osload(datum,perc,n)
+% [th0,thhats,params,covX,covavhs,thpix,E,v,obscov,sclcovX,momx,covthpix,covF0]=OSLOAD(datum,perc,n)
 %
 % Loads ALL FOUR of the output diagnostic files produced by the suite of
 % programs following Simons & Olhede (2013). Data files are, like,
-% 'mleosl_thzro_16-Jun-2015-64-2', 'mleosl_thini_16-Jun-2015-64-2',
-% 'mleosl_thhat_16-Jun-2015-64-2', 'mleosl_diagn_16-Jun-2015-64-2', etc.
+% 'mleosl_thzro_DD-MON-YYYY', 'mleosl_thini_DD-MON-YYYY'
+% 'mleosl_thhat_DD-MON-YYYY', 'mleosl_diagn_DD-MON-YYYY', etc
 %
 % INPUT:
 %
 % datum        The file identifier, e.g. '16-Jun-2015-64-2'
 % perc         The percentage preserved by calling TRIMIT to the estimated parameters
+% n            A string if you do not want to accept the default calling-routine name
 %
 % OUTPUT:
 %
@@ -17,31 +18,33 @@ function [th0,thhats,params,covX,covHav,thpix,E,v,obscov,sclcovF0,momx,covthpix]
 % thhats       The maximum-likelihood estimates from the series of saved MLEOSL runs 
 % params       The parameter structure of the SIMULOSL simulations
 % covX         A covariance matrix for the estimate as written by OSWDIAG
-% covHav       The covariance matrix based on the MEDIAN numerical Hessian matrix
+% covavhs      The covariance matrix based on the MEDIAN numerical Hessian matrix
 % thpix        The example estimate, randomly picked up
 % E            Young's modulus - for conversion to Te only
 % v            Poisson's ratio - for conversion to Te only
 % obscov       Scaled observed sample covariance (ones on the diagonal)
-% sclcov0      Scaled Fisher covariance at the truth (ones on the diagonal)
+% sclcovX      Scaled version of a random pick of covX (ones on the diagonal)
 % momx         Moment parameters of the simulation results
 % covthpix     The covariance matrix based on the numerically derived
-%              Hessian matrix at the randomly picked solution 
+%              Hessian matrix at the randomly picked solution  
+% covF0        The covariance matrix based on the Fisher matrix at the truth
 %
 % SEE ALSO:
 %
 % OSOPEN, OSRDIAG, TRIMIT, MLEOS etc
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/18/2017
+% Last modified by fjsimons-at-alum.mit.edu, 10/17/2017
 
 % Who called? Work this into the filenames
-[~,n]=star69;
+[~,nn]=star69;
+defval('n',nn)
 
 % Young's modulus 
 defval('E',1.4e11);
 % Poisson's ratio
 defval('v',0.25);
 % The percentile by which the parameters should be trimmed
-defval('perc',100);
+defval('perc',99);
 
 % You need to be in the proper directory to do this
 f1=sprintf('%s_thzro_%s',n,datum);
@@ -83,7 +86,7 @@ end
 % from the truth, negatively biased, than the mle estimates. 
 matscl=[sclth0(:)*sclth0(:)'];
 
-% Bring all of them on a common scaling
+% Bring all of them on a common scaling, if it should have differed...
 if sum(sum(abs(diff(scl,1)),1)) || sum(abs(sclth0-unique(scl,'rows')))
   % Remember the way the scaling works for Hessians (which are inverse th0)
   for index=1:size(hes,1)
@@ -99,12 +102,15 @@ end
 avhs=median(hes,1);
 k=knums(params);
 df=length(k(~~k))/2; 
-covHav=inv(trilosi(avhs)./matscl)/df;
+covavhs=inv(trilosi(avhs)./matscl)/df;
 
 % Below is the "partial average" MEAN over the last NH runs as reported in
 % the OSWZERO file, expressed with the same scaling again...
 % If it was a "blank" filler shot at the end, ignore, ignore warnings
-covHavz=inv(trilosi(avhsz)./matscl)/df;
+% covavhsz=inv(trilosi(avhsz)./matscl)/df;
+
+% Now I am trimming
+thhats=trimit(thhats,perc,1);
 
 % A random pick from the set of maximum-likelihood estimates
 pix=randi(size(thhats,1)); thpix=thhats(pix,1:3);
@@ -118,13 +124,13 @@ covthpix=inv(trilosi(hes(pix,:))./matscl)/df;
 % The below should be the same as covF0 since it came out of OSWZEROE, not at zero-k
 [~,covth0]=fishiosl(k,th0,1);
 
-% This needs to be close
+% This needs to be identical except in a few digits compared to the size
 diferm(covth0(:),covF0(:),2)
 % But the one taking out the wavenumber at zero is the right one
 covF0=covth0;
 
-% Remember the avhs is actually coming from the diagnostic file; below is untrimmed
-osdisp(th0,thhat(:,1:np),size(hes,1),avhs,F0,covHav)
+% Remember the avhs is actually coming from the diagn file; below is untrimmed
+osdisp(th0,thhats(:,1:np),size(hes,1),avhs,F0,covavhs)
 
 if np>3
   % For display and later output only
@@ -135,8 +141,8 @@ if np>3
 end
 
 % Actually, best to scale so the diagonal has unit variance
-sclcovF0=covF0./[diag(sqrt(covF0))*diag(sqrt(covF0))'];
+sclcovX=covthpix./[diag(sqrt(covthpix))*diag(sqrt(covthpix))'];
 
-% How about we plot the observed sample covariance matrix instead
-obscov=cov(thhat(:,1:np));
+% How about we return the observed sample covariance matrix instead
+obscov=cov(thhats(:,1:np));
 obscov=obscov./[diag(sqrt(obscov))*diag(sqrt(obscov))'];
