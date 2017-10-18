@@ -34,12 +34,12 @@ function [pf,pv,pr,alfa]=normtest(stat,mn,vr,alfa)
 %
 % ZTEST, VARTEST
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/24/2017
+% Last modified by fjsimons-at-alum.mit.edu, 10/18/2017
 
 % Default confidence limit
 defval('alfa',0.05)
 
-% ONE-SAMPLE TEST ON THE MEAN
+% ONE-SAMPLE (single value!) TEST ON THE MEAN (applied on every element)
 % This is the probability of a single test value even more extremely
 % removed, in the absolute sense, from the expectation, given a known
 % standard deviation 
