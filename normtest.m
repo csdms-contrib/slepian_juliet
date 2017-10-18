@@ -2,19 +2,19 @@ function [pf,pv,pr,alfa]=normtest(stat,mn,vr,alfa)
 % [pf,pv,pr,alfa]=NORMTEST(stat,mn,vr,alfa)
 %
 % Test whether a particular value is derived from a hypothesized NORMAL
-% (GAUSSIAN) distribution with known (postulated) mean and variance,
-% reject if the probability of more extreme than observed values are very
-% unlikely, e.g. below (1-alfa)x100 percent. This is a TWO-SIDED test
-% where the algorithm depends on the symmetry of the distribution. It is
-% a ONE-SAMPLE test for every ELEMENT of the array offered (i.e. quite
-% literally one sample, of one point, each), unlike ZTEST.
+% (GAUSSIAN) distribution with known (postulated) mean and variance, reject
+% if the probability of more extreme than observed values is very unlikely,
+% e.g. below (1-alfa)x100 per cent. This is a TWO-SIDED test, where the
+% algorithm depends on the symmetry of the distribution. It is a ONE-SAMPLE
+% test for every ELEMENT of the array offered (i.e. quite literally ONE
+% sample, of one point, each), unlike Matlab's own ZTEST.
 %
 % INPUT: 
 %
-% stat      The value being tested, could be a vector or a matrix
+% stat      The values being tested individually, could be a vector or a matrix
 % mn        The expected value of the normal distribution under the null [0]
 % vr        The variance of the  normal distribution under the null [1]
-% alfa      The significance level [0.05] for a (1-alfa)x100 confidence
+% alfa      The significance level for a (1-alfa)x100 confidence [0.05]
 %
 % OUTPUT:
 %
@@ -29,8 +29,6 @@ function [pf,pv,pr,alfa]=normtest(stat,mn,vr,alfa)
 %
 % mu=randn; vr=rand; al=randi(100)/100; mn=randi(1e3);
 % [a,b,c]=normtest(randn(mn,1),0,1,al);
-% disp(sprintf('%i%% rejected at the %i%% confidence level',...
-%            round(c),round(al*100)))
 %
 % SEE ALSO: 
 %
@@ -42,11 +40,14 @@ function [pf,pv,pr,alfa]=normtest(stat,mn,vr,alfa)
 defval('alfa',0.05)
 
 % ONE-SAMPLE TEST ON THE MEAN
-% This is the probability of a test value even more extremely removed, in
-% the absolute sense, from the predicted mean given the standard deviation
+% This is the probability of a single test value even more extremely
+% removed, in the absolute sense, from the expectation, given a known
+% standard deviation 
 pv=1-2*abs(normcdf(stat,mn,sqrt(vr))-1/2);
+
 % This is the test, reject gives a 1
 pf=pv<alfa;
+
 % This is the report on the rejections
 pr=sum(pf)/length(pf)*100;
 
