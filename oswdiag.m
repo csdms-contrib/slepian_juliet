@@ -22,7 +22,7 @@ function oswdiag(fid,fmts,lpars,thhat,thini,scl,ts,vHxs,momx,covX)
 %
 % SEE ALSO: OSRDIAG, OSRZERO
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/18/2017
+% Last modified by fjsimons-at-alum.mit.edu, 06/13/2018
 
 % There may be one, there may be two sample variances incoming
 fmtx=repmat(' %9.3e',1,length(vHxs));
@@ -32,7 +32,7 @@ fprintf(fid, fmts{1},                     thini.*scl      );
 % Second line: The estimate, scaled back to proper units, the sample variance
 fprintf(fid,[fmts{1}(1:end-2) fmtx '\n'],[thhat.*scl vHxs]);
 % Third line: Time spent, Exit flag, Iterations
-% Fourth line: Likelihood, First-order optimality , moments
+% Fourth line: Likelihood, First-order optimality, moments
 % Fifth line: Scales
 % Remaining lines: Numerical Score, Numerical Hessian, Covariance
 fprintf(fid,fmts{3},...
