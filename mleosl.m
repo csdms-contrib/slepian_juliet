@@ -72,12 +72,12 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %% One simulation and a chi-squared plot
 % mleosl('demo5',th0,params)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/17/2017
+% Last modified by fjsimons-at-alum.mit.edu, 06/13/2018
 
 % NEED TO CHANGE THE k(~~k) to proper accounting for kiso
 
 if ~isstr(Hx)
-  defval('algo','unc')
+  defval('algo','con')
   % The necessary strings for formatting FJS see OSDISP and OSANSW
   str0='%18s';
   str1='%13.0e ';
@@ -532,8 +532,8 @@ elseif strcmp(Hx,'demo2')
   clf
   % Looks like more trimming is needed for 'con' rather than 'unc'
   trims=90;
-  % disp(sprintf('%s estimates trimmed at %i percentile',...
-  %      upper(mfilename),trims))
+   disp(sprintf('%s estimates trimmed at %i percentile',...
+        upper(mfilename),trims))
   
   % If the above two are close, we need to start using the second one
   % Let us feed it the Fisher covariance at the TRUTH
