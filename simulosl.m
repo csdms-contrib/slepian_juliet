@@ -67,7 +67,7 @@ function varargout=simulosl(th0,params,xver,varargin)
 % MLEOSL, LOADING, SIMULOS, EGGERS1, EGGERS2, EGGERS4, etc
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
-% Last modified by fjsimons-at-alum.mit.edu, 10/11/2017
+% Last modified by fjsimons-at-alum.mit.edu, 06/13/2018
 
 % Here is the true parameter vector and the only variable that gets used 
 defval('th0',[1e6 2.5 2e4]);
@@ -78,7 +78,7 @@ if ~isstr(th0)
   fields={               'dydx','NyNx','blurs','kiso','quart'};
 
  defstruct('params',fields,...
-	    {                      [10 10]*1e3,[64 64],-1,NaN,1});
+	    {                      [10 10]*1e3,[64 64],-1,NaN,0});
   struct2var(params)
 
   % Here is the extra verification parameter
