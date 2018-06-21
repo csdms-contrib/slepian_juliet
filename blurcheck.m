@@ -14,7 +14,7 @@ function blurcheck(Sbar,params)
 % params  Parameters of this experiment, the ones that are needed are:
 %         NyNx  number of samples in the y and x directions
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/02/2016
+% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
 % Target dimensions, the original ones
 NyNx=params.NyNx;
