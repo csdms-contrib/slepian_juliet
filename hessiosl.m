@@ -44,7 +44,7 @@ function [H,covH,cH]=hessiosl(k,th,params,Hk,xver)
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/21/2017
+% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
 % Early setup exactly as in FISHIOSL
 defval('xver',1)
