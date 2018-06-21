@@ -41,7 +41,7 @@ function varargout=mlechiplos(witsj,Hk,thhat,scl,params,ah,pertur,th0,covX,E,v)
 %
 % MLECHIPSDOSL, MLEOSL, EGGERS6
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
+% Last modified by fjsimons-at-alum.mit.edu, 06/21/2018
 
 defval('pertur',0)
 defval('th0',[])
@@ -154,8 +154,8 @@ xstr2=sprintf('quadratic residual 2%s',varibal);
 xstr=sprintf('quadratic residual %s',varibal);
 cax=[0 3*df];
 
-defval('ah',NaN)
-if isnan(ah)
+% If the graphics handle by this name exists
+if ~exist('ah','var')
   ah=krijetem(subnum(1,3));
 end
 
@@ -199,7 +199,13 @@ axis square
 axes(ah(2))
 % Note that SOME people use a different parameterization (b vs 1/b)
 % Note that gamma [df/2 2] is chi-squared [df]...
-h=qqplot(2*Xk(allg),ProbDistUnivParam('gamma',[df/2 2])); 
+% Note that the try/catch provides the necessary version upgrade
+try
+  h=qqplot(2*Xk(allg),makedist('gamma','a',df/2,'b',2));
+catch
+  h=qqplot(2*Xk(allg),ProbDistUnivParam('gamma',[df/2 2])); 
+end
+
 axis image; box on
 set(h(1),'MarkerE','k')  
 set(h(3),'LineS','-','Color',grey)
@@ -244,8 +250,8 @@ imagefnan([xlis(1) xlis(end)],[xlis(end) xlis(1)],...
 	  'gray',cax,[],1); axis image
 % Whatever you do, take out the zero wavenumber, where you get a special point
 t(3)=title(titst);
-set(ah(3),'xtick',xlis,'xtickl',[-lx/2 0 lx/2],...
-	  'ytick',xlis,'ytickl',[-lx/2 0 lx/2])
+set(ah(3),'xtick',xlis,'XtickLabel',[-lx/2 0 lx/2],...
+	  'ytick',xlis,'YtickLabel',[-lx/2 0 lx/2])
 [cb,xcb]=addcb(cborien,cax,cax,'gray',df,1);
 set(xcb,'string',xstr)
 
@@ -255,7 +261,7 @@ fig2print(gcf,'landscape')
 set(ah(1),'xtick',xlls,'ytick',ylls)
 set(ah(2),'xtick',xlls,'ytick',xlls)
 longticks([ah cb])
-set(t,'FontS',9)
+set(t,'FontSize',9)
 
 % This will reset everything that is plot under HOLD ON
 set([cat(1,findobj('FontSize',10)); yl(:); xl(:); xcb(:)],'FontSize',12)
