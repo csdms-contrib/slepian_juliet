@@ -1,8 +1,10 @@
-function varargout=mleplos(thhats,th0,covF0,covHav,covHpix,E,v,params,name,thpix)
-% MLEPLOS(thhats,th0,covF0,covHav,covHpix,E,v,params,name,thpix)
+function varargout=mleplos(thhats,th0,covX,covavhs,covhpix,E,v,params,name,thpix)
+% MLEPLOS(thhats,th0,covX,covavhs,covhpix,E,v,params,name,thpix)
 %
 % Graphical statistical evaluation of the maximum-likelihood inversion
-% results from the suite MLEOS, MLEROS, MLEROS0, MLEOSL. 
+% results from the suite MLEOS, MLEROS, MLEROS0, MLEOSL. Displays
+% probability density functions of the estimates and makes
+% quantile-quantile plots to ascertain normality. 
 %
 % INPUT:
 %
@@ -14,10 +16,10 @@ function varargout=mleplos(thhats,th0,covF0,covHav,covHpix,E,v,params,name,thpix
 %            th0(3/4)=s2   The first Matern parameter, aka sigma^2 
 %            th0(4/5)=nu   The second Matern parameter 
 %            th0(5/6)=rho  The third Matern parameter 
-% covF0      The covariance matrix based on the Fisher matrix at the truth
-% covHav     The covariance matrix based on the average numerical Hessian
-%            matrix at the individual estimates
-% covHpix   The covariance matrix based on the numerical Hessian at a random estimate
+% covX       A single certain covariance matrix
+% covavhs    The covariance matrix based on the median numerical Hessian
+%            matrix near the individual estimates, from the diag file
+% covhpix    The covariance matrix based on the numerical Hessian at a random estimate
 % E          Young's modulus (not used for single fields)
 % v          Poisson's ratio (not used for single fields)
 % params     The structure with the fixed parameters from the experiment
@@ -30,9 +32,9 @@ function varargout=mleplos(thhats,th0,covF0,covHav,covHpix,E,v,params,name,thpix
 %
 % EXAMPLE:
 %
-% This only gets used in MLEOS/MLEROS/MLEROS0/MLEOSL thus far
+% This only gets used in MLEOS/MLEROS/MLEROS0/MLEOSL thus far, their 'demo2'
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/17/2017
+% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
 defval('xver',0)
 
@@ -78,28 +80,28 @@ for ind=1:np
   mobss(ind)=mean(thhats(:,ind));
   sobss(ind)=std(thhats(:,ind));
 
-  % The theoretical means and standard deviations for any one estimate
+  % The means and standard deviations for any one estimate
   th0i=th0(ind);
-  if ~isempty(covF0)
-    % Error estimate based on the Fisher matrix 
-    stdF=real(sqrt(covF0(ind,ind)));
+  if ~isempty(covX)
+    % Error estimate based on whatever it was being fed
+    stdX=real(sqrt(covX(ind,ind)));
   else
-    stdF=NaN;
+    stdX=NaN;
   end
   % Collect them all
-  stdFs(ind)=stdF;
+  stdXs(ind)=stdX;
 
-  if ~isempty(covHav)
-    % Error estimate based on the median Hessian matrix
-    stdH=real(sqrt(covHav(ind,ind)));
+  if ~isempty(covavhs)
+    % Error estimate based on the median numerical Hessian matrix near estimate
+    stdavhs=real(sqrt(covavhs(ind,ind)));
   else
-    stdH=NaN;
+    stdavhs=NaN;
   end
-  if ~isempty(covHpix)
-    % Error estimate based on one particular randomly picked Hessian
-    stdHts=real(sqrt(covHpix(ind,ind)));
+  if ~isempty(covhpix)
+    % Error estimate based on one particular randomly picked numerical Hessian
+    stdhpix=real(sqrt(covhpix(ind,ind)));
   else
-    stdHts=NaN;
+    stdhpix=NaN;
   end
 
   % HISTOGRAMS
@@ -124,27 +126,27 @@ for ind=1:np
   stats=mobs+nstats*sobs;
   % What is the percentage captured within the range?
   nrx=20; nry=15;
-  set(ah(ind),'xlim',stats([1 end]),'xtick',stats,'xtickl',nstats)
+  set(ah(ind),'XLim',stats([1 end]),'XTick',stats,'XTickLabel',nstats)
 
-  % Truth and range based on the Fisher matrix at the truth... 
+  % Truth and range based on stdX
   hold on
   p0(ind)=plot([th0i th0i],ylim,'k-');
   halfup=indeks(ylim,1)+range(ylim)/2;
-  ps(ind)=plot(th0i+[-1 1]*stdF,...
+  ps(ind)=plot(th0i+[-1 1]*stdX,...
 	       [halfup halfup],'k-'); 
   % Didn't like this range bar in the end
   delete(ps(ind))
   
   % Estimate x-axis from observed means and variances
   xnorm=linspace(nstats(1),nstats(end),100)*sobs+mobs;
-  % Normal distribution based on the Fisher matrix at the truth
-  psF(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdF));
-  % Based on the average/median Hessian matrix
-  psH(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdH));
+  % Normal distribution based on stdX
+  psX(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdX));
+  % Based on the median numerical Hessian matrix at the estimates
+  psavhs(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdavhs));
   % Based on one of them picked at random, numerical Hessian at estimate
-  psh(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdHts));
+  pshpix(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdhpix));
   % Based on the actually observed covariance of these data
-  pth(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,sobs));
+  pobs(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,sobs));
 
   % Some annotations
   % Experiment size, he giveth, then taketh away
@@ -156,10 +158,10 @@ for ind=1:np
 
   % The percentage covered in the histogram that is being shown
   tt(ind)=text(stats(1)+range(stats)/nrx,indeks(ylim,2)-2*range(ylim)/nry,...
-	      sprintf('s/%s = %5.2f','\sigma',sobs/stdH)); 
+	      sprintf('s/%s = %5.2f','\sigma',sobs/stdavhs)); 
   fb=fillbox(ext2lrtb(tt(ind),[],0.8),'w'); delete(tt(ind)); set(fb,'EdgeC','w')
   tt(ind)=text(stats(1)+range(stats)/nrx,indeks(ylim,2)-2*range(ylim)/nry,...
-	      sprintf('s/%s = %5.2f','\sigma',sobs/stdH));
+	      sprintf('s/%s = %5.2f','\sigma',sobs/stdavhs));
 
   % The ratio of the observed to the theoretical standard deviation
   t(ind)=text(stats(1)+range(stats)/nrx,indeks(ylim,2)-range(ylim)/nry,...
@@ -176,12 +178,12 @@ for ind=1:np
   set(h(3),'LineS','-','Color',grey)
   top(h(3),ah(ind+np))
   set(ah(ind+np),'xlim',nstats([1 end]),...
-		'box','on','xtick',nstats,'xtickl',nstats)
-  delete(get(ah(ind+np),'ylabel'));
-  delete(get(ah(ind+np),'title'));
-  delete(get(ah(ind+np),'xlabel'));
-  set(ah(ind+np),'ylim',stats([1 end]),'ytick',stats,...		       
-		'ytickl',round(rondo*stats/sclth0(ind))/rondo);
+		'box','on','xtick',nstats,'XTickLabel',nstats)
+  delete(get(ah(ind+np),'Ylabel'));
+  delete(get(ah(ind+np),'Title'));
+  delete(get(ah(ind+np),'XLabel'));
+  set(ah(ind+np),'YLim',stats([1 end]),'YTickLabel',stats,...		       
+		'YTickLabel',round(rondo*stats/sclth0(ind))/rondo);
   hold on
   e(ind)=plot(xlim,[mobs mobs],'k:');
   f(ind)=plot([0 0],ylim,'k:');
@@ -228,17 +230,17 @@ movev(ah(length(ah)/2+1:end),mv)
 axes(ah(1))
 yl=ylabel('posterior probability density');
 longticks(ah)
-% Normal distribution based on the Fisher matrix at the truth
-set(psF,'linew',0.5,'color','k','LineS','--')
-% Based on the average/median Hessian matrix
-set(psH,'linew',1.5,'color','k')
+% Normal distribution based on stdX
+set(psX,'linew',0.5,'color','k','LineS','--')
+% Based on the median numerical Hessian matrix
+set(psavhs,'linew',1.5,'color','k')
 % Based on the randomly picked Hessian matrix
-set(psh,'linew',0.5,'color','k')
+set(pshpix,'linew',0.5,'color','k')
 % Based on the actually observed covariance of these data
-set(pth,'linew',1.5,'color',grey(3.5))
+set(pobs,'linew',1.5,'color',grey(3.5))
 
 % Do this so the reduction looks slightly better
-set(yl,'FontS',12)
+set(yl,'FontSize',12)
 nolabels(ah(2:np),2)
 %disp(sprintf('\n'))
 fig2print(gcf,'landscape')
@@ -250,19 +252,20 @@ if isstruct(params)
   t=ostitle(ah,params,name); movev(t,.4)
 end
 
-% Here is the TRUTH and the FISHER-BASED standard deviation
-[answ,answs]=osansw(th0,covF0,E,v);
+% Here is the TRUTH and the COVX standard deviation
+[answ,answs]=osansw(th0,covX,E,v);
 disp(sprintf('%s',...
-             'Truth and Fisher-covariance standard deviation at the truth'))
+             'Truth and covariance covX standard deviation'))
 disp(sprintf(answs,answ{:}))
-% Here is the mean estimate and its covariance-based standard deviation
+% Here is the MEAN ESTIMATE and its OBSERVED-COVARIANCE-based standard deviation
 [answ,answs]=osansw(mean(thhats),cov(thhats),E,v);
 disp(sprintf('\n%s',...
              'Mean estimate and ensemble-covariance standard deviation'))
 disp(sprintf(answs,answ{:}))
+% By the way, use THAT as a title
 tt=supertit(ah(np+1:2*np),sprintf(answs,answ{:}));
-% Here is the random estimate and its numerical-Hessian based standard deviation
-[answ,answs]=osansw(thpix,covHpix,E,v);
+% Here is the RANDOMLY PICKED estimate and its NUMERICAL-HESSIAN based standard deviation
+[answ,answs]=osansw(thpix,covhpix,E,v);
 disp(sprintf('\n%s',...
              'Example estimate and numerical-Hessian covariance standard deviation'))
 disp(sprintf(answs,answ{:}))
@@ -283,14 +286,14 @@ if xver==1
     o(ind)=plot(mobss(pcomb(ind,1))+pstats*sobss(pcomb(ind,1)),...
 		[mobss(pcomb(ind,2)) mobss(pcomb(ind,2))],'LineW',2);
     % Observed means and theoretical standard deviations
-    ot(ind)=plot(mobss(pcomb(ind,1))+pstats*stdFs(pcomb(ind,1)),...
+    ot(ind)=plot(mobss(pcomb(ind,1))+pstats*stdXs(pcomb(ind,1)),...
 		 [mobss(pcomb(ind,2)) mobss(pcomb(ind,2))],'g--');
     % Observed means and observed standard deviations
     t(ind)=plot([mobss(pcomb(ind,1)) mobss(pcomb(ind,1))],...
 		mobss(pcomb(ind,2))+pstats*sobss(pcomb(ind,2)),'LineW',2);
     % Observed means and theoretical standard deviations
     tt(ind)=plot([mobss(pcomb(ind,1)) mobss(pcomb(ind,1))],...
-		 mobss(pcomb(ind,2))+pstats*stdFs(pcomb(ind,2)),'g--');
+		 mobss(pcomb(ind,2))+pstats*stdXs(pcomb(ind,2)),'g--');
     hold off
     % Truths
     set(ah(ind),'xtick',th0(pcomb(ind,1)),'ytick',th0(pcomb(ind,2))); grid on
