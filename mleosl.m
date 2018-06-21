@@ -22,7 +22,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %                0 size as is, watch for periodic correlation behavior
 % algo     'unc' uses FMINUNC for unconstrained optimization
 %          'con' uses FMINCON with positivity constraints [default]
-%          'klose' simply closes out a run that got stuck
+%          'klose' simply closes out a run that got stuck [defaulted when needed ]
 % bounds    A cell array with those positivity constraints [defaulted]
 % aguess    A parameter vector [s2 nu rho] that will be used in
 %           simulations for demo purposes, and on which "thini" will be
@@ -63,21 +63,27 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 % p.quart=0; p.blurs=0; p.kiso=NaN; clc; [Hx,~,p]=simulosl([],p,1); mleosl(Hx,[],p,[],[],[],1);
 %
 % You can stick in partial structures, e.g. only specifying params.kiso
+%
 %% Perform a series of N simulations centered on th0
 % mleosl('demo1',N,th0,params)
-%% Statistical study of a series of simulations done using 'demo1'
-% mleosl('demo2','02-Oct-2014') % You can ask for output 
-%% Covariance study of a series of simulations
-% mleosl('demo4','02-Oct-2014')
-%% One simulation and a chi-squared plot
+%
+%% Statistical study of a series of simulations using MLEPLOS
+% mleosl('demo2','20-Jun-2018')
+%
+%% Covariance study of a series of simulations using COVPLOS
+% mleosl('demo4','20-Jun-2018')
+%
+%% One simulation and a chi-squared plot using MLECHIPLOS
 % mleosl('demo5',th0,params)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/13/2018
+% Tested on 8.3.0.532 (R2014a)
+%
+% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
 % NEED TO CHANGE THE k(~~k) to proper accounting for kiso
 
 if ~isstr(Hx)
-  defval('algo','con')
+  defval('algo','unc')
   % The necessary strings for formatting FJS see OSDISP and OSANSW
   str0='%18s';
   str1='%13.0e ';
@@ -251,9 +257,11 @@ if ~isstr(Hx)
       ts=etime(clock,t0);
      case 'klose'
        % Simply a "closing" run to return the options
+       lpars{6}=options;
+       lpars{7}=bounds;
+       % Simply a "closing" run to return the options
        varargout=cellnan(nargout,1,1);
-       varargout{end-1}=options;
-       varargout{end}=bounds;
+       varargout{end}=lpars;
        return
     end
   catch
@@ -471,9 +479,8 @@ elseif strcmp(Hx,'demo1')
         % We don't compare the second and third outputs of LOGLIOSL
         % since these are analytical, poorly approximately blurred,
         % derivates, and we be writing the numerical versions 
-	% Print the optimization results and diagnostics to a different
-        % file 
-        % FJS Oct 17 now changed to writing out covFHh{3}
+	% Print optimization results and diagnostics to different file 
+        % FJS Oct 17 now changed to writing out covFHh{3} as the best one
 	oswdiag(fids(4),fmts,lpars,thhat,thini,scl,ts,var(Hx),momx,covFHh{3})
       end
     end
@@ -482,7 +489,7 @@ elseif strcmp(Hx,'demo1')
   % If for some reason this didn't end well, do an N==0 run.
 
   % Initialize if all you want is to close the file
-  if N==0
+  if N==0 
     [Hx,th0,p,k]=simulosl(th0,params); 
     good=1; avhsz=avhsz+1; 
     [~,~,lpars]=mleosl(Hx,[],[],'klose');
@@ -531,7 +538,7 @@ elseif strcmp(Hx,'demo2')
   fig2print(gcf,'landscape')
   clf
   % Looks like more trimming is needed for 'con' rather than 'unc'
-  trims=90;
+  trims=99;
    disp(sprintf('%s estimates trimmed at %i percentile',...
         upper(mfilename),trims))
   
@@ -549,12 +556,9 @@ elseif strcmp(Hx,'demo2')
   varns={cobs,mobs,nobs,th0,p,momx};
   varargout=varns(1:nargout);
 
-  % Print the figure! Don't forget the degs.pl script
+  % Print the figure!
   disp(' ')
-  figna=figdisp([],sprintf('%s_%s',Hx,datum),[],1);
-  system(sprintf('degs %s.eps',figna));
-  system(sprintf('epstopdf %s.eps',figna)); 
-  system(sprintf('rm -f %s.eps',figna)); 
+  figna=figdisp([],sprintf('%s_%s',Hx,datum),[],2);
   
   % Being extra careful or not?
   defval('xver',0)
@@ -604,20 +608,17 @@ elseif strcmp(Hx,'demo4')
 
   % Load everything you know about this simulation
   % Looks like more trimming is needed for 'con' rather than 'unc'
-  trims=90;
+  trims=99;
   [th0,thhats,params,covX,~,pix,~,~,obscov,sclcovX,~,covXpix]=osload(datum,trims);
 
   % Make the plot
-  ah=covplos(2,sclcovX,obscov,sclcovX,params,thhats,th0,[],[],'ver');
+  ah=covplos(2,sclcovX,obscov,covX,params,thhats,th0,[],[],'ver');
 
-  % Make the plot
-  figna=figdisp([],sprintf('%s_%s',Hx,datum),[],1);
-  system(sprintf('degs %s.eps',figna));
-  system(sprintf('epstopdf %s.eps',figna)); 
-  system(sprintf('rm -f %s.eps',figna)); 
+  % Print the figure!
+  disp(' ')
+  figna=figdisp([],sprintf('%s_%s',Hx,datum),[],2);
 elseif strcmp(Hx,'demo5')  
   % What th-parameter set? The SECOND argument after the demo id
-
   defval('thini',[]);
   % If there is no preference, then that's OK, it gets taken care of
   th0=thini; clear thini
@@ -634,36 +635,28 @@ elseif strcmp(Hx,'demo5')
   thini=[];
 
   % Perform the optimization, whatever the quality of the result
-  [thhat,~,logli,thini,scl,p,e,o,gr,hs]=mleosl(Hx,thini,p);
+  [thhat,covFHh,lpars,scl,thini,p,Hk,k]=mleosl(Hx,thini,p);
+  matscl=[scl(:)*scl(:)'];
 
-  % Take a look at the approximately blurred gradient purely for fun,
-  % they should be so small as to be immaterial
-  grobs=[gammiosl(k,thhat.*scl,p,Hk)]';
+  % Fisher and Fisher-derived covariance at the truth
+  [F0,covF0]=fishiosl(k,th0);
+  % Fisher and Fisher-derived covariance at the estimate
+  % covF=covFHh{1};
+  % Those two are close of course, and of not much intrinsic interest anymore
+   
+  % Make sure there isn't a factor of two in-between covFHh{1} and covFHh{2}
+  % Sometimes the blurring makes it look like that
+  % Should be testing that these are all closer together the larger the
+  % data set is 
   
-  % Take a look at the unblurred theoretical covariance at the estimate,
-  [F,covthat]=fishiosl(k,thhat.*scl);
+  % Scaled covariances based on the analytical Hessian at the estimate
+  predcov=covFHh{2}./[scl(:)*scl(:)'];
+  % Scaled covariances based on the numerical Hessian at the estimate
+  obscov=covFHh{3}./[scl(:)*scl(:)'];
 
-  % Collect the theoretical covariance for the truth for the title
-  covth=fishiosl(k,th0);
- 
-  % Take a look at the scaled Fisher to compare with the scaled Hessian  
-  F;
-  hs;
-  grobs;
-  
-  % Take a look at the scaled covariances
-  predcov=covthat./[scl(:)*scl(:)'];
-  % And compare to the inverse of the scaled Hessians in the full plane
-  % Watch as this will change with the anticipated halfplane changes
-  obscov=inv(hs)/length(k(:))*2;
-  % These two should compare reasonably well in the unblurred case, I
-  % would have thought - but of course it's ignoring stochastic
-  % variability. If we can use the Hessian for the uncertainty estimation
-  % we can do this for the cases where we can't come up with a
-  % theoretical covariance, not even an unblurred one. Check std's.
-  % Maybe should do this a hundred times?
+  % Quick status report, but note that you get more information in demo4
   disp(sprintf('%s\n',repmat('-',1,97)))
-  disp('predicted and observed scaled standard deviations and their ratio')
+  disp('analytical and numerical scaled Hessian standard deviations and their ratio')
   disp(sprintf([repmat('%6.3f  ',1,length(obscov)) '\n'],...
 	       [sqrt(diag(predcov))' ; sqrt(diag(obscov))' ; ...
 		sqrt(diag(predcov))'./sqrt(diag(obscov))']'))
@@ -673,27 +666,30 @@ elseif strcmp(Hx,'demo5')
   disp(sprintf(sprintf('%s : %s ',str0,repmat(str2,size(thhat))),...
 	       'Estimated theta',thhat.*scl))
   disp(repmat('-',1,97))
+
+  % Subvert OSDISP for this one example
+  osdisp(th0,thhat,1,trilos(lpars{3}),trilos(F0.*matscl),covFHh{3})
   
-  % Quick plot, but see OLHEDESIMONS5
+  % Quick plot, but see also EGGERS3
   clf
   ah=krijetem(subnum(2,3)); delete(ah(4:6)); ah=ah(1:3);
 
   % Maybe we should show different covariances than the predicted ones??
 
   % Time to rerun LOGLIOS one last time at the solution
-  [L,~,~,momx]=logliosl(k,thhat,scl,p,Hk,xver);
+  % Do not collect the analytical gradient and Hessian, since these are
+  % not the observed blurred gradients
+  [L,~,~,momx]=logliosl(k,thhat,scl,p,Hk,1);
+  % We had this already, just making sure it checks out
+  diferm(L,lpars{1})
 
-  disp('fjs feed this into the next one')
-  disp('fjs here fits the likelihood contours')
+  % Makes an attractive plot that can be used as a judgment for fit
+  mlechiplos(4,Hk,thhat,scl,p,ah,0,th0,covFHh{3});
+  
+  disp('FJS here fits also MLECHIPSDOSL')
+  disp('FJS here fits the likelihood contours')
 
-  % Better feed this to the next code, now it's redone inside
-  mlechiplos(4,Hk,thhat,scl,p,ah,0,th0,covth);
-   
-  % Better put in MLELCONTSOL and MLEPSDOSL here also
-
-  % Print the figure! Don't forget the degs.pl script
-  figna=figdisp(figna,[],[],1);
-  system(sprintf('degs %s.eps',figna));
-  system(sprintf('epstopdf %s.eps',figna)); 
-  system(sprintf('rm -f %s.eps',figna)); 
-end 
+  % Print the figure!
+  disp(' ')
+  figna=figdisp(figna,[],[],2);
+end
