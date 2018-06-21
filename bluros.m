@@ -40,7 +40,7 @@ function [Sbar,k]=bluros(S,params,xver)
 %
 % Maybe should formally increase it in those cases so as to never worry?
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/15/2016
+% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
 if params.blurs<0
   error('You should be running BLUROSY, not BLUROS!')
