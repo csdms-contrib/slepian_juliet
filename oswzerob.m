@@ -16,7 +16,7 @@ function oswzerob(fid,th0,params,options,bounds,fmts)
 %
 % OSWZEROE, OSRZERO, OSWDIAG, OSRDIAG
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/18/2017
+% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
 % Commit the truth to file
 fprintf(fid,'%s\n','the true parameter vector');
