@@ -31,7 +31,7 @@ function [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covX]=osrdiag(fname,ddir,
 %
 % OSOPEN, OSLOAD, OSWDIAG
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/18/2017
+% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
 defval('ddir','/u/fjsimons/PROGRAMS/MFILES/olhede4')
 defval('fname','mleosl_diagn_11-Jun-2015')
