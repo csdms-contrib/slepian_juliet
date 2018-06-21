@@ -15,7 +15,7 @@ function m=trilosi(v)
 %
 % TRILOS, NCHOOSEK
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/20/2016
+% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
 % Figure out the full dimension of the matrix
 np=(-1+sqrt(1+4*2*length(v(:))))/2;
