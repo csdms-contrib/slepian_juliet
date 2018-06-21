@@ -19,7 +19,7 @@ function tracecheck(L,A,mv,tol,meth)
 %
 % MAOSL
 % 
-% Last modified by fjsimons-at-alum.mit.edu, 10/19/2016
+% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
 for j=1:length(A)
   % Checks a random wavenumber
