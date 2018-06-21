@@ -45,7 +45,7 @@ function [L,g,H,momx,vr,Lk]=logliosl(k,th,scl,params,Hk,xver)
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/24/2017
+% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
 defval('xver',1)
 
@@ -68,7 +68,7 @@ Hk=Hk(~~k);
 S = S(~~kk); 
 k = k(~~k);
 
-% The statistics of Xk will be tested in LOGLIOS below
+% The statistics of Xk will be computed as momx, below, and tested in MLEOSL
 Xk=hformos(S,Hk,[],xver);
 
 % Radial wavenumber restrictions, these need to carry over elsewhere
