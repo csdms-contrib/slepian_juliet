@@ -1,5 +1,5 @@
-function varargout=osdisp(th0,thhats,nl,avhs,F0,covHav)
-% OSDISP(th0,thhats,nl,avhs,F0,covHav)
+function varargout=osdisp(th0,thhats,nl,avhs,F0,covavhs)
+% OSDISP(th0,thhats,nl,avhs,F0,covavhs)
 % OSDISP(th0,params)
 % [str0,str1,str2,str3]=OSDISP(...)
 %
@@ -10,17 +10,17 @@ function varargout=osdisp(th0,thhats,nl,avhs,F0,covHav)
 %
 % th0        True parameter vector
 % thhats     Estimated parameter vector, OR
-% params     A structure with the fixed parameter settings
+%  params    A structure with the fixed parameter settings, AND
 % nl         Number of experiments over which the average Hessian is reported
-% avhs       Average numerical Hessian matrix at the estimates
-% F0         Fisher matrix evaluated at at the truth
-% covHav     The covariance based on the average numerical Hessian matrix
+% avhs       Median numerical Hessian matrix at the estimates (after TRILOS)
+% F0         Fisher matrix evaluated at at the truth (after TRILOS)
+% covavhs    The covariance based on the average median Hessian (full form)
 %
 % OUTPUT:
 %
 % The strings used 
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/18/2017
+% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
 % The necessary strings for formatting
 str0='%18s';
@@ -31,7 +31,7 @@ str3='%13s ';
 % Replicate to the size of the parameter vector
 str1s=repmat(str1,size(th0));
 str2s=repmat(str2,size(th0));
-%str1s='%13.0f %13.2f %13.0f';
+str3s=repmat(str3,size(th0));
 
 % Don't use STRUC2ARRAY since we want them in our own order
 % But see the reordering solution in OSWZEROB
@@ -52,37 +52,47 @@ if isstruct(thhats) && nargin==2
 else
   % Estimated values
   disp(sprintf(sprintf('%s : %s \n',str0,str1s),...
-	       'Average estimated theta',mean(thhats,1)))
-  % Average numerical Hessian and Fisher matrix at the truth
-   disp(sprintf(['Over %i simulations, the average numerical Hessian and' ...
-		 ' the Fisher matrix at the truth are'],nl))
-   disp(sprintf(...
-       '|%4.2f|%s apart on average (the relevant diagn file had the full information)\n',...
-       1/100*round(100*mean(abs([avhs-F0]'./F0'*100))),'%'))
+	       'Average thhat',mean(thhats,1)))
+  
+  if nl==1
+    % Average numerical Hessian near the estimate and Fisher matrix at the truth
+    disp(sprintf(['Over %i simulation, the numerical Hessian near the estimate\n' ...
+		  'and the unblurred Fisher matrix at the truth are |%4.2f|%s apart\n'],nl,...
+		 1/100*round(100*mean(abs([avhs-F0]'./F0'*100))),'%'))
+  else
+    % Average numerical Hessian near the estimate and Fisher matrix at the truth
+    disp(sprintf(['Over %i simulations, the median numerical Hessian near the estimate\n' ...
+		  'and the unblurred Fisher matrix at the truth are |%4.2f|%s apart\n'],nl,...
+		 1/100*round(100*mean(abs([avhs-F0]'./F0'*100))),'%'))
+  end
 
   % Covariance, relative, empirical, and theoretical
+  if size(thhats,1)>4
+    disp(sprintf(sprintf('%s : %s',str0,str1s),...
+		 'Observed standard deviation',std(thhats)))
+  end
   disp(sprintf(sprintf('%s : %s',str0,str1s),...
-	       'Observed standard deviation',std(thhats)))
-  disp(sprintf(sprintf('%s : %s',str0,str1s),...
-	       'Theortcl standard deviation',sqrt(diag(covHav))))
-  disp(sprintf(sprintf('%s : %s',str0,str2s),...
-	       'Perct of obs to pred stnddv',...
-	       round(100*std(thhats)./sqrt(diag(covHav)'))))
-  disp(sprintf(sprintf('%s : %s\n',str0,str2s),...
-	       'Observed percent stand devn',...
-	       round(100*std(thhats)./th0)))
+	       'AvNumHes standard deviation',sqrt(diag(covavhs))))
+  if size(thhats,1)>4
+    disp(sprintf(sprintf('%s : %s',str0,str2s),...
+		 'Perct of obs to pred stnddv',...
+		 round(100*std(thhats)./sqrt(diag(covavhs)'))))
+    disp(sprintf(sprintf('%s : %s\n',str0,str2s),...
+		 'Observed percent stand devn',...
+		 round(100*std(thhats)./th0)))
+  end
 end
 
 if length(th0)==6
-  disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3,size(th0))),...
+  disp(sprintf(sprintf('\n%s   %s ',str0,str3s),...
 	       ' ','D','f2','r','s2','nu','rho'))
   disp(sprintf(sprintf('%s : %s ',str0,str1s),'True theta',th0))
 elseif length(th0)==5
-  disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3,size(th0))),...
+  disp(sprintf(sprintf('\n%s   %s ',str0,str3s),...
 	       ' ','D','f2','s2','nu','rho'))
   disp(sprintf(sprintf('%s : %s ',str0,str1s),'True theta',th0))
 elseif length(th0)==3
-  disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3,size(th0))),...
+  disp(sprintf(sprintf('\n%s   %s ',str0,str3s),...
 	       ' ','s2','nu','rho'))
   disp(sprintf(sprintf('%s : %s ',str0,str1s),'True theta',th0))
 end
