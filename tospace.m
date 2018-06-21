@@ -20,7 +20,7 @@ function Hx=tospace(Hk,p)
 %
 % TOSPEC, KNUMS, KNUM2
 % 
-% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
+% Last modified by fjsimons-at-alum.mit.edu, 06/21/2018
 
 % Unitary transform, and it has physical units
 Hx=realize(indeks(ifft2(ifftshift(reshape(Hk,p.NyNx))),':')...
