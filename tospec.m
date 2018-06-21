@@ -19,7 +19,7 @@ function Hk=tospec(Hx,p)
 %
 % TOSPACE, KNUMS, KNUM2
 % 
-% Last modified by fjsimons-at-alum.mit.edu, 10/07/2016
+% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
 % Unitary transform, and it has physical units
 Hk=indeks(fftshift(fft2(reshape(Hx,p.NyNx))),':')...
