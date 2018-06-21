@@ -17,7 +17,7 @@ function v=trilos(m)
 %
 % TRILOSI, NCHOOSEK
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/20/2016
+% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
 % Do'nt check symmetry as we will "fake-use" TRILOS for TRILOSI
 % difer(m-m',[],[],NaN)
