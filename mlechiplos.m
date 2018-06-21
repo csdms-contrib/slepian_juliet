@@ -2,9 +2,12 @@ function varargout=mlechiplos(witsj,Hk,thhat,scl,params,ah,pertur,th0,covX,E,v)
 % [cb,xl,t,tt]=MLECHIPLOS(witsj,Hk,thhat,scl,params,ah,pertur)
 % [cb,xl,t,tt]=MLECHIPLOS(witsj,Hk,thhat,scl,params,ah,pertur,th0,covX,E,v)
 %
-% Makes a plot of the quadratic residual and its interpretation for a
-% likelihood model evaluated at its estimate. Watch what happens when you've
-% filtered and check the warnings related to blurring, filtering, etc.
+% Makes a three-panel plot of the quadratic residuals and their
+% interpretation for a likelihood model evaluated at its estimate. Plotted
+% are a histogram with the theoretical distribution overlain, a
+% quantile-quantile plot against the theoretical distribution, and a
+% two-dimensional spectral plot to check for patterns. Calculates metrics
+% and statistical tests.
 %
 % INPUT:
 %
@@ -13,7 +16,7 @@ function varargout=mlechiplos(witsj,Hk,thhat,scl,params,ah,pertur,th0,covX,E,v)
 %          2 SIMULROS - new school correlated as in Simons & Olhede (2013)
 %          3 SIMULROS0 - new school uncorrelated as in Simons & Olhede (2013)
 %          4 SIMULOSL - single-field as in Simons & Olhede (2013)
-% Hk       The Fourier-domain data
+% Hk       The Fourier-domain data, e.g. from SIMULOSL
 % thhat    The evaluated scaled parameter vector
 % scl      The scale factors
 % params   The structure with the fixed parameters from the experiment
@@ -29,11 +32,16 @@ function varargout=mlechiplos(witsj,Hk,thhat,scl,params,ah,pertur,th0,covX,E,v)
 % cb,xl    Axis handles
 % t,tt     Title and subtitle handles
 %
+% NOTE: 
+%
+% Watch what happens when you've filtered and check the warnings related
+% to blurring, filtering, etc.
+%
 % SEE ALSO:
 %
 % MLECHIPSDOSL, MLEOSL, EGGERS6
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/23/2017
+% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
 defval('pertur',0)
 defval('th0',[])
@@ -96,7 +104,7 @@ switch witsj
   df=2;
 end
 
-% And this should be the same thing again, except for the k=0 which is NaN
+% And this should be the same thing again, except how it treats k=0
 % Note that if you HAVE a solution already, you'll find the loglik you had
 switch witsj
   case 1
@@ -109,13 +117,18 @@ switch witsj
    Xk1=-Lkros0(k,thhat.*scl,params,Hk)-log(detSb);
    Lbar=logliros0(thhat,params,Hk,k,scl);
  case 4
-   % We nixed the next line but recreated it after
-   %Xk1=-Lkosl(k,thhat.*scl,params,Hk)-log(Sb);
-   [Lbar,~,~,momx,~,Xk1]=logliosl(k,thhat,scl,params,Hk);
+   [Lbar,~,~,momx,~,Xk1]=logliosl(k,thhat,scl,params,Hk,1);
    Xk1=-Xk1-log(Sb(~~k));
-   % Update to check with what's in the titles, they are recalculated later
-   % disp(sprintf('MOMENTS %8.5f  %8.5f %8.5f',momx))
+   % The oldest way, using a since retired function
+   % Xkk1=-Lkosl(k,thhat.*scl,params,Hk)-log(Sb);
+   % difer(Xkk1(~~k)-Xk1,9,[],NaN)
 end
+
+% Check we're doing the same thing to tolerance, depending on whether
+% some prior codes put a NaN at zero wavenumber or got rid of the
+% zero-wavenumber values altogether; these checks will be removed
+difer(Xk(~isnan(Xk0))-Xk0(~isnan(Xk0)),9,[],NaN)
+difer(Xk(~~k)-Xk1,9,[],NaN)
 
 switch witsj
  case {1,2,3}
@@ -126,17 +139,11 @@ switch witsj
   varibal='X';
 end
 
-% Check we're doing the same thing to tolerance, depending on whether
-% some prior codes put a NaN at zero wavenumber or got rid of the
-% zero-wavenumber values altogether; these checks will be removed
-difer(Xk(~isnan(Xk0))-Xk0(~isnan(Xk0)),9,[],NaN)
-difer(Xk(~~k)-Xk1,9,[],NaN)
-
 % First make the wavenumbers, give the data size and the data length
-k=knums(params);
+% k=knums(params);
 
 % Evaluate the likelihood
-disp(sprintf('The loglihood is %8.3f',Lbar))
+% disp(sprintf('The loglihood is %8.3f',Lbar))
 
 % Craft some labels
 xll=[0 3*2*df];
@@ -154,11 +161,13 @@ end
 
 % Select non-ridiculous values
 allg=~isinf(Xk);
+% Should that perhaps be isnan, as in MLECHIPSDOSL
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 axes(ah(1))
 % Take out the Inf which may occur at zero wavenumber
 [bdens,c]=hist(2*Xk(allg),5*round(log(length(Xk(allg)))));
+% Plot the histogram as a bar graph
 bdens=bdens/indeks(diff(c),1)/length(Xk(allg));
 bb=bar(c,bdens,1);
 % Each of the below should be df/2
@@ -167,9 +176,12 @@ t(1)=title(sprintf('m(%s) =  %5.3f   v(%s) =  %5.3f',...
 		   varibal,nanvar(Xk(allg))));
 set(bb,'FaceC',grey)
 hold on
+% Plot the ideal chi-squared distribution
 refs=linspace(0,max(2*Xk),100);
 plot(refs,chi2pdf(refs,df),'Linew',1,'Color','k')
 hold off
+
+% Labeling and cosmetic adjustments
 if pertur==0
   maxi=0.25;
   ylls=[0:0.1:maxi*(4/df)];
@@ -209,10 +221,10 @@ delete(get(ah(2),'title'));
 % This is the same as what comes out of LOGLIOSL etc
 magx=nanmean([Xk(allg)-df/2].^2);
 neem='\xi'; neem='s_X^2';
-% Do the test
+% Do the test whether you accept this as a good fit, or not
 vr=8/length(k(~~k));
 [a,b,c]=normtest(magx,1,vr,0.05);
-disp(sprintf('NORMTEST %i %5.3f %i',a,b,round(c)))
+% disp(sprintf('NORMTEST %i %5.3f %i',a,b,round(c)))
 if a==0; stp='accept'; else stp='reject'; end
 t(2)=title(sprintf('%s =  %5.3f   8/K = %5.3f   %s   p = %5.2f',...
                    neem,magx,vr,stp,b));
