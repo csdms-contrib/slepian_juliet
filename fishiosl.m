@@ -1,5 +1,5 @@
-function [F,covF,cF]=fishiosl(k,th,xver)
-% [F,covF,cF]=FISHIOSL(k,th,xver)
+function [F,covF,cF]=fishiosl(k,th,xver,params)
+% [F,covF,cF]=FISHIOSL(k,th,xver,params)
 %
 % Calculates the entries in the Fisher matrix of Olhede & Simons (2013) for
 % the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN model, after
@@ -15,6 +15,7 @@ function [F,covF,cF]=fishiosl(k,th,xver)
 %          th(2)=nu   The second Matern parameter [differentiability]
 %          th(3)=rho  The third Matern parameter [range in m]
 % xver     Excessive verification [0 or 1, which also computes F(k)]
+% params   Attempt at bringing blurring in under the radar
 %
 % OUTPUT:
 %
@@ -36,7 +37,7 @@ function [F,covF,cF]=fishiosl(k,th,xver)
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/21/2017
+% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
 % Early setup exactly as in HESSIOSL
 defval('xver',1)
@@ -63,11 +64,17 @@ cF=nan(npp,1);
 
 % We're abusing the 'xver' switch to bypass saving wavenumber-dependencies
 if xver==0
+  % Attempt to do this otherwise
+% FJS  [~,kz,W]=blurosy(th,params);
+
   % Do not save the wavenumber-dependent entities
   for ind=1:npp
     % Eq. (A60) in doi: 10.1093/gji/ggt056
     cF(ind)=mean(mth{i(ind)}.*mth{j(ind)});
+    % Attempt to do this otherwise
+% FJS    cFb(ind)=indeks(bsxfun(@times,mth{i(ind)},mth{j(ind)}'),':').*W(~~kz));
   end
+% FJS keyboard
 elseif xver==1
   % Initialize; some of them depend on the wave vectors, some don't
   cFk=cellnan([npp 1],[1 repmat(lk,1,5)],repmat(1,1,6));
