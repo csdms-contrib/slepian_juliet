@@ -14,7 +14,7 @@ function t=ostitle(ah,params,ovall,numsim)
 %
 % t           Title handle
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/24/2014
+% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
 defval('ovall','')
 defval('numsim','')
