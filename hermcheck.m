@@ -11,7 +11,7 @@ function hermcheck(A)
 %
 % KNUM2
 %
-% Last modified by fjsimons-at-alum.mit.edu, 05/04/2016
+% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
 % Disregarding the first row and column if the size is even
 Hh=A(1+~mod(size(A,1),2):end,1+~mod(size(A,2),2):end);
