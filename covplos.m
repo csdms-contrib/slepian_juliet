@@ -27,7 +27,7 @@ function varargout=covplos(oneortwo,sclcovX,obscov,covX,params,thhats,th0,E,v,cb
 %
 % ah,yl     Axis handles to what was just plotted
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/17/2017
+% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
 defval('oneortwo',2)
 defval('cblox','ver')
@@ -133,8 +133,8 @@ end
 axis image
 
 % Labels and such
-set(ah,'xtick',1:np,'xtickl',labs)
-set(ah,'ytick',1:np,'ytickl',labs)
+set(ah,'xtick',1:np,'XTickLabel',labs)
+set(ah,'ytick',1:np,'YTickLabel',labs)
 longticks(ah)
 movev(ah,.05)
 
