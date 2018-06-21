@@ -1,11 +1,11 @@
 function [fids,fmts,fmti]=osopen(np)
 % [fids,fmts,fmti]=OSOPEN(np,npp)
 %
-% Opens ALL FOUR diagnostic files for writing by the suite of
-% programs following Simons & Olhede (2013). Data files are, like,
-% 'mleosl_thzro_16-Jun-2015-64-2', 'mleosl_thini_16-Jun-2015-64-2',
-% 'mleosl_thhat_16-Jun-2015-64-2', 'mleosl_diagn_16-Jun-2015-64-2', etc, 
-%  and returns identifiers and format strings. 
+% Opens ALL FOUR diagnostic files for writing by the suite of programs
+% following Simons & Olhede (2013), and returns identifiers and format
+% strings. Data files are, like,
+% 'mleosl_thzro_DD-MON-YYYY', 'mleosl_thini_DD-MON-YYYY'
+% 'mleosl_thhat_DD-MON-YYYY', 'mleosl_diagn_DD-MON-YYYY', etc
 %
 % INPUT:
 %
@@ -21,7 +21,7 @@ function [fids,fmts,fmti]=osopen(np)
 %
 % OSLOAD, OSRDIAG (with which it needs to match!)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/18/2017
+% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
 % Who called? Work this into the filenames
 [~,n]=star69;
