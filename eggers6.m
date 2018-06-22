@@ -1,13 +1,29 @@
-function eggers6
-% EGGERS6
+function eggers6(datum)
+% EGGERS6(datum)
 %
-% Makes FIGURE 5 of Olhede et al. (2017), illustrating the chi-squaredness
-% of the ratio residuals and the normality of the test statistic for
-% chi-squaredness. May have to run it twice for proper proportions.
+% Makes a FIGURE illustrating the chi-squaredness of the power-spectral
+% density ratio residuals and the normality of the specific test statistic
+% for chi-squaredness of the results of maximum-likelihood estimation of
+% two-dimensional univariate Matern fields. 
+%
+% INPUT:
+%
+% datum    A filename extension of a locally available premade set,
+%          defaulted to today's date (e.g. '22-Jun-2018')
+%
+% SEE ALSO:
+%
+% SIMULOSL, MLEOSL, MLECHIPLOS
+%
+% NOTE: 
 %
 % Tested on 8.3.0.532 (R2014a)
+% May have to run it twice for proper proportions.
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/23/2017
+% Last modified by fjsimons-at-alum.mit.edu, 06/22/2018
+
+% Set the default
+defval('datum',date)
 
 % Set the experimental parameters
 th0=[1e6 2.5 2e4];
@@ -31,21 +47,21 @@ ah=krijetem(subnum(2,3));
 [cb,xl,t,tt]=mlechiplos(4,Hk1,thhat,scl,params,ah(1:3));
 delete(t)
 
-% Kind of an old simulation, some of the additional goodies must be off
-% especially in comparing covariance matrices, about which we changed our mind
-whatscreated='16-Jun-2015-64-2';
 % Then here plot the results from the series of tests in a new figure
 % that we pillage and kill afterwards, only to collect momx
-%figure(1)
-% MIGHT JUST GET THIS OUT OF OSLOAD, BUT STILL IT IS PERHAPS NICE TO SEE
-%[~,~,~,th0,p,momx]=mleosl('demo2',whatscreated);
-% using OSLOAD
-[~,thhats,pp,~,~,~,~,~,~,~,momx]=osload(whatscreated,[],'mleosl');
-% using LOGLIOSL cannot do since we didn't save the data Hk!
-% momxxx=nan(size(momxx)); for index=1:size(thhats,1); 
-%   [~,~,~,momxxx(index,:)]=logliosl(k1,thhats(index,:),1,p,Hk1); end
-% close(1)
-% Now plot what we reaped, i.e. momx(:,3)
+figure(1)
+try
+  % If premade simulations exist, will plot a plot (to be erased)
+  mleosl('demo2',datum);
+catch
+  % If premade simulations do not exists, will generate a set
+  mleosl('demo1',175,th0,p);
+end
+
+% Then, you be sure it can be loaded!
+[~,thhats,pp,~,~,~,~,~,~,~,momx]=osload(datum,[],'mleosl');
+
+% THIS SHOULD BECOME SOMETHING LIKE MLEMXPLOS
 
 % HISTOGRAM PLOT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -181,6 +197,5 @@ moveh(cb(2),.005)
 moveh(xcb,-5)
 
 % Write out
-figna=figdisp([],[],[],1);
-system(sprintf('epstopdf %s.eps',figna));
+figna=figdisp([],[],[],2);
 
