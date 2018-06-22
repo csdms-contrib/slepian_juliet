@@ -76,9 +76,9 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %% One simulation and a chi-squared plot using MLECHIPLOS
 % mleosl('demo5',th0,params)
 %
-% Tested on 8.3.0.532 (R2014a)
+% Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
+% Last modified by fjsimons-at-alum.mit.edu, 06/21/2018
 
 % NEED TO CHANGE THE k(~~k) to proper accounting for kiso
 
