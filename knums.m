@@ -28,7 +28,7 @@ function [k,dci,dcn,kx,ky]=knums(params,doit)
 %
 % kx,ky     The components of the wave vector
 %
-% Last modified by fjsimons-at-alum.mit.edu, 05/04/2016
+% Last modified by fjsimons-at-alum.mit.edu, 08/24/2017
 
 % Extract the variables explicitly from this structure
 NyNx=params.NyNx;
@@ -40,7 +40,7 @@ if nargin==1 || [nargin==2 && [blurs == 0 || blurs == 1]]
   [k,kx,ky,dci,dcn]=knum2(NyNx,[(NyNx(1)-1)*dydx(1) (NyNx(2)-1)*dydx(2)]);
 else
   if blurs<0
-    error('You probably should be running BLUROSY, not BLUROS!')
+    error('You should be running BLUROSY, not BLUROS!')
   end
   
   % Proposed new dimensions
