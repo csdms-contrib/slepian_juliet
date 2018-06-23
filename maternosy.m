@@ -30,7 +30,7 @@ function Cy=maternosy(y,th,varargin)
 %% Compared to what we think it should be:
 % [sum(y.*maternosy(y,th0))*(y(2)-y(1))/(2*pi) maternos(0,th0)]
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/02/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/03/2016
 
 % These are always the last three elements of the input 
 s2=th(end-2);
