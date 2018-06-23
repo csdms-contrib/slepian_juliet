@@ -13,7 +13,7 @@ function A=realize(A,tolp)
 %
 % A      The matrix in question
 %
-% Last modified by fjsimons-at-alum.mit.edu, 04/28/2016
+% Last modified by fjsimons-at-alum.mit.edu, 04/30/2016
 
 defval('tolp',0.001);
 
