@@ -39,7 +39,7 @@ function varargout=maternprc(theta,prc,meth,xver)
 % SEE ALSO:  MATERNOS, MATERNOSP, MATERNOSY, FZERO, SYM, SYMS, TRAPEZE
 %
 % Last modified by gleggers-at-princeton.edu, 03/19/2014
-% Last modified by fjsimons-at-princeton.edu, 10/31/2016
+% Last modified by fjsimons-at-princeton.edu, 06/23/2018
 
 % Default values
 defval('prc',50)
