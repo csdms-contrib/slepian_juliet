@@ -28,7 +28,7 @@ function [Sk,k]=maternosp(th,params,xver)
 %
 % MATERNOS, MATERNOSY, MATERNPRC, KNUMS, BLUROS, BLUROSY, BLURCHECK
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/15/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/16/2016
 
 % Default is to oververify it all
 defval('xver','1')
