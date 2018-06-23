@@ -11,7 +11,7 @@ function M=quarter(M)
 %
 % M   The new matrix
 %
-% Last modified by fjsimons-at-alum.mit.edu, 05/20/2015
+% Last modified by fjsimons-at-alum.mit.edu, 06/23/2018
 
 [m,n]=size(M);
 
