@@ -18,7 +18,7 @@ function varargout=mAosl(k,th,xver)
 % mththp   The second-partials parameters for GAMMIOSL, HESSIOSL, as a cell
 % A        The "A" matrices for GAMMIOSL, HESSIOSL, as a cell
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/02/2016
+% Last modified by fjsimons-at-alum.mit.edu, 08/21/2017
 
 % Extra verification?
 defval('xver',1)
@@ -31,7 +31,7 @@ rh=th(3);
 % Auxilliary variable
 avark=4*nu/pi^2/rh^2+k(:).^2;
 
-% The "means",which still depend on the wavenumbers, sometimes
+% The "means", which still depend on the wavenumbers, sometimes
 % The first derivatives of the logarithmic spectral density
 % Eq. (A25) in doi: 10.1093/gji/ggt056
 mth{1}=1/s2;
