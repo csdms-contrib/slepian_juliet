@@ -23,7 +23,7 @@ function [newmat,trimi]=trimit(oldmat,perc,maxi,col)
 % 
 % WINSOR
 %
-% Last modified by fjsimons-at-alum.mit.edu, 09/21/2016
+% Last modified by fjsimons-at-alum.mit.edu, 11/18/2016
 
 defval('perc',100)
 defval('maxi',0)
