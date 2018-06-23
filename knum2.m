@@ -41,9 +41,9 @@ function [K,kx,ky,dci,dcn,dx,dy]=knum2(mn,pl)
 %% How is Parseval's theorem satisfied?
 % difer(H(:)'*H(:)-Hk(:)'*Hk(:)/prod(size(Hk)),8)
 %
-% SEE ALSO: FFTAXIS, FFTAXIS1D, KNUM, RANDGPN, BRACEWELL
+% SEE ALSO: FFTAXIS, FFTAXIS1D, KNUMS, RANDGPN, BRACEWELL
 %
-% Last modified by fjsimons-at-alum.mit.edu, 03/02/2015
+% Last modified by fjsimons-at-alum.mit.edu, 06/23/2018
 
 % Supply defaults for testing
 defval('mn',[32 32]+round(rand))
