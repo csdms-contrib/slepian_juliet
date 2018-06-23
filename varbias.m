@@ -44,7 +44,7 @@ function b=varbias(th0,p,calx,calxo)
 % EXAMPLE: See usage in EGGERS1, EGGERS3, and so on 
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
-% Last modified by fjsimons-at-alum.mit.edu, 11/02/2016
+% Last modified by fjsimons-at-alum.mit.edu, 12/02/2016
 
 defval('xver',0)
 
