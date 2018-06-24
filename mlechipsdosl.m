@@ -42,7 +42,7 @@ function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah)
 % Maybe should integrate MLECHIPLOS into this one. 
 %
 % Last modified by gleggers-at-princeton.edu, 04/17/2014
-% Last modified by fjsimons-at-alum.mit.edu, 08/24/2017
+% Last modified by fjsimons-at-alum.mit.edu, 06/23/2018
 
 % Some defaults
 defval('stit','Chi-squared residuals')
