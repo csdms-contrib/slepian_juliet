@@ -1,5 +1,5 @@
-function varargout=mleplos(thhats,th0,covX,covavhs,covhpix,E,v,params,name,thpix)
-% MLEPLOS(thhats,th0,covX,covavhs,covhpix,E,v,params,name,thpix)
+function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpix)
+% MLEPLOS(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpix)
 %
 % Graphical statistical evaluation of the maximum-likelihood inversion
 % results from the suite MLEOS, MLEROS, MLEROS0, MLEOSL. Displays
@@ -16,10 +16,11 @@ function varargout=mleplos(thhats,th0,covX,covavhs,covhpix,E,v,params,name,thpix
 %            th0(3/4)=s2   The first Matern parameter, aka sigma^2 
 %            th0(4/5)=nu   The second Matern parameter 
 %            th0(5/6)=rho  The third Matern parameter 
-% covX       A single certain covariance matrix
+% covF0      A (poor) covariance estimate based on the Fisher matrix at
+%            the truth, which does not involve any of the data
 % covavhs    The covariance matrix based on the median numerical Hessian
 %            matrix near the individual estimates, from the diag file
-% covhpix    The covariance matrix based on the numerical Hessian at a random estimate
+% covXpix    A covariance matrix based on the numerical Hessian at a random estimate
 % E          Young's modulus (not used for single fields)
 % v          Poisson's ratio (not used for single fields)
 % params     The structure with the fixed parameters from the experiment
@@ -34,7 +35,7 @@ function varargout=mleplos(thhats,th0,covX,covavhs,covhpix,E,v,params,name,thpix
 %
 % This only gets used in MLEOS/MLEROS/MLEROS0/MLEOSL thus far, their 'demo2'
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
+% Last modified by fjsimons-at-alum.mit.edu, 06/25/2018
 
 defval('xver',0)
 
@@ -82,14 +83,14 @@ for ind=1:np
 
   % The means and standard deviations for any one estimate
   th0i=th0(ind);
-  if ~isempty(covX)
-    % Error estimate based on whatever it was being fed
-    stdX=real(sqrt(covX(ind,ind)));
+  if ~isempty(covF0)
+    % Error estimate based on the Fisher matrix at the truth
+    stdF0=real(sqrt(covF0(ind,ind)));
   else
-    stdX=NaN;
+    stdF0=NaN;
   end
   % Collect them all
-  stdXs(ind)=stdX;
+  stdF0s(ind)=stdF0;
 
   if ~isempty(covavhs)
     % Error estimate based on the median numerical Hessian matrix near estimate
@@ -97,11 +98,11 @@ for ind=1:np
   else
     stdavhs=NaN;
   end
-  if ~isempty(covhpix)
+  if ~isempty(covXpix)
     % Error estimate based on one particular randomly picked numerical Hessian
-    stdhpix=real(sqrt(covhpix(ind,ind)));
+    stdXpix=real(sqrt(covXpix(ind,ind)));
   else
-    stdhpix=NaN;
+    stdXpix=NaN;
   end
 
   % HISTOGRAMS
@@ -111,7 +112,7 @@ for ind=1:np
   [a,bdens,c]=kde(thhats(:,ind),2^8);
   if isinf(a) || any(bdens<-1e-10) || size(thhats,1)<50
     % If it's funky use the good old histogram
-    [bdens,c]=hist(thhats(:,ind),min(size(thhats,1)/3,25));
+    [bdens,c]=hist(thhats(:,ind),max(size(thhats,1)/3,3));
     bdens=bdens/indeks(diff(c),1)/size(thhats(:,ind),1);
   end
   % This number is close to one... it's a proper density!
@@ -128,23 +129,23 @@ for ind=1:np
   nrx=20; nry=15;
   set(ah(ind),'XLim',stats([1 end]),'XTick',stats,'XTickLabel',nstats)
 
-  % Truth and range based on stdX
+  % Truth and range based on stdF0
   hold on
   p0(ind)=plot([th0i th0i],ylim,'k-');
   halfup=indeks(ylim,1)+range(ylim)/2;
-  ps(ind)=plot(th0i+[-1 1]*stdX,...
+  ps(ind)=plot(th0i+[-1 1]*stdF0,...
 	       [halfup halfup],'k-'); 
   % Didn't like this range bar in the end
   delete(ps(ind))
   
   % Estimate x-axis from observed means and variances
   xnorm=linspace(nstats(1),nstats(end),100)*sobs+mobs;
-  % Normal distribution based on stdX
-  psX(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdX));
+  % Normal distribution based on stdF0
+  psF0(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdF0));
   % Based on the median numerical Hessian matrix at the estimates
   psavhs(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdavhs));
   % Based on one of them picked at random, numerical Hessian at estimate
-  pshpix(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdhpix));
+  psXpix(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdXpix));
   % Based on the actually observed covariance of these data
   pobs(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,sobs));
 
@@ -231,11 +232,11 @@ axes(ah(1))
 yl=ylabel('posterior probability density');
 longticks(ah)
 % Normal distribution based on stdX
-set(psX,'linew',0.5,'color','k','LineS','--')
+set(psF0,'linew',0.5,'color','k','LineS','--')
 % Based on the median numerical Hessian matrix
 set(psavhs,'linew',1.5,'color','k')
 % Based on the randomly picked Hessian matrix
-set(pshpix,'linew',0.5,'color','k')
+set(psXpix,'linew',0.5,'color','k')
 % Based on the actually observed covariance of these data
 set(pobs,'linew',1.5,'color',grey(3.5))
 
@@ -252,10 +253,10 @@ if isstruct(params)
   t=ostitle(ah,params,name); movev(t,.4)
 end
 
-% Here is the TRUTH and the COVX standard deviation
-[answ,answs]=osansw(th0,covX,E,v);
+% Here is the TRUTH and the COVF0 standard deviation
+[answ,answs]=osansw(th0,covF0,E,v);
 disp(sprintf('%s',...
-             'Truth and covariance covX standard deviation'))
+             'Truth and Fisher-based covariance standard deviation'))
 disp(sprintf(answs,answ{:}))
 % Here is the MEAN ESTIMATE and its OBSERVED-COVARIANCE-based standard deviation
 [answ,answs]=osansw(mean(thhats),cov(thhats),E,v);
@@ -264,8 +265,9 @@ disp(sprintf('\n%s',...
 disp(sprintf(answs,answ{:}))
 % By the way, use THAT as a title
 tt=supertit(ah(np+1:2*np),sprintf(answs,answ{:}));
+
 % Here is the RANDOMLY PICKED estimate and its NUMERICAL-HESSIAN based standard deviation
-[answ,answs]=osansw(thpix,covhpix,E,v);
+[answ,answs]=osansw(thpix,covXpix,E,v);
 disp(sprintf('\n%s',...
              'Example estimate and numerical-Hessian covariance standard deviation'))
 disp(sprintf(answs,answ{:}))
@@ -273,6 +275,7 @@ disp(sprintf(answs,answ{:}))
 if np>3; movev(tt,-4); else; movev(tt,-3.5); end
 
 % Make basic x-y plots of the parameters
+% SHOULD CALL THIS MLETHPLOS
 if xver==1
   figure
   clf
