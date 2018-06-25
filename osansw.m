@@ -19,7 +19,7 @@ function [answ,answs]=osansw(th0,covX,E,v)
 %
 % SEE ALSO: OSDISP, DTOTE
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
+% Last modified by fjsimons-at-alum.mit.edu, 06/25/2018
 
 defval('th0',[])
 defval('covX',[])
