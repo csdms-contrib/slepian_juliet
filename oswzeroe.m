@@ -7,7 +7,7 @@ function oswzeroe(fid,scl,avhsz,good,F0,covF0,fmti)
 %
 % fid          The file id (from FOPEN)
 % scl          The scaling factors for the Fisher matrix 
-% avhsz        The full-form sample-average scaled Hessian matrix
+% avhsz        The full-form AVERAGE scaled Hessian matrix
 % good         The number of samples over which this was averaged
 % F0           The full-form scaled Fisher matrix, at the truth
 % covF0        The full-form theoretical covariance matrix, based on F0
