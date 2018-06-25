@@ -77,6 +77,9 @@ else
 		 'Observed percent stand devn',...
 		 round(100*std(thhats)./th0)))
   end
+  % Estimated values
+  disp(sprintf(sprintf('%s : %s',str0,str1s),...
+               'Average thhat',mean(thhats,1)))
 end
 
 if length(th0)==6
@@ -92,10 +95,6 @@ elseif length(th0)==3
 	       ' ','s2','nu','rho'))
   disp(sprintf(sprintf('%s : %s ',str0,str1s),'True theta',th0))
 end
-
-% Estimated values
-disp(sprintf(sprintf('%s : %s \n',str0,str1s),...
-             'Average thhat',mean(thhats,1)))
 
 % Optional output
 varns={str0,str1,str2,str3};
