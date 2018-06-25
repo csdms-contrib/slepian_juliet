@@ -294,7 +294,7 @@ if ~isstr(Hx)
   % Covariance from FMINUNC/FMINCON's numerical scaled Hessian NEAR estimate
   covh=inv(hes./matscl)/df;
   
-  if xver==1 & verLessThan('matlab','2018a')
+  if xver==1 & verLessThan('matlab','R2018a')
     % Try variable-precision arithmetic?
     vh=sym('vh',[np np]);
     for index=1:prod(size(vh))
