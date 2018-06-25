@@ -20,7 +20,7 @@ function varargout=osdisp(th0,thhats,nl,avhs,F0,covavhs)
 %
 % The strings used 
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
+% Last modified by fjsimons-at-alum.mit.edu, 06/25/2018
 
 % The necessary strings for formatting
 str0='%18s';
@@ -50,19 +50,15 @@ if isstruct(thhats) && nargin==2
                  'Parameters',params.dydx,params.NyNx,params.blurs,params.quart))
   end
 else
-  % Estimated values
-  disp(sprintf(sprintf('%s : %s \n',str0,str1s),...
-	       'Average thhat',mean(thhats,1)))
-  
   if nl==1
     % Average numerical Hessian near the estimate and Fisher matrix at the truth
-    disp(sprintf(['Over %i simulation, the numerical Hessian near the estimate\n' ...
-		  'and the unblurred Fisher matrix at the truth are |%4.2f|%s apart\n'],nl,...
+    disp(sprintf(['\nOver %i simulation, the numerical Hessian near the estimate\n' ...
+		  'and the unblurred Fisher matrix at the truth are |%4.2f|%s apart:\n'],nl,...
 		 1/100*round(100*mean(abs([avhs-F0]'./F0'*100))),'%'))
   else
     % Average numerical Hessian near the estimate and Fisher matrix at the truth
-    disp(sprintf(['Over %i simulations, the median numerical Hessian near the estimate\n' ...
-		  'and the unblurred Fisher matrix at the truth are |%4.2f|%s apart\n'],nl,...
+    disp(sprintf(['\nOver %i simulations, the median numerical Hessian near the estimate\n' ...
+		  'and the unblurred Fisher matrix at the truth are |%4.2f|%s apart:\n'],nl,...
 		 1/100*round(100*mean(abs([avhs-F0]'./F0'*100))),'%'))
   end
 
@@ -96,6 +92,10 @@ elseif length(th0)==3
 	       ' ','s2','nu','rho'))
   disp(sprintf(sprintf('%s : %s ',str0,str1s),'True theta',th0))
 end
+
+% Estimated values
+disp(sprintf(sprintf('%s : %s \n',str0,str1s),...
+             'Average thhat',mean(thhats,1)))
 
 % Optional output
 varns={str0,str1,str2,str3};
