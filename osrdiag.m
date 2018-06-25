@@ -6,8 +6,8 @@ function [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covX]=osrdiag(fname,ddir,
 % INPUT:
 %
 % ddir    A directory name, e.g. OLHEDE?/Simulations-lemaitre
-% fname   A file name, e.g. diagn_01-Jul-2014
-% np      The number of parameters that are being solved for
+% fname   A file name, e.g. 'diagn_21-Jun-2018'
+% np      The number of parameters that are being solved for [default: 3]
 %
 % OUTPUT:
 %
@@ -25,19 +25,19 @@ function [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covX]=osrdiag(fname,ddir,
 % hes      The Hessian, second derivative of the likelihood, by FMINUNC/FMINCON
 % optis    The first-order optimality condition, by FMINUNC/FMINCON
 % momx     The various moments of the quadratic piece of the likelihood
-% covX     A certain covariance matrix estimate for the estimate
+% covX     The covariance matrix estimate of the estimate
 %
 % SEE ALSO:
 %
 % OSOPEN, OSLOAD, OSWDIAG
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
+% Last modified by fjsimons-at-alum.mit.edu, 06/25/2018
 
 defval('ddir','/u/fjsimons/PROGRAMS/MFILES/olhede4')
-defval('fname','mleosl_diagn_11-Jun-2015')
+defval('fname','mleosl_diagn_21-Jun-2018')
 
-% The number of parameters to solve for; standard is 5
-defval('np',5)
+% The number of parameters to solve for
+defval('np',3)
 % The number of unique entries in an np*np symmetric matrix
 npp=np*(np+1)/2;
 
@@ -109,8 +109,10 @@ end
 fclose(fid);
 
 % Finetune the preallocation over time
-disp(sprintf('\n%s allocated length %i, received length %i',...
-             upper(mfilename),size(thhat,1),index))
+if size(thhat,1)~=index
+  disp(sprintf('\n%s allocated length %i, received length %i',...
+               upper(mfilename),size(thhat,1),index))
+end
 
 % Trim the possibly wrongly preallocated arrays
 thhat=thhat(1:index,:);
