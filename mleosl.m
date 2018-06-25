@@ -46,10 +46,11 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %          lpars{5} the output structure of the FMINUNC/FMINCON procedure
 %          lpars{6} the options used by the FMINUNC/FMINCON procedure
 %          lpars{7} any bounds used by the  FMINUNC/FMINCON procedure
-% scl      The scaling applied as part of the optimization procedure
-% thini    The scaled starting guess used in the optimization procedure
-% params   The known constants used inside, see under INPUT
-% Hk       The spectral-domain version of the spatial-domian vector Hx
+%          lpars{8} the residual moment statistics used for model testing 
+% scl      The scaling that applies to THHAT and THINI
+% thini    The starting guess used in the optimization procedure [scaled]
+% params   The known constants used inside, see above under INPUT
+% Hk       The spectral-domain version of the spatial-domain vector Hx
 % k        The wavenumbers on which the estimate is actually based
 %
 % NOTE: 
@@ -78,13 +79,13 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/21/2018
+% Last modified by fjsimons-at-alum.mit.edu, 06/25/2018
 
 % NEED TO CHANGE THE k(~~k) to proper accounting for kiso
 
 if ~isstr(Hx)
   defval('algo','unc')
-  % The necessary strings for formatting FJS see OSDISP and OSANSW
+  % The necessary strings for formatting, see OSDISP and OSANSW
   str0='%18s';
   str1='%13.0e ';
   str2='%13.5g %13.5g %13.5g';
@@ -369,6 +370,10 @@ if ~isstr(Hx)
                  ts/oput.iterations*100,100,ts/oput.funcCount*1000,1000))
   end
 
+  % Here we compute the moment parameters and recheck the likelihood
+  [L,~,~,momx]=logliosl(k,thhat,scl,params,Hk,xver);
+  diferm(L,logli)
+ 
   % Reorganize the output into cell arrays
   covFHh{1}=covF;
   covFHh{2}=covH;
@@ -381,9 +386,10 @@ if ~isstr(Hx)
   lpars{5}=oput;
   lpars{6}=options;
   lpars{7}=bounds;
-
+  lpars{8}=momx;
+  
   % Generate output as needed
-  varns={thhat,covFHh,lpars,scl,thini,params,Hk,k,options,bounds};
+  varns={thhat,covFHh,lpars,scl,thini,params,Hk,k};
   varargout=varns(1:nargout);
 elseif strcmp(Hx,'demo1')
   % Runs a series of simulations. See 'demo2' to display them.
@@ -436,7 +442,7 @@ elseif strcmp(Hx,'demo1')
     % Initialize the THZRO file... note that the bounds may change
     % between simulations, and only one gets recorded here
     if index==1 && labindex==1
-      oswzerob(fids(1),th0,p,lpars{6},lpars{7},fmts)
+      oswzerob(fids(1),th0,p,lpars,fmts)
     end
 
     % If a model was found, keep the results, if not, they're all NaNs
@@ -467,21 +473,17 @@ elseif strcmp(Hx,'demo1')
 	    && lpars{5}.iterations > itmin ...
 	    && lpars{5}.firstorderopt < optmin
 	good=good+1;
-	% Build the average of the Hessians for printout later
+	% Build the AVERAGE of the Hessians for printout later
 	avhsz=avhsz+lpars{3}./[scl(:)*scl(:)'];
 	% Reapply the scaling before writing it out
 	fprintf(fids(2),fmts{1},thhat.*scl);
 	fprintf(fids(3),fmts{1},thini.*scl);
-	% Here we compute and write out the moments of the Xk
-	[L,~,~,momx]=logliosl(k,thhat,scl,p,Hk,0);
-        % This better be close if we know what's going on
-        diferm(L,lpars{1})
         % We don't compare the second and third outputs of LOGLIOSL
         % since these are analytical, poorly approximately blurred,
         % derivates, and we be writing the numerical versions 
 	% Print optimization results and diagnostics to different file 
-        % FJS Oct 17 now changed to writing out covFHh{3} as the best one
-	oswdiag(fids(4),fmts,lpars,thhat,thini,scl,ts,var(Hx),momx,covFHh{3})
+        % Be aware that covFHh{3} is the best covariance estimate!
+	oswdiag(fids(4),fmts,lpars,thhat,thini,scl,ts,var(Hx),covFHh{3})
       end
     end
   end
@@ -500,7 +502,7 @@ elseif strcmp(Hx,'demo1')
     % This is the scaling based on the truth which we use here 
     sclth0=10.^round(log10(th0));
 
-    % This is the average of the numerical Hessians, should be closer to the Fisher
+    % This is the AVERAGE of the numerical Hessians, should be closer to the Fisher
     avhsz=avhsz.*[sclth0(:)*sclth0(:)']/good;
 
     % Now compute the Fisher and Fisher-derived covariance at the truth
@@ -525,26 +527,23 @@ elseif strcmp(Hx,'demo2')
   % The number of parameters to solve for
   np=3;
 
+  % Looks like more trimming is needed for 'con' rather than 'unc'
+  trims=100;
   % Load everything you know about this simulation
-  [th0,thhats,p,~,covavhs,thpix,~,~,~,~,momx,covhpix,covF0]=osload(datum);
+  [th0,thhats,p,covX,covavhs,thpix,~,~,~,~,momx,covXpix,covF0]=osload(datum,trims);
 
   % Report the findings of all of the moment parameters
   disp(sprintf('\nm(m(Xk)) %f m(v(Xk)) %f\nm(magic) %f v(magic) %f',...
 	      mean(momx),var(momx(:,end))))
   
   % Plot it all - perhaps some outlier selection?
-  disp(sprintf('\n'))
   %figure(1)
   fig2print(gcf,'landscape')
   clf
-  % Looks like more trimming is needed for 'con' rather than 'unc'
-  trims=99;
-   disp(sprintf('%s estimates trimmed at %i percentile',...
-        upper(mfilename),trims))
-  
+
   % If the above two are close, we need to start using the second one
   % Let us feed it the Fisher covariance at the TRUTH
-  [ah,ha]=mleplos(trimit(thhats,trims,1),th0,covF0,covavhs,covhpix,[],[],p,...
+  [ah,ha]=mleplos(thhats,th0,covF0,covavhs,covXpix,[],[],p, ...
                   sprintf('MLEOSL-%s',datum),thpix);
   
   % Return some output, how about just the empirically observed
@@ -608,11 +607,11 @@ elseif strcmp(Hx,'demo4')
 
   % Load everything you know about this simulation
   % Looks like more trimming is needed for 'con' rather than 'unc'
-  trims=99;
+  trims=100;
   [th0,thhats,params,covX,~,pix,~,~,obscov,sclcovX,~,covXpix]=osload(datum,trims);
 
   % Make the plot
-  ah=covplos(2,sclcovX,obscov,covX,params,thhats,th0,[],[],'ver');
+  ah=covplos(2,sclcovX,obscov,params,thhats,[],[],'ver');
 
   % Print the figure!
   disp(' ')
