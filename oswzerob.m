@@ -1,5 +1,5 @@
-function oswzerob(fid,th0,params,options,bounds,fmts)
-% OSWZEROB(fid,th0,params,options,bounds,fmts)
+function oswzerob(fid,th0,params,lpars,fmts)
+% OSWZEROB(fid,th0,params,lpars,fmts)
 % 
 % Writes the (b)eginning of a THZRO diagnostic file
 %
@@ -8,15 +8,21 @@ function oswzerob(fid,th0,params,options,bounds,fmts)
 % fid        The file id (from OSOPEN)
 % th0        The parameter vector (see, e.g., SIMULOS)
 % params     A structure with the known constants (see, e.g. SIMULOS)
-% options    The options used by the optimization procedure
-% bounds     The bounds used by the optimization procedure
+% lpars      lpars{1} not written out here, but rather by OSWDIAG
+%            lpars{2} not written out here, but rather by OSWDIAG
+%            lpars{3} not written out here, but rather by OSWDIAG
+%            lpars{4} not written out here, but rather by OSWDIAG
+%            lpars{5} not written out here, but rather by OSWDIAG
+%            lpars{6} the options used by the FMINUNC/FMINCON procedure
+%            lpars{7} any bounds used by the  FMINUNC/FMINCON procedure
+%            lpars{8} not written out here, but rather by OSWDIAG
 % fmts       Cell array with format strings from OSOPEN
 %
 % SEE ALSO: 
 %
 % OSWZEROE, OSRZERO, OSWDIAG, OSRDIAG
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
+% Last modified by fjsimons-at-alum.mit.edu, 06/25/2018
 
 % Commit the truth to file
 fprintf(fid,'%s\n','the true parameter vector');
@@ -33,8 +39,8 @@ fprintf(fid,fmts{2},[jk{i(~~i)}]);
 
 % Convert the bounds to something printable
 fprintf(fid,'%s\n','the bounds, if any');
-if ~isempty(bounds)
-  struct2str(cell2struct(bounds,...
+if ~isempty(lpars{7})
+  struct2str(cell2struct(lpars{7},...
 		    {'A',  'B'  ,... % Linear Inequalities
 		     'Aeq','Beq',... % Linear Equalities
 		     'LB',...        % Lower Bounds
@@ -48,4 +54,4 @@ end
 
 % Commit the parameters of the optimization to file
 fprintf(fid,'%s\n','the optimization options');
-struct2str(options,fid)
+struct2str(lpars{6},fid)
