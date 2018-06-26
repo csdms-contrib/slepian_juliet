@@ -1,8 +1,18 @@
-function s=v2s(v)
-% s=v2s(v)
+function s=v2s(v,varargin)
+% s=v2s(v,varargin)
 %
-% Vector-to-square matrix transform
+% Vector-to-square/rectangle matrix transform
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/17/2010
+% INPUT:
+%
+% v       A vector that is the unwrapping of a matrix
+% p       Optional parameter structure as from the MLEOSL suite, at least:
+%         NyNx  number of samples in the y and x directions
+%
+% Last modified by fjsimons-at-alum.mit.edu, 06/26/2018
 
-s=reshape(v,sqrt(length(v(:))),[]);
+if nargin==1
+  s=reshape(v(:),sqrt(length(v(:))),[]);
+else
+  s=reshape(v(:),p.NyNx);
+end
