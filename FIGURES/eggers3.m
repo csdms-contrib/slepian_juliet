@@ -3,13 +3,21 @@ function eggers3(domind,fldind)
 %
 % A whole suite of runs for the Venus topography!
 %
+% INPUT:
+%
+% domind    A domain index [1-77]
+% fldind    1 Gravity anomaly expanded to spherical harmonic degree/order 180
+%           2 Topography expanded to spherical harmonic degree/order 180
+%           3 Topography expanded to spherical harmonic degree/order 360
+%  
+%
 % EXAMPLE
 %
 % parfor index=1:77; try; eggers3(index); end; end
 % for index=1:77; try; eggers3(index); end; end
 % [parfor gets in trouble with the graphics]
 %
-% Last modified by fjsimons-at-alum.mit.edu, 07/14/2015
+% Last modified by fjsimons-at-alum.mit.edu, 06/25/2018
 
 % needs some work 
 
@@ -17,25 +25,24 @@ function eggers3(domind,fldind)
 img=0;
 
 % Plot residuals? Turn on for now
-chi=0;
+chi=1;
 
 % Simulate some relateds?
 sos=0;
 
 % Plot covariance in space and in the spectrum?
-kov=1;
+kov=0;
 
 % Estimate uncertainties? Turn off for now
 unc=0;
 
 % Sets the domain index
-defval('domind',58);
+defval('domind',randi(77));
 % Sets the field in question [03 for 360 topography]
 defval('fldind',3);
 
-% Make the variable name and the save file to look for
+% Make the variable name to construct the save file to look for
 varibal=sprintf('V%4.4i_%2.2i',domind,fldind);
-fname=sprintf('%s.mat',varibal);
 
 % Load the data, take a look
 topo=modload(fullfile(getenv('IFILES'),'VENUS','DATA','plmData',...
@@ -57,16 +64,22 @@ diferm(abs(diff(topo.geo.latrDx))/[topo.params.NyNx(1)-1],topo.geo.DxDy)
 c11=[topo.geo.lonrDx(1) topo.geo.latrDx(2)];
 cmn=[topo.geo.lonrDx(2) topo.geo.latrDx(1)];
 
-% PERFORM THE ESTIMATION!
-if exist(fullfile('.',fname))~=2 
-  % Complete the parameters, make blurring 3 for safety
-  topo.params.blurs=3;
-  % No need for the quartering here, by the way
-  topo.params.quart=0;
-  % Put in a good choice for kiso as the Nyquist wavenumber
-  topo.params.kiso=pi./max(topo.params.dydx);
-  %topo.params.kiso=NaN;
+% Complete the parameters
+topo.params.blurs=-1;
+% No need for the quartering here, by the way
+topo.params.quart=0;
+% Put in a good choice for kiso as the Nyquist wavenumber
+topo.params.kiso=pi./max(topo.params.dydx);
+% The MLEOSL algorithm, constrained, or unconstrained?
+algo='unc';
 
+% Make a hash - order matters! 
+hah=hash([struct2array(orderfields(topo.params)) abs(algo)],'SHA-1');
+fname=fullfile(getenv('HASHES'),'HASHES',sprintf('%s-%s.mat',varibal,hah));
+
+% PERFORM THE ESTIMATION!
+% SHOULD MAKE A HASH
+if exist(fullfile('.',fname))~=2 || 1==1
   if ~isnan(topo.params.kiso)
     disp('May need to widen the default bounds on nu inside MLEOSL')
     disp('May need to switch to unconstrained search inside MLEOSL')
@@ -75,13 +88,11 @@ if exist(fullfile('.',fname))~=2
   % Estimates the parameters via maximum-likelihood... using a reasonable
   % but randomized initial guess! Stick to constrained inversions for now
   % but widen the bounds, especially for nu
-  algo='con';
-  [thhat,covh,logli,thini,scl,p,e,o,gr,hs,Hk,k,ops,bds]=...
+  [thhat,covFHh,lpars,scl,thini,p,Hk,k]=...
       mleosl(Hx,[],topo.params,algo);
 
-  % Here we compute and write out the moments of the Xk
-  [L,~,momx,vr]=logliosl(thhat,p,Hk,k,scl);
-  [pf,pv,pr,af]=normtest(momx(3),1,vr,0.05);
+  % Here we test the null hypothesis
+  [pf,pv,pr,af]=normtest(lpars{8}(3),1,lpars{9},0.05);
   disp(sprintf('NORMTEST %i %5.3f %i',pf,pv,round(pr)))
   if pf==0; stp='accept'; else stp='reject'; end
 
@@ -90,16 +101,22 @@ if exist(fullfile('.',fname))~=2
 
   % What do we expect for var(Hx), biased as it is with this rho?
   b=varbias(thhat,topo.params);
-
+  
+  % FJS so far, not too sure
+  b=b*kselbias(k,p);
+  
   % Take a sanity-check look at the variance for comparison
   disp(sprintf('var(Hx) = %i ; s^2 = %i ; debiased %i',...
                round(var(Hx)),round(thhat(1)),round(thhat(1)-b)))
-
+  
+  keyboard
+  
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   % SAVE ALL OF THE IMPORTANT STUFF (EXCEPT THE DATA AGAIN)
-  save(varibal,'thhat','covh','logli','thini','p','e','o','gr','hs','b',...
-       'momx','vr','stp','pf','pv','af','Hk','varibal','DegDis','ops','bds')
+  save(fname,'thhat','covFHh','lpars','thini','p','scl',...
+       'stp','pf','pv','af','Hk','varibal','DegDis')
 else
+  disp(sprintf('%s loading %s',mfilename,fname))
   load(fname)
 end
 
@@ -137,7 +154,7 @@ if img==1
       nounder(varibal),...
       '\sigma',round(sqrt(s2)),'\nu',nu,'\rho',round(rh/1000),...
       '\lambda',round(2*pi/p.kiso/1000),stp,pv));
-  set(t,'FontS',12)
+  set(t,'FontSize',12)
   movev(t,range(topo.geo.latrDx)/50)
 
   % Save in high-quality format
@@ -147,9 +164,7 @@ end
 % Plot residual behavior
 if chi==1
   clf
-  % We may have had no wavenumber restriction; report WITH restriction
-   p.kiso=pi./max(p.dydx);
-   mlechipsdosl(Hk,thhat,p,...
+   mlechipsdosl(Hk,thhat./scl,scl,p,...
                 sprintf('%s  |  %s = %i m  %s = %4.2f  %s = %i km',nounder(varibal),...
                         '\sigma',round(sqrt(s2)),'\nu',nu,'\rho',round(rh/1000)))
    figna=figdisp([],sprintf('%s_chi',varibal),[],2);
