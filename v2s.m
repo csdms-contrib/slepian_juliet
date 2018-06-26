@@ -14,5 +14,5 @@ function s=v2s(v,varargin)
 if nargin==1
   s=reshape(v(:),sqrt(length(v(:))),[]);
 else
-  s=reshape(v(:),p.NyNx);
+  s=reshape(v(:),varargin{1}.NyNx);
 end
