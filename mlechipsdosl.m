@@ -35,14 +35,14 @@ function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah)
 %
 % SEE ALSO:
 %
-% EGGERS8, MATERNOS, LOGLIOSL, SIMULOSL, QQPLOT
+% MLECHIPLOS, MLEPLOS, EGGERS8
 %
 % NOTE: 
 %
 % Maybe should integrate MLECHIPLOS into this one. 
 %
 % Last modified by gleggers-at-princeton.edu, 04/17/2014
-% Last modified by fjsimons-at-alum.mit.edu, 06/23/2018
+% Last modified by fjsimons-at-alum.mit.edu, 06/26/2018
 
 % Some defaults
 defval('stit','Chi-squared residuals')
@@ -75,14 +75,8 @@ Xk(k>params.kiso)=NaN;
 [Lbar,~,~,momx,~,Xk1]=logliosl(k,thhat,scl,params,Hk,1);
 Xk1=-Xk1-log(Sb(~~k));
 % The oldest way, using a since retired function
-% Xkk1=-Lkosl(k,thhat.*scl,params,Hk)-log(Sb);
+% Xkk1=-lkosl(k,thhat.*scl,params,Hk)-log(Sb);
 % difer(Xkk1(~~k)-Xk1,9,[],NaN)
-
-% Check we're doing the same thing to tolerance, depending on whether
-% some prior codes put a NaN at zero wavenumber or got rid of the
-% zero-wavenumber values altogether; these checks will be removed
-%difer(Xk(~isnan(Xk0))-Xk0(~isnan(Xk0)),9,[],NaN)
-%difer(Xk(~~k)-Xk1,9,[],NaN)
 
 % Labeling  thing
 varibal='X';
@@ -132,9 +126,9 @@ binos=(binWidth/2)*[1:2:bounds2X(2)*2/binWidth+1];
 bdens=bdens/indeks(diff(c),1)/length(Xk(allg));
 bb=bar(c,bdens,1);
 % Each of the below should be df/2
-%disp(sprintf('m(%s) =  %5.3f   v(%s) =  %5.3f',...
-%		   varibal,nanmean(Xk(allg)),...
-%		   varibal,nanvar(Xk(allg))));
+disp(sprintf('m(%s) =  %5.3f   v(%s) =  %5.3f',...
+		   varibal,nanmean(Xk(allg)),...
+		   varibal,nanvar(Xk(allg))));
 
 set(bb,'FaceC',grey)
 hold on
@@ -149,12 +143,19 @@ xl1(1)=xlabel(xstr2v);
 ylim([0 max(bdens)*1.05])
 yl1(1)=ylabel('probability density');
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % Prepare an overlay axis for the quantile-quantile plot
 ah2(1)=laxis(ah(1),0,0);
 axes(ah2(1))
 
 % Obtain qq-plot data
-h=qqplot(2*Xk,ProbDistUnivParam('gamma',[df/2 2]));
+% Note that the try/catch provides the necessary version upgrade
+try
+  h=qqplot(2*Xk(allg),makedist('gamma','a',df/2,'b',2));
+catch
+  h=qqplot(2*Xk,ProbDistUnivParam('gamma',[df/2 2]));
+end
 hx=get(h,'Xdata'); hx=hx{1};
 hy=get(h,'ydata'); hy=hy{1};
 delete(h)
@@ -347,9 +348,13 @@ set(ah(2:4),'Box','On')
 
 % Give the overall figure a title
 axes(ah2(1))
-%spt=title(ah2(1),stit);
-%movev(spt,-.05)
-spt=text(df,bounds2X(2)-df+1/2,stit);
+[~,b]=star69;
+if strcmp(b,'eggers8')
+  spt=text(df,bounds2X(2)-df+1/2,stit);  
+else
+  spt=title(ah2(1),stit);
+  movev(spt,-.05)
+end
 
 movev([ah ah2 cb],-.02)
 
