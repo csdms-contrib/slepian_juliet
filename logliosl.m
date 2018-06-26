@@ -2,8 +2,8 @@ function [L,g,H,momx,vr,Lk]=logliosl(k,th,scl,params,Hk,xver)
 % [L,g,H,momx,vr,Lk]=LOGLIOSL(k,th,scl,params,Hk,xver)
 %
 % Calculates the full negative logarithmic likelihood and its derivatives as
-% averaged over wavenumber space. This is the function that we need to
-% MINIMIZE! No consideration is given to the zero wavenumbers.
+% averaged over wavenumber space. This is the function that we MINIMIZE! No
+% consideration is given to the zero wavenumbers or to those beyond params.kiso
 %
 % INPUT:
 %
@@ -45,7 +45,9 @@ function [L,g,H,momx,vr,Lk]=logliosl(k,th,scl,params,Hk,xver)
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
+% Last modified by fjsimons-at-alum.mit.edu, 06/25/2018
+
+% Make sure that this does render LKOSL obsolete
 
 defval('xver',1)
 
@@ -73,12 +75,11 @@ Xk=hformos(S,Hk,[],xver);
 
 % Radial wavenumber restrictions, these need to carry over elsewhere
 if any(~isnan(params.kiso))
-  ksel=k>params.kiso;
-  disp('Need to still build this selection in...')
-  disp('...depends if you want to look at Lk with the NaNs in there')
+  ksel=k<=params.kiso;
+else
+  ksel=logical(ones(prod(size(k)),1));
 end
 
-% Should make sure that this is real! Might remove REALIZE later
 % Note: should we restrict this to the upper halfplane? or will MEAN do
 % Should we use NANMEAN anywhere here? 
 
@@ -86,42 +87,47 @@ end
 if xver==0
   % Do it all at once, don't save the wavenumber-dependent entities
   % Eq. (A52) in doi: 10.1093/gji/ggt056
-  L=-mean(-log(S)-Xk);
+  L=-mean(-log(S(ksel))-Xk(ksel));
   Lk=NaN;
 elseif xver==1
+  % Will need to stick the deselected wavenumbers back in!
+  % Maybe here make them NaN, that have been deselected
   % Do save the wavenumber-dependent entities
   Lk=realize(-log(S)-Xk);
   % Eq. (A52) in doi: 10.1093/gji/ggt056
-  L=-mean(Lk);
+  L=-nanmean(Lk);
 end
 
 % Attempt to reset if for some reason the whole thing failed
 if isnan(L)
-  % This may no longer be necessary% 
+  % This may no longer be necessary
   L=1e100;
 end
 
 if nargout>=2
+  % FJS needs ksel fix
   % Get the appropriately scaled scores here
   g=gammiosl(k,th,params,Hk,xver).*scl(:);
 end
 
 if nargout>=3
+  % FJS needs ksel fix
   % Get the appropriately scaled Hessian values here
   H=hessiosl(k,th,params,Hk,xver).*[scl(:)*scl(:)'];
 end
 
+
 if nargout>=4
-  % Extract the moments we'll be needing for evaluation later
+% Extract the moments we'll be needing for evaluation later
   df=2;
   % First should be close to df/2, second close to df/2, third is like
   % the second except formally from a distribution that should be normal
   % with mean df/2 and variance 8/K --- the "magic" parameter
-  momx=[nanmean(Xk) nanvar(Xk) nanmean([Xk-df/2].^2)];
+  momx=[nanmean(Xk(ksel)) nanvar(Xk(ksel)) nanmean([Xk(ksel)-df/2].^2)];
 end
 if nargout>=5
-  % Compute the variance
-  vr=8/sum(~isnan(Xk));
+  % Compute the variance of the moment parameter
+  vr=8/sum(~isnan(Xk(ksel)));
 end
 
 % Print the trajectory, seems like one element at a time gets changed
