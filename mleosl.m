@@ -47,6 +47,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %          lpars{6} the options used by the FMINUNC/FMINCON procedure
 %          lpars{7} any bounds used by the  FMINUNC/FMINCON procedure
 %          lpars{8} the residual moment statistics used for model testing 
+%          lpars{9} the predicted variance of lpars{8}(3) under the null hypothesis
 % scl      The scaling that applies to THHAT and THINI
 % thini    The starting guess used in the optimization procedure [scaled]
 % params   The known constants used inside, see above under INPUT
@@ -81,7 +82,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % Last modified by fjsimons-at-alum.mit.edu, 06/25/2018
 
-% NEED TO CHANGE THE k(~~k) to proper accounting for kiso
+% FJS NEED proper accounting for kiso
 
 if ~isstr(Hx)
   defval('algo','unc')
@@ -371,7 +372,7 @@ if ~isstr(Hx)
   end
 
   % Here we compute the moment parameters and recheck the likelihood
-  [L,~,~,momx]=logliosl(k,thhat,scl,params,Hk,xver);
+  [L,~,~,momx,vr]=logliosl(k,thhat,scl,params,Hk,xver);
   diferm(L,logli)
  
   % Reorganize the output into cell arrays
@@ -387,6 +388,7 @@ if ~isstr(Hx)
   lpars{6}=options;
   lpars{7}=bounds;
   lpars{8}=momx;
+  lpars{9}=vr;
   
   % Generate output as needed
   varns={thhat,covFHh,lpars,scl,thini,params,Hk,k};
