@@ -1,15 +1,24 @@
-function eggers3(domind,fldind)
-% EGGERS3(domind,fldind)
+function varargout=eggers3(domind,fldind,img,chi,kov,sos)
+% EGGERS3(domind,fldind,img,chi,kov,sos)
 %
 % A whole suite of runs for the Venus topography!
 %
 % INPUT:
 %
-% domind    A domain index [1-77]
+% domind    A domain index [1-77] (default: a random one)
 % fldind    1 Gravity anomaly expanded to spherical harmonic degree/order 180
 %           2 Topography expanded to spherical harmonic degree/order 180
-%           3 Topography expanded to spherical harmonic degree/order 360
-%  
+%           3 Topography expanded to spherical harmonic degree/order 360 [default]
+% img       1 Plot the data patch
+% chi       1 Plot the residual analysis using MLECHIPSDOSL
+% kov       1 Plot covariance in space and the spectral density
+% sos       1 Plots some simulations using the estimated parameters 
+%
+% OUTPUT:
+%
+% ah        Primary axis handles
+% axx       Overlay axis handles 
+% cb        Colorbar axis handles
 %
 % EXAMPLE
 %
@@ -22,23 +31,23 @@ function eggers3(domind,fldind)
 % needs some work 
 
 % Plot patch?
-img=0;
+defval('img',0);
 
-% Plot residuals? Turn on for now
-chi=1;
+% Plot residuals? 
+defval('chi',0);
 
 % Simulate some relateds?
-sos=0;
+defval('sos',0);
 
 % Plot covariance in space and in the spectrum?
-kov=0;
+defval('kov',0);
 
 % Estimate uncertainties? Turn off for now
 unc=0;
 
 % Sets the domain index
 defval('domind',randi(77));
-% Sets the field in question [03 for 360 topography]
+% Sets the field in question [3 for 360 topography]
 defval('fldind',3);
 
 % Make the variable name to construct the save file to look for
@@ -53,33 +62,30 @@ DegDis=2*pi*fralmanac(topo.id.fralRef,'Venus')/360;
 % Harmonize the data names
 Hx=topo.dataP.dp(:);
 
-% Prepare for color bar and labeling
-cm=2;
-cax=[-cm cm]*std(Hx);
-cxl=[-cm:cm]*std(Hx);
-
-% Check the spacings etc
-diferm(abs(diff(topo.geo.lonrDx))/[topo.params.NyNx(2)-1],topo.geo.DxDy)
-diferm(abs(diff(topo.geo.latrDx))/[topo.params.NyNx(1)-1],topo.geo.DxDy)
-c11=[topo.geo.lonrDx(1) topo.geo.latrDx(2)];
-cmn=[topo.geo.lonrDx(2) topo.geo.latrDx(1)];
-
-% Complete the parameters
+% Complete the estimation parameters
 topo.params.blurs=-1;
 % No need for the quartering here, by the way
 topo.params.quart=0;
-% Put in a good choice for kiso as the Nyquist wavenumber
-topo.params.kiso=pi./max(topo.params.dydx);
+% Put in a good choice for kiso, e.g. as the Nyquist wavenumber
+topo.params.kiso=pi./max(topo.params.dydx)/1.75;
 % The MLEOSL algorithm, constrained, or unconstrained?
 algo='unc';
 
+% Prepare for color bar and labeling for future plotting
+cm=2;
+cax=[-cm cm]*std(Hx);
+cxl=[-cm:cm]*std(Hx);
+% Prepare data extent for future plotting
+c11=[topo.geo.lonrDx(1) topo.geo.latrDx(2)];
+cmn=[topo.geo.lonrDx(2) topo.geo.latrDx(1)];
+
 % Make a hash - order matters! 
 hah=hash([struct2array(orderfields(topo.params)) abs(algo)],'SHA-1');
-fname=fullfile(getenv('HASHES'),'HASHES',sprintf('%s-%s.mat',varibal,hah));
+fname=fullfile(getenv('IFILES'),'HASHES',sprintf('%s-%s.mat',varibal,hah));
 
 % PERFORM THE ESTIMATION!
 % SHOULD MAKE A HASH
-if exist(fullfile('.',fname))~=2 || 1==1
+if exist(fullfile(fname))~=2 || 1==3
   if ~isnan(topo.params.kiso)
     disp('May need to widen the default bounds on nu inside MLEOSL')
     disp('May need to switch to unconstrained search inside MLEOSL')
@@ -109,8 +115,6 @@ if exist(fullfile('.',fname))~=2 || 1==1
   disp(sprintf('var(Hx) = %i ; s^2 = %i ; debiased %i',...
                round(var(Hx)),round(thhat(1)),round(thhat(1)-b)))
   
-  keyboard
-  
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   % SAVE ALL OF THE IMPORTANT STUFF (EXCEPT THE DATA AGAIN)
   save(fname,'thhat','covFHh','lpars','thini','p','scl',...
@@ -125,8 +129,13 @@ s2=thhat(1);
 nu=thhat(2);
 rh=thhat(3);
 
-% Plot data patch
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Plot data patch, quickly... see TOPOFIG, GRAVFIG, RADARFIG
 if img==1
+  % Check the spacings etc
+  diferm(abs(diff(topo.geo.lonrDx))/[topo.params.NyNx(2)-1],topo.geo.DxDy)
+  diferm(abs(diff(topo.geo.latrDx))/[topo.params.NyNx(1)-1],topo.geo.DxDy)
+
   % Makes a plot of the data in question
   clf; fig2print(gcf,'portrait')
   ah=gca;
@@ -139,9 +148,9 @@ if img==1
   hr=twoplot(topo.geo.XYr360,'LineW',2,'Color','k');
   hold off
 
-  % Color bar
-  [cb,xb]=addcb('vert',cax,cax,'kelicol',diff(cxl));
-  set(cb,'ytickl',round(cxl),'yaxisl','r');
+  % Color bar - the last entry needs to evaluate to a SINGLE number
+  [cb,xb]=addcb('vert',cax,cax,'kelicol',unique(diff(cxl)));
+  set(cb,'YTickLabel',round(cxl),'YAxisLocation','r');
   set(xb,'string',sprintf('demeaned topography of %s [m] (to within %i std)',...
                           nounder(varibal),cm))
   longticks(cb,2)
@@ -161,58 +170,18 @@ if img==1
   figna=figdisp([],varibal,[],2);
 end
 
-% Plot residual behavior
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Plot residual behavior using MLECHIPSDOSL
 if chi==1
   clf
-   mlechipsdosl(Hk,thhat./scl,scl,p,...
+  [~,~,ah,axx,cb]=...
+      mlechipsdosl(Hk,thhat./scl,scl,p,...
                 sprintf('%s  |  %s = %i m  %s = %4.2f  %s = %i km',nounder(varibal),...
-                        '\sigma',round(sqrt(s2)),'\nu',nu,'\rho',round(rh/1000)))
+                        '\sigma',round(sqrt(s2)),'\nu',nu,'\rho',round(rh/1000)));
    figna=figdisp([],sprintf('%s_chi',varibal),[],2);
 end
 
-% How about some simulations with similar parameters
-if sos==1
-  clf
-  [ah,ha,H]=krijetem(subnum(2,2));
-  axes(ah(1))
-  h=imagefnan(c11,cmn,topo.dataP.dp-mean(topo.dataP.dp(:)),...
-                       'kelicol',cax); hold on
-  t(1)=title(sprintf('%s',nounder(varibal)));
-
-  [cb,xb]=addcb('vert',cax,cax,'kelicol',diff(cxl));
-  set(cb,'ytickl',round(cxl),'yaxisl','r');
-  set(xb,'string',nounder(varibal))
-
-  % We may have had blurring; simulate without blurring? Or do we 
-  % I go back and forth on this one but always make sure that kiso is in there!
-  p.blurs=0;
-  for ind=2:4
-    Hx=simulosl(thhat,p);
-    axes(ah(ind))
-    h(ind)=imagefnan(c11,cmn,reshape(Hx,p.NyNx)-mean(Hx(:)),...
-                       'kelicol',cax);
-    [cb(ind),xb(ind)]=addcb('vert',cax,cax,'kelicol',diff(cxl));
-    set(cb(ind),'ytickl',round(cxl),'yaxisl','r');
-    set(xb(ind),'string',sprintf('simulation %i',ind-1))
-  end
-  hold off
-  longticks(ah)
-  axes(ah(2))
-  t(2)=title(sprintf(...
-      '%s = %i m  %s = %4.2f   %s = %i km',...
-      '\sigma',round(sqrt(s2)),'\nu',nu,'\rho',round(rh/1000)));
-
-  % Cosmetics
-  nolabels(ah(1:2),1)
-  nolabels(ha(3:4),2)
-  serre(H,2/3,'across')
-  serre(H',2/3,'down')
-  delete(cb([1 2 3]))
-  delete(xb(4))
-
-  figna=figdisp([],sprintf('%s_sim',varibal),[],2);
-end
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if kov==1
   % Inspired by EGGERS2
   % Wavenumber axes, 2D axes flattened to 1D radial
@@ -339,7 +308,56 @@ if kov==1
   set([xl yl],'fontsize',8)
 
   figna=figdisp([],sprintf('%s_kov',varibal),[],2);
-  % system(sprintf('xpdf %s.pdf',figna))
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% How about some simulations with similar parameters
+if sos==1
+  clf
+  [ah,ha,H]=krijetem(subnum(2,2));
+  axes(ah(1))
+  h=imagefnan(c11,cmn,topo.dataP.dp-mean(topo.dataP.dp(:)),...
+                       'kelicol',cax); hold on
+  t(1)=title(sprintf('%s',nounder(varibal)));
+
+  [cb,xb]=addcb('vert',cax,cax,'kelicol',unique(diff(cxl)));
+  set(cb,'ytickl',round(cxl),'yaxisl','r');
+  set(xb,'string',nounder(varibal))
+
+  % We may have had blurring; simulate without blurring? Or do we?
+  % I go back and forth on this one but always make sure that kiso is in there!
+  % p.blurs=0; % Simulate with all the same parameters
+  for ind=2:4
+    Hx=simulosl(thhat,p);
+    % REDEFINE THE COLORSCALE FOR EACH OF THE SIMULATIONS
+    cax=[-cm cm]*std(Hx);
+    cxl=[-cm:cm]*std(Hx);
+    
+    axes(ah(ind))
+    h(ind)=imagefnan(c11,cmn,reshape(Hx,p.NyNx)-mean(Hx(:)),...
+                       'kelicol',cax);
+    [cb(ind),xb(ind)]=addcb('vert',cax,cax,'kelicol',unique(diff(cxl)));
+    set(cb(ind),'ytickl',round(cxl),'yaxisl','r');
+    set(xb(ind),'string',sprintf('simulation %i',ind-1))
+  end
+  hold off
+  longticks(ah)
+  axes(ah(2))
+  t(2)=title(sprintf(...
+      '%s = %i m  %s = %4.2f   %s = %i km',...
+      '\sigma',round(sqrt(s2)),'\nu',nu,'\rho',round(rh/1000)));
+
+  % Cosmetics
+  nolabels(ah(1:2),1)
+  nolabels(ha(3:4),2)
+  serre(H,2/3,'across')
+  serre(H',2/3,'down')
+  
+  % AND SO, YES, THAT MEANS ONLY THE LAST COLOR SCALE IS PERTINENT
+  delete(cb([1 2 3]))
+  delete(xb(4))
+
+  figna=figdisp([],sprintf('%s_sim',varibal),[],2);
 end
 
 if unc==1
@@ -364,3 +382,10 @@ if unc==1
   covhs=cov(thhats);
   % Compare with the other covariances
 end
+
+% Some output if you like, and if you have it
+defval('ah',NaN)
+defval('axx',NaN)
+defval('cb',NaN)
+varns={ah,axx,cb};
+varargout=varns(1:nargout);
