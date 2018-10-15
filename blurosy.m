@@ -72,16 +72,13 @@ switch method
   % multiplied by the transform of the Fejer kernel
   Cyy=spatmat(ycol,xrow,th,NyNx,dydx);
 
-  % Pick out the first column and the first row
-  Cyc=Cyy(:,1); 
-  Cyr=Cyy(1,:);
-  [q1,q2]=deal(fft2(Cyy));
-keyboard
-  q2(:,2:end)=fliplr(q2(:,2:end));
-  q4=q1+q2-repmat(fft(Cyc),1,NyNx(1));
+  % Exploit the symmetry just a tad, which allows us to work with smaller matrices
+  q1=fft2(Cyy);
+  q4=q1+[q1(:,1) fliplr(q1(:,2:end))]-repmat(fft(Cyy(:,1)),1,NyNx(1));
 
   % Here is the blurred covariance on the 'complete' grid
-  Hh=fftshift(abs(2*real(q4)-repmat(2*real(fft(Cyr))-Cyy(1,1),NyNx(2),1)));
+  % Is in the "realize" step, perhaps
+  Hh=fftshift(2*real(q4)-repmat(2*real(fft(Cyy(1,:)))-Cyy(1,1),NyNx(2),1));
 end
 
 % Normalize and vectorize
