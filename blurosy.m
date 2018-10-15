@@ -16,8 +16,8 @@ function [Sbar,k]=blurosy(th,params,xver,method)
 %         NyNx  number of samples in the y and x directions
 % xver    1 Extra verification via BLURCHECK
 %         0 No checking at all
-% method  'ef' efficient and fast [default]
-%         'efs' efficient and faster, due to symmetry [not working yet]
+% method  'ef' exact, efficient and fast [default]
+%         'efs' exact, efficient and faster, exploiting Hermitian symmetry
 %
 % OUTPUT:
 %
@@ -30,7 +30,7 @@ function [Sbar,k]=blurosy(th,params,xver,method)
 % SIMULOSL, BLUROS, MATERNOSP, BLURCHECK
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
+% Last modified by fjsimons-at-alum.mit.edu, 10/15/2018
 
 if params.blurs>=0
   error('Are you sure you should be running BLUROSY, not BLUROS?')
@@ -48,69 +48,70 @@ switch method
  case 'ef'
   % http://blogs.mathworks.com/steve/2010/07/16/complex-surprises-from-fft/
 
-  % Fully exact and not particularly fast, still faster than BLUROS
+  % Fully exact and not particularly fast, still much faster than BLUROS
   % Distance grid, got to be careful with the incoming parity of the signal
   ycol=[-NyNx(1)+mod(NyNx(1),2):NyNx(1)-1]';
   xrow=[-NyNx(2)+mod(NyNx(2),2):NyNx(2)-1] ; 
-  % The triangles coming out of the convolution... normalized?
-  triy=[1-abs(ycol)/NyNx(1)];
-  trix=[1-abs(xrow)/NyNx(2)];
-  % Here is the distance grid
-  y=sqrt(bsxfun(@plus,[ycol*dydx(1)].^2,[xrow*dydx(2)].^2));
 
-  % Here is the triangle grid
-  t=bsxfun(@times,triy,trix);
+  % Here is the Matern spatial covariance on the distance grid,
+  % multiplied by the transform of the Fejer kernel
+  Cyy=spatmat(ycol,xrow,th,NyNx,dydx);
+
   % Here is the blurred covariance on the 'double' grid
-  Hh=fftshift(realize(fft2(ifftshift(maternosy(y,th).*t))));
+  Hh=fftshift(realize(fft2(ifftshift(Cyy))));
 
-  % Normalize so that the C(y) is the proper transform of S(k)
-  Hh=Hh*prod(dydx)/(2*pi)^2;
-
-  % Could play with a culled DFTMTX but rather now subsample
+  % Play with a culled DFTMTX? Rather now subsample to the 'complete' grid
   Hh=Hh(1:2:end,1:2:end);
-
-  % Vectorize the argument
-  Sbar=Hh(:);    
  case 'efs'
   % Fully exact and trying to be faster for advanced symmetry
   % Distance grid
   ycol=[0:NyNx(1)-1]';
   xrow=[0:NyNx(2)-1] ;
-  % The triangles coming out of the convolution
-  triy=1-ycol/NyNx(1);
-  trix=1-xrow/NyNx(2);
 
-  % Here is the distance grid
-  y=sqrt(bsxfun(@plus,[ycol*dydx(1)].^2,[xrow*dydx(2)].^2));
-  % Here is the triangle grid
-  t=bsxfun(@times,triy,trix);
-  
-  % Need the Matern spatial covariance on the distance grid...
+  % Here is the Matern spatial covariance on the distance grid,
   % multiplied by the transform of the Fejer kernel
-  sxx=maternosy(y,th).*t;
+  Cyy=spatmat(ycol,xrow,th,NyNx,dydx);
 
-  % Pick out a column and a row
-  sxc=sxx(:,1); 
-  sxr=sxx(1,:);
+  % Pick out the first column and the first row
+  Cyc=Cyy(:,1); 
+  Cyr=Cyy(1,:);
+  [q1,q2]=deal(fft2(Cyy));
+keyboard
+  q2(:,2:end)=fliplr(q2(:,2:end));
+  q4=q1+q2-repmat(fft(Cyc),1,NyNx(1));
 
-  % Produce the exact blurred spectrum, adjust the normalization also
-  [q1,q2]=deal(fft2(sxx));
-  q2(:,2:end) = fliplr(q2(:,2:end));
-  q4 = q1+q2-repmat(fft(sxc),1,NyNx(1));
-  
-  Sbar=fftshift(abs(2*real(q4)-repmat(2*real(fft(sxr))-sxx(1,1),NyNx(2),1)));
-  % Normalize and vectorize
-  Sbar=Sbar(:)*prod(dydx)/(2*pi)^2;
+  % Here is the blurred covariance on the 'complete' grid
+  Hh=fftshift(abs(2*real(q4)-repmat(2*real(fft(Cyr))-Cyy(1,1),NyNx(2),1)));
 end
+
+% Normalize and vectorize
+Sbar=Hh(:)*prod(dydx)/(2*pi)^2;
 
 % Check Hermiticity
 if xver==1
   blurcheck(Sbar,params)
 end
 
-% Produce the unwrapped wavenumbers if you've request them to be output
+% Produce the unwrapped wavenumbers if you've requested them to be output
 if nargout>1
   k=knums(params);
   k=k(:);
 end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function Cyy=spatmat(ycol,xrow,th,NyNx,dydx)
+% Returns the modified spatial covariance whose transform is the blurred spectrum 
+
+% The triangles coming out of the convolution of the unit window function  
+triy=1-abs(ycol)/NyNx(1);
+trix=1-abs(xrow)/NyNx(2);
+
+% Here is the distance grid
+y=sqrt(bsxfun(@plus,[ycol*dydx(1)].^2,[xrow*dydx(2)].^2));
+% Here is the triangle grid
+t=bsxfun(@times,triy,trix);
+  
+% Need the modified spatial covariance
+Cyy=maternosy(y,th).*t;
+
 
