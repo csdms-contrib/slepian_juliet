@@ -33,20 +33,42 @@ function [Sbar,k]=blurosy(th,params,xver,method)
 % SIMULOSL, BLUROS, MATERNOSP, BLURCHECK
 %
 %
-% EXAMPLE:
+% A WHOLE LONG EXAMPLE WHILE TROUBLESHOOTING:
 %
-% p.dydx=1e3*[1 1]; p.NyNx=[64 64]; th=1e6*[1 0.0000025 0.02]; 
-% p.blurs= 0; S0=maternosp(th,p,1); % Unblurred
-% p.blurs= 1; S1=maternosp(th,p,1); % Unblurred
+% p.dydx=1e3*[1 1]; th=1e6*[1 0.0000025 0.02]; p.NyNx=[64 64]; 
 % p.blurs= 5; S2=maternosp(th,p,1); % Convolutionally blurred
 % p.blurs=-1; S3=blurosy(th,p,1,'ef'); % Exact blurred slow
 % p.blurs=-1; S4=blurosy(th,p,1,'efs'); % Exact blurred fast
+%% Make the plots for visual inspection! And plot the crosses on there
+% [ah,ha,H]=krijetem(subnum(2,3)); axes(ah(2))
+% imagesc(reshape(log10(S3),p.NyNx)); h=caxis; title('EVEN BLUROSY ef')
+% axes(ah(1))
+% imagesc(reshape(log10(S2),p.NyNx)); caxis(h); title('EVEN BLUROS')
+% axes(ah(3))
+% imagesc(reshape(log10(S4),p.NyNx)); caxis(h); title('EVEN BLUROSY efs')
+% [kor,dci,dcn,kx,ky]=knums(p); for in=1:3; axes(ah(in));
+% hold on; plot(dci(1),dci(2),'w+'); axis image ; hold off;
+% set(ah(in),'xtick',[1 dci(2) p.NyNx(2)],'ytick',[1 dci(1) p.NyNx(1)]); end
+% p.dydx=1e3*[1 1]; th=1e6*[1 0.0000025 0.02]; p.NyNx=[65 65]; 
+% p.blurs= 5; S2=maternosp(th,p,1); % Convolutionally blurred
+% p.blurs=-1; S3=blurosy(th,p,1,'ef'); % Exact blurred slow
+% p.blurs=-1; S4=blurosy(th,p,1,'efs'); % Exact blurred fast
+% axes(ah(5))
+% imagesc(reshape(log10(S3),p.NyNx)); h=caxis; title('ODD BLUROSY ef')
+% axes(ah(4))
+% imagesc(reshape(log10(S2),p.NyNx)); caxis(h); title('ODD BLUROS')
+% axes(ah(6))
+% imagesc(reshape(log10(S4),p.NyNx)); caxis(h); title('ODD BLUROSY efs')
+% [kor,dci,dcn,kx,ky]=knums(p); for in=4:6; axes(ah(in));
+% hold on; plot(dci(1),dci(2),'w+'); axis image ; hold off; 
+% set(ah(in),'xtick',[1 dci(2) p.NyNx(2)],'ytick',[1 dci(1) p.NyNx(1)]); end
+% longticks(ah); serre(H',1/2,'down')
 % 
 % S2, S3, and S4 are close but need to be reconciled in minor details
 % depending on whether the parity is even or odd, as 2 agrees with 3 or 4
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 10/15/2018
+% Last modified by fjsimons-at-alum.mit.edu, 10/16/2018
 
 if params.blurs>=0
   error('Are you sure you should be running BLUROSY, not BLUROS?')
@@ -123,7 +145,6 @@ trix=1-abs(xrow)/NyNx(2);
 % See Arthur's note for more general windows, use iff2/fft2 you need, see
 % ~/POSTDOCS/ArthurGuillaumin/NewSimulations/NonParametricEstimation/Periodogram.m
 
-
 % Here is the distance grid
 y=sqrt(bsxfun(@plus,[ycol*dydx(1)].^2,[xrow*dydx(2)].^2));
 % Here is the triangle grid
@@ -131,5 +152,3 @@ t=bsxfun(@times,triy,trix);
   
 % Need the modified spatial covariance
 Cyy=maternosy(y,th).*t;
-
-
