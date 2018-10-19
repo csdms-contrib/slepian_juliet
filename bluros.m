@@ -82,7 +82,7 @@ end
 % Should do this once and save it. Now let's not forget that in our
 % formalism we force the fft/ifft to be unitary
 % If params.blurs were to be 1, we would get a single 1 in the center
-% Note that the kernel veluas are very different depending on even/odd dimensions
+% Note that the kernel values are very different depending on even/odd dimensions
 Fejk=fftshift(abs(fft2(repmat(1/prod(NyNx)/blurs,NyNx),NyNx2(1),NyNx2(2))).^2);
 
 if xver==1
@@ -108,7 +108,11 @@ for in=1:size(S,2)
   % Later, consider griddedInterpolant
   Hh=interp2(kx2(:)',ky2(:),...
              conv2(Fejk,reshape(S(:,in),NyNx2),'same'),...
-             kx(:)',ky(:));
+             kx(:)',ky(:),'cubic');
+  % In the even case only
+  if ~mod(NyNx(1),2); Hh(1,:)=Hh(1,:)*2; end
+  if ~mod(NyNx(2),2); Hh(:,1)=Hh(:,1)*2; end
+  % Unwrap
   Sbar(:,in)=Hh(:);
 end
 
