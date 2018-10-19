@@ -35,34 +35,7 @@ function [Sbar,k]=blurosy(th,params,xver,method)
 %
 % A WHOLE LONG EXAMPLE WHILE TROUBLESHOOTING:
 %
-% p.dydx=1e3*[1 1]; th=1e6*[1 0.0000025 0.02]; p.NyNx=[64 64]; 
-% p.blurs= 5; S2=maternosp(th,p,1); % Convolutionally blurred
-% p.blurs=-1; S3=blurosy(th,p,1,'ef'); % Exact blurred slow
-% p.blurs=-1; S4=blurosy(th,p,1,'efs'); % Exact blurred fast
-%% Make the plots for visual inspection! And plot the crosses on there
-% [ah,ha,H]=krijetem(subnum(2,3)); axes(ah(2))
-% imagesc(reshape(log10(S3),p.NyNx)); h=caxis; title('EVEN BLUROSY ef')
-% axes(ah(1))
-% imagesc(reshape(log10(S2),p.NyNx)); caxis(h); title('EVEN BLUROS')
-% axes(ah(3))
-% imagesc(reshape(log10(S4),p.NyNx)); caxis(h); title('EVEN BLUROSY efs')
-% [kor,dci,dcn,kx,ky]=knums(p); for in=1:3; axes(ah(in));
-% hold on; plot(dci(1),dci(2),'w+'); axis image ; hold off;
-% set(ah(in),'xtick',[1 dci(2) p.NyNx(2)],'ytick',[1 dci(1) p.NyNx(1)]); end
-% p.dydx=1e3*[1 1]; th=1e6*[1 0.0000025 0.02]; p.NyNx=[65 65]; 
-% p.blurs= 5; S2=maternosp(th,p,1); % Convolutionally blurred
-% p.blurs=-1; S3=blurosy(th,p,1,'ef'); % Exact blurred slow
-% p.blurs=-1; S4=blurosy(th,p,1,'efs'); % Exact blurred fast
-% axes(ah(5))
-% imagesc(reshape(log10(S3),p.NyNx)); h=caxis; title('ODD BLUROSY ef')
-% axes(ah(4))
-% imagesc(reshape(log10(S2),p.NyNx)); caxis(h); title('ODD BLUROS')
-% axes(ah(6))
-% imagesc(reshape(log10(S4),p.NyNx)); caxis(h); title('ODD BLUROSY efs')
-% [kor,dci,dcn,kx,ky]=knums(p); for in=4:6; axes(ah(in));
-% hold on; plot(dci(1),dci(2),'w+'); axis image ; hold off; 
-% set(ah(in),'xtick',[1 dci(2) p.NyNx(2)],'ytick',[1 dci(1) p.NyNx(1)]); end
-% longticks(ah); serre(H',1/2,'down')
+% BLUROSY_DEMO
 % 
 % S2, S3, and S4 are close but need to be reconciled in minor details
 % depending on whether the parity is even or odd, as 2 agrees with 3 or 4
@@ -87,9 +60,8 @@ switch method
   % http://blogs.mathworks.com/steve/2010/07/16/complex-surprises-from-fft/
 
   % Fully exact and not particularly fast, still much faster than BLUROS
-  % Distance grid, watch the parity correction so that it hits the zero wavenumber
-  ycol=[-NyNx(1)+mod(NyNx(1),2):NyNx(1)-1]';
-  xrow=[-NyNx(2)+mod(NyNx(2),2):NyNx(2)-1] ;
+  ycol=[-NyNx(1):NyNx(1)-1]';
+  xrow=[-NyNx(2):NyNx(2)-1] ;
 
   % Here is the Matern spatial covariance on the distance grid,
   % multiplied by the transform of the Fejer kernel
@@ -99,7 +71,7 @@ switch method
   Hh=fftshift(realize(fft2(ifftshift(Cyy))));
 
   % Play with a culled DFTMTX? Rather now subsample to the 'complete' grid
-  Hh=Hh(1:2:end,1:2:end);
+  Hh=Hh(1+mod(NyNx(1),2):2:end,1+mod(NyNx(2),2):2:end);
  case 'efs'
   % Fully exact and trying to be faster for advanced symmetry
   % Distance grid
@@ -115,8 +87,8 @@ switch method
   q4=q1+[q1(:,1) fliplr(q1(:,2:end))];
 
   % Here is the blurred covariance on the 'complete' grid, exactly as per Arthur
-  Hh=fftshift(2*real(q4-repmat(fft(Cyy(:,1)),1,NyNx(1)))...
-	      -repmat(2*real(fft(Cyy(1,:))),NyNx(2),1)...
+  Hh=fftshift(2*real(q4-repmat(fft(Cyy(:,1)),1,NyNx(2)))...
+	      -repmat(2*real(fft(Cyy(1,1:end))),NyNx(1),1)...
 	      +Cyy(1,1));
 end
 
