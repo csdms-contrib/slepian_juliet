@@ -46,13 +46,12 @@ else
   % Proposed new dimensions
   bNyNx=blurs*NyNx;
 
-  % Protect against parity CHANGE, which messes with BLUROS down the line
+  % Protect against parity CHANGE, which messes with BLUROS Nyquist notions
   pp=mod(NyNx,2)~=mod(bNyNx,2); 
   bNyNx=bNyNx+pp;
-  
+
   % And then we run KNUM2 again to do the blurring later
-  [k,kx,ky,~,dcn]=knum2(bNyNx,[(bNyNx(1)-1)*dydx(1) (bNyNx(2)-1)* ...
-		      dydx(2)]);
+  [k,kx,ky,~,dcn]=knum2(bNyNx,[(bNyNx(1)-1)*dydx(1) (bNyNx(2)-1)*dydx(2)]);
   % But then we still will want the RUNNING index of the zero in the
   % UNBLURRED matrix without running this same function again
   dci=sub2ind(NyNx,floor(NyNx(1)/2)+1,floor(NyNx(2)/2)+1);
