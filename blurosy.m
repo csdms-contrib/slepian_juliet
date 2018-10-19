@@ -74,10 +74,9 @@ switch method
 
   % Exploit the symmetry just a tad, which allows us to work with smaller matrices
   q1=fft2(Cyy);
-  q4=q1+[q1(:,1) fliplr(q1(:,2:end))]-repmat(fft(Cyy(:,1)),1,NyNx(1));
+  q4=q1+[zeros(NyNx(1),1) fliplr(q1(:,2:end))]-repmat(fft(Cyy(:,1)),1,NyNx(1));
 
   % Here is the blurred covariance on the 'complete' grid
-  % Is in the "realize" step, perhaps
   Hh=fftshift(2*real(q4)-repmat(2*real(fft(Cyy(1,:)))-Cyy(1,1),NyNx(2),1));
 end
 
