@@ -1,5 +1,5 @@
-function [Sbar,k]=bluros(S,params,xver)
-% [Sbar,k]=BLUROS(S,params,xver)
+function [Sbar,k,Fejk]=bluros(S,params,xver)
+% [Sbar,k,Fejk]=BLUROS(S,params,xver)
 %
 % Spectral blurring with periodogram of a boxcar. If we're talking about a
 % matrix, there are three columns, and there can be an eigenvalue check.
@@ -27,6 +27,7 @@ function [Sbar,k]=bluros(S,params,xver)
 % Sbar    The blurred spectral matrix, interpolated to original requested
 %         dimension as identified by 'params' from the input
 % k       The wavenumber matrix (the norm of the wave vectors), unwrapped
+% Fejk    The kernel, for now, only the Fejer kernel
 %
 % SEE ALSO:
 %
@@ -34,7 +35,7 @@ function [Sbar,k]=bluros(S,params,xver)
 %
 % Maybe should formally increase it in those cases so as to never worry?
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/31/2018
+% Last modified by fjsimons-at-alum.mit.edu, 11/02/2018
 
 if params.blurs<0
   error('You should be running BLUROSY, not BLUROS!')
@@ -80,7 +81,7 @@ if xver==1
   % Make sure it is unitary and norm-preserving, that's why we need
   % the override
   difer(sum(Fejk(:))-1,[],[],NaN)
-  % Check Hermiticity of the Fejer kernel, no reason to doubt it
+  % Check Hermiticity of the Fejer kernel, this NEVER fails
   hermcheck(Fejk)
 end
 
@@ -95,41 +96,77 @@ if [ky(1)-ky2(1)]<0; ky2(1)=ky(1); end
 
 % Fill to original dimensions
 Sbar=nan(prod(NyNx),size(S,2));
-% Make sure there are no NaNs in the output
-for in=1:size(S,2)
-  
-  % Is there a simpler way in which the new grid is a superset of
-  % the old grid
-  disp(sprintf('\nINTERPOLATE:'))
-  tic
-  % Later, consider griddedInterpolant
-  Hh=interp2(kx2(:)',ky2(:),...
-             conv2(Fejk,reshape(S(:,in),NyNx2),'same'),...
-             kx(:)',ky(:),'cubic');
-  toc
 
-  if round(blurs)==blurs && ...
-          [abs(sum(kx2(1+mod(NyNx2(2),2):blurs:end)-kx))+abs(sum(ky2(1+mod(NyNx2(1),2):blurs:end)-ky))]==0
-    disp(sprintf('\nSUBSAMPLE:'))
-    tic
-    Hhi=conv2(Fejk,reshape(S(:,in),NyNx2),'same');
-    Hhi=Hhi(1+mod(NyNx2(2),2):blurs:end,1+mod(NyNx2(1),2):blurs:end);
-    toc
-    difer([Hh-Hhi]/norm(Hh))
-    % Subsampling will always be better than interpolating, won't it??
-    %    Hh=Hhi;
-  end
+% For each of the variables and their co-variables1
+for in=1:size(S,2)
+  % Perform the convolution, isolate the center part where the
+  % center is to be understood as the location of the
+  % zero-wavenumber, see KNUMS and KNUM2
+  HhC=conv2(Fejk,reshape(S(:,in),NyNx2),'same');
+
+  % The result, the convolution of two positive definite kernels,
+  % cannot be negative! Happens under 'cubic' or 'spline'...
+
+  % You just need to supply the correct zero-wavenumber value,
+  % while it gets progressively better for larger patches and
+  % higher refinement factors, it's just always different in the
+  % exact and the approximate method. We need to do this outside,
+  % in MATERNOSP, since that's the only place we have access to the
+  % Matern parameters that tell us EXACTLY what is going on.
+
+  % CORRECTION: MAYBE IT'S RIGHT? STILL ARGUES WE MIGHT EXCLUDE
+  % THE ZERO WAVENUMBER, RATHER REPLACE THE ZERO WAVENUMBER BY THE
+  % CORRECTLY SCALED VERSION WHICH IS VIA THE SPATIAL AVERAGE OF
+  % THE WINDOW FUNCTION... 
   
-keyboard
+  % disp(sprintf('\nINTERPOLATE:')) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  tic
+   HhI=interp2(kx2(:)',ky2(:),HhC,...
+               kx(:)',ky(:),'linear');
+   % Later, may/should consider griddedInterpolant, etc. 
+   % Check and/or protect for negatives
+   if any(HhI<0); error('Convolved variance kernel contains negatives'); end
+  d=toc;
+  
+  % That is it for now, unless the below changes it
+  Hh=HhI;
+
+  % disp(sprintf('\nSUBSAMPLE:')) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  %  There may be a simpler way in which the new grid is a superset of the old
+  sx=1+mod(NyNx2(2),2);
+  sy=1+mod(NyNx2(1),2);
+  if round(blurs)==blurs && ...
+          [sum(abs(kx2(sx:blurs:end)-kx))+sum(abs(ky2(sy:blurs:end)-ky))]==0
+
+    tic
+     HhS=HhC(sx:blurs:end,sy:blurs:end);
+    e=toc;
+
+    if e<d
+      disp(sprintf('\nSUBSAMPLING BEATS INTERPOLATION by %i%%',round((1-e/d)*100)))
+    end
+
+    % Check the difference
+    difer([HhI-HhS]/norm(HhS))
+
+    % Isn't subsampling always to be preferred over interpolation?
+    Hh=HhS;
+  end
+
 % Need to consider that we can subsample even more, 
-% Need to consider the peak mismatch
-% Need to consider specific values that are problematic, and why
 
   % In the even case only
   if ~mod(NyNx(1),2); Hh(1,:)=Hh(1,:)*2; end
   if ~mod(NyNx(2),2); Hh(:,1)=Hh(:,1)*2; end
   % Unwrap
   Sbar(:,in)=Hh(:);
+  % Make sure the zero wavenumber gets the correct value, the zero-wavenumber
+  kzx=floor(NyNx2(2)/2)+1; kzy=floor(NyNx2(1)/2)+1;
+  kz2=[kzx-1]*NyNx2(1)+kzy;
+  % This is ALREADY WHAT IT IS!
+  %Sbar(kzero,in)=S(kz2,in)*Fejk(kzy,kzx); 
+  1/(1/sqrt(prod(NyNx))/sqrt(prod(NyNx2)))
 end
 
 if xver==1
@@ -149,5 +186,3 @@ end
 % convmtx2 needs more memory
 % Actually, should look into FFTW. But also limit to halfplane.
 % disp(sprintf('BLUROS %i %i %i',blurs,NyNx2(1),NyNx2(2)));
-
-% Should we put the check on NaN and REALIZE in here?
