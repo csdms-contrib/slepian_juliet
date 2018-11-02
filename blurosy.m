@@ -41,7 +41,7 @@ function [Sbar,k]=blurosy(th,params,xver,method)
 % depending on whether the parity is even or odd, as 2 agrees with 3 or 4
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 10/16/2018
+% Last modified by fjsimons-at-alum.mit.edu, 11/02/2018
 
 if params.blurs>=0
   error('Are you sure you should be running BLUROSY, not BLUROS?')
@@ -49,7 +49,8 @@ end
 
 % Defaults
 defval('xver','1')
-defval('method','ef')
+% It is here and now only that we decide to always go with 'efs'
+defval('method','efs')
 
 % Target dimensions, the original ones
 NyNx=params.NyNx;
@@ -114,7 +115,7 @@ function Cyy=spatmat(ycol,xrow,th,NyNx,dydx)
 triy=1-abs(ycol)/NyNx(1);
 trix=1-abs(xrow)/NyNx(2);
 
-% See Arthur's note for more general windows, use iff2/fft2 you need, see
+% See Arthur's note for more general windows, use IFF2/FFT2 you need, see
 % ~/POSTDOCS/ArthurGuillaumin/NewSimulations/NonParametricEstimation/Periodogram.m
 
 % Here is the distance grid
