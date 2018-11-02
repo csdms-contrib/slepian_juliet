@@ -28,7 +28,7 @@ function [k,dci,dcn,kx,ky]=knums(params,doit)
 %
 % kx,ky     The components of the wave vector
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/31/2018
+% Last modified by fjsimons-at-alum.mit.edu, 11/02/2018
 
 % Extract the variables explicitly from this structure
 NyNx=params.NyNx;
@@ -46,13 +46,13 @@ else
   % Proposed new dimensions
   bNyNx=blurs*NyNx;
 
-  % Protect against parity CHANGE, which messes with BLUROS Nyquist notions
-  pp=mod(NyNx,2)~=mod(bNyNx,2); 
-  bNyNx=bNyNx+pp;
-
-  if ~all(pp)==0
-    disp(sprintf('Blurred grid fixed to preserved parity of original'))
-  end
+  % Protect against parity CHANGE, which messes up BLURCHECK later
+  % on, thought that might be a red herring because of relative tolerance
+  % pp=mod(NyNx,2)~=mod(bNyNx,2); 
+  % bNyNx=bNyNx+pp
+  %  if ~all(pp)==0
+  %   disp(sprintf('Blurred grid fixed to preserved parity of original'))
+  % end
 
   % And then we run KNUM2 again to do the blurring later
   [k,kx,ky,~,dcn]=knum2(bNyNx,[(bNyNx(1)-1)*dydx(1) (bNyNx(2)-1)*dydx(2)]);
