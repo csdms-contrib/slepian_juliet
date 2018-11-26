@@ -1,15 +1,18 @@
 function [Sbar,k,Fejk]=bluros(S,params,xver)
 % [Sbar,k,Fejk]=BLUROS(S,params,xver)
 %
-% Spectral blurring with periodogram of a boxcar. If we're talking about a
-% matrix, there are three columns, and there can be an eigenvalue check.
-% This is the approximate, slower, convolutional way which requires
-% an integer "grid refinement" parameter. Later, will build in other types of windows.
+% Blurring of a spectral matrix with the periodogram of a spatial
+% windowing function (for now: the boxcar), in the approximate,
+% discretized convolutional manner. The wavenumber-dependent input is
+% given on a grid that was specified to be an integer refinement from
+% an original that remains the target. The result is obtained by
+% interpolation or subsampling to the original grid. This function is
+% designed to be called only by MATERNOSP.
 %
 % INPUT:
 %
 % S       The spectral matrix with its wavenumbers unwrapped, on a
-%         wavenumber grid that was refined from the original
+%         wavenumber grid that was REFINED from the original target
 %         For univariate spectra, it's a column vector. 
 %         For bivariate spectra, it's [S_XX(k(:)) SXY(k(:)) SYY(k(:))]
 % params  Parameters of this experiment, the ones that are needed are:
@@ -24,19 +27,18 @@ function [Sbar,k,Fejk]=bluros(S,params,xver)
 %
 % OUTPUT:
 %
-% Sbar    The blurred spectral matrix, interpolated to original requested
-%         dimension as identified by 'params' from the input
+% Sbar    The blurred spectral matrix, interpolated to the ORIGINAL requested
+%         dimension as identified by 'params' in the input
 % k       The wavenumber matrix (the norm of the wave vectors), unwrapped
 % Fejk    The kernel, for now, only the Fejer kernel
 %
 % SEE ALSO:
 %
-% SIMULOSL, BLUROSY, BLUROSY_DEMO
+% MATERNOSP, SIMULOSL, BLUROSY, BLUROSY_DEMO
 %
-% Maybe should formally increase it in those cases so as to never worry?
-%
-% Last modified by fjsimons-at-alum.mit.edu, 11/02/2018
+% Last modified by fjsimons-at-alum.mit.edu, 11/26/2018
 
+% If you tried running it as a stand-alone with the wrong parameters
 if params.blurs<0
   error('You should be running BLUROSY, not BLUROS!')
 end
@@ -44,42 +46,39 @@ end
 % Set defaults
 defval('xver',1)
 
-% Target dimensions, the original ones
+% Target dimensions, i.e. the ORIGINAL ones
 NyNx=params.NyNx;
 dydx=params.dydx;
-% The blurring refinement factor
+
+% The blurring REFINEMENT factor
 blurs=params.blurs;
 
-% The unblurred-property wavenumber grid
+% The unblurred-property ORIGINAL wavenumber grid
 [k,dci,~,kx,ky]=knums(params);
-% The blurred-property wavenumber grid
+% The blurred-property REFINED wavenumber grid
 [~,kzero,~,kx2,ky2]=knums(params,1);
+% Find out what you've actually been given, do not jump to
+% conclusions as KNUMS could introduce dimensional subtlety; at one
+% point, we played with parity preservation, since abandoned
+NyNx2=[length(ky2) length(kx2)];
 
 if xver==1
-  % Do the check, don't bother with dcn2 as that's done inside knum2
+  % Other checks are inside KNUM2 called from KNUMS called here
   diferm(k(dci(1),dci(2)))
+  % Is the zero-wavenumber indeed, well, zero?
   diferm(k(kzero))
 end
 
-% Find out what you've actually been given, remember S worked on KNUMS
-NyNx2=[length(ky2) length(kx2)];
-
-% This is the periodogram of the boxcar for the old grid 
-% interpolated to the new grid so we don't just hit the nodes
+% This is the periodogram of the boxcar, for the REFINED grid as
+% interpolated from the ORIGINAL grid (or we'd just hit the nodes).
 % See http://blinkdagger.com/matlab/matlab-fft-and-zero-padding/
-% Should do this once and save it. Now let's not forget that in our
-% formalism we force the fft/ifft to be unitary
-% If blurs were to be 1, we would get a single 1 in the center
+% In our subsequent formalism we force the fft/ifft pair to be unitary.
+% If blurs were to be 1, we would get a single 1 in the center.
 % Note that the kernel values are very different depending on even/odd dimensions
-% Note that we are not using the parameter blurs itself, but the
-% final dimensions, which could have been subject to the parity
-% preservation, and, in the past, necessitated an "effective"
-% blurring, which just got to be too cumbersome
 Fejk=fftshift(abs(fft2(repmat(1/sqrt(prod(NyNx))/sqrt(prod(NyNx2)),NyNx),NyNx2(1),NyNx2(2))).^2);
 
 if xver==1
-  % Make sure it is unitary and norm-preserving, that's why we need
-  % the override
+  % Make sure the kernel is unitary and norm-preserving
   difer(sum(Fejk(:))-1,[],[],NaN)
   % Check Hermiticity of the Fejer kernel, this NEVER fails
   hermcheck(Fejk)
@@ -94,23 +93,21 @@ if [ky(end)-ky2(end)]>0; ky2(end)=ky(end); end
 if [kx(1)-kx2(1)]<0; kx2(1)=kx(1); end
 if [ky(1)-ky2(1)]<0; ky2(1)=ky(1); end
 
-% Fill to original dimensions
+% Prefill to original dimensions
 Sbar=nan(prod(NyNx),size(S,2));
 
-% For each of the variables and their co-variables1
+% Remember that if S is a matrix, its three column vectors are
+% elements of their joint spectral matrix, SXX(:), SXY(:), SYY(:)
 for in=1:size(S,2)
   % Perform the convolution, isolate the center part where the
   % center is to be understood as the location of the
   % zero-wavenumber, see KNUMS and KNUM2
   HhC=conv2(Fejk,reshape(S(:,in),NyNx2),'same');
 
-  % The result, the convolution of two positive definite kernels,
-  % cannot be negative! Happens under 'cubic' or 'spline'...
-
   % You just need to supply the correct zero-wavenumber value,
   % while it gets progressively better for larger patches and
-  % higher refinement factors, it's just always different in the
-  % exact and the approximate method. We need to do this outside,
+  % higher refinement factors, it remains different in the
+  % exact and the approximate methods. We need to do this outside,
   % in MATERNOSP, since that's the only place we have access to the
   % Matern parameters that tell us EXACTLY what is going on.
 
@@ -121,10 +118,12 @@ for in=1:size(S,2)
   
   % disp(sprintf('\nINTERPOLATE:')) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   tic
+  disp(sprintf('Interpolating %ix%i to %ix%i',length(ky2),length(kx2),length(kx),length(ky)))
+   % Interpolate, maybe later consider using griddedInterpolant
    HhI=interp2(kx2(:)',ky2(:),HhC,...
-               kx(:)',ky(:),'linear');
-   % Later, may/should consider griddedInterpolant, etc. 
-   % Check and/or protect for negatives
+               kx(:)' ,ky(:) ,'linear');
+    % The result, the convolution of two positive definite kernels,
+    % cannot be negative! Happens under 'cubic' or 'spline'...
    if any(HhI<0); error('Convolved variance kernel contains negatives'); end
   d=toc;
   
@@ -138,35 +137,43 @@ for in=1:size(S,2)
   sy=1+mod(NyNx2(1),2);
   if round(blurs)==blurs && ...
           [sum(abs(kx2(sx:blurs:end)-kx))+sum(abs(ky2(sy:blurs:end)-ky))]==0
-
     tic
      HhS=HhC(sx:blurs:end,sy:blurs:end);
     e=toc;
 
     if e<d
-      disp(sprintf('\nSUBSAMPLING BEATS INTERPOLATION by %i%%',round((1-e/d)*100)))
+      disp(sprintf('\nSUBSAMPLING FASTER THAN INTERPOLATION by %i%%',round((1-e/d)*100)))
     end
 
     % Check the difference
+    disp('Relative difference between interpolated and subsampled versions')
     difer([HhI-HhS]/norm(HhS))
 
     % Isn't subsampling always to be preferred over interpolation?
     Hh=HhS;
   end
 
-% Need to consider that we can subsample even more, 
+  % Need to consider that we can subsample in even more cases
 
-  % In the even case only
+  % In the even case only, we adjust for the bits that aren't
+  % already doubly present
   if ~mod(NyNx(1),2); Hh(1,:)=Hh(1,:)*2; end
   if ~mod(NyNx(2),2); Hh(:,1)=Hh(:,1)*2; end
   % Unwrap
   Sbar(:,in)=Hh(:);
+
   % Make sure the zero wavenumber gets the correct value, the zero-wavenumber
-  kzx=floor(NyNx2(2)/2)+1; kzy=floor(NyNx2(1)/2)+1;
-  kz2=[kzx-1]*NyNx2(1)+kzy;
-  % This is ALREADY WHAT IT IS!
-  %Sbar(kzero,in)=S(kz2,in)*Fejk(kzy,kzx); 
-  1/(1/sqrt(prod(NyNx))/sqrt(prod(NyNx2)))
+  if xver==1
+    % We need the indicial zero-wavenumber location for the REFINED grid
+    kzx2=floor(NyNx2(2)/2)+1; kzy2=floor(NyNx2(1)/2)+1;
+    % We need the running zero-wavenumber location for the REFINED grid
+    kz2=[kzx2-1]*NyNx2(1)+kzy2;
+    % I am not sure yet which one of these two things it should be 
+    disp('Checking center portion')
+    diferm(Sbar(kzero,in),S(kz2,in)*Fejk(kzy2,kzx2)); 
+    % Playing with this in order to find out as part of BLUROSY_DEMO
+    disp(sprintf('\nArea factor %g\n',1/(1/sqrt(prod(NyNx))/sqrt(prod(NyNx2)))))
+  end
 end
 
 if xver==1
@@ -182,7 +189,13 @@ if nargout>1
   k=k(:);
 end
 
-% Should use the Claerbout helix! Not so, says Sergey Fomel.
-% convmtx2 needs more memory
-% Actually, should look into FFTW. But also limit to halfplane.
 % disp(sprintf('BLUROS %i %i %i',blurs,NyNx2(1),NyNx2(2)));
+
+% FURTHER CONSIDERATIONS PRECEDING THE MOVE TO BLUROSY
+% Use the Claerbout helix? No gains, as once discussed with Sergey Fomel.
+% Use CONVMTX2? Might need more memory
+% User FFTW?
+% Save and load the window?
+% Allow for windows different from the boxcar? 
+% Limit to halfplane? Now that's effectively done by BLUROSY
+
