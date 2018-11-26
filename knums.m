@@ -2,7 +2,8 @@ function [k,dci,dcn,kx,ky]=knums(params,doit)
 % [kor,dci,dcn,kx,ky]=KNUMS(params)
 % [kblur,kzero,dcn,kx,ky]=KNUMS(params,1)
 % 
-% A partial-output interface to KNUM2 for the Olhede & Simons suite
+% Produces a grid of wavenumbers suitable for the spectral analysis
+% of spatial dataas part of the Olhede & Simons suite
 %
 % INPUT:
 %
@@ -28,7 +29,7 @@ function [k,dci,dcn,kx,ky]=knums(params,doit)
 %
 % kx,ky     The components of the wave vector
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/02/2018
+% Last modified by fjsimons-at-alum.mit.edu, 11/26/2018
 
 % Extract the variables explicitly from this structure
 NyNx=params.NyNx;
@@ -46,17 +47,25 @@ else
   % Proposed new dimensions
   bNyNx=blurs*NyNx;
 
-  % Protect against parity CHANGE, which messes up BLURCHECK later
-  % on, thought that might be a red herring because of relative tolerance
+  % Shouldn't we indeed be able to use ANY refinement grid?
+  % Should we protect against parity CHANGE? The original
+  % motivation was to avoid HERMCHECK errors, which, however, could
+  % be made to go away with higher-order interpolation, which,
+  % however, could lead to negatives in the convolved kernels. 
+  % Seems like we should, but doing it makes the errors behaved
+  % inconsistently for the even and odd cases, as gleaned from BLUROSY_CHECK.
+  % I can only infer the preference to emerge from CONV2 or
+  % INTERP2. So from now we avoid any additions or substitutions.
   % pp=mod(NyNx,2)~=mod(bNyNx,2); 
-  % bNyNx=bNyNx+pp
-  %  if ~all(pp)==0
-  %   disp(sprintf('Blurred grid fixed to preserved parity of original'))
+  % bNyNx=bNyNx+pp;
+  % if ~all(pp)==0
+  %  disp(sprintf('Blurred grid fixed to preserve parity of original'))
   % end
 
   % And then we run KNUM2 again to do the blurring later
   [k,kx,ky,~,dcn]=knum2(bNyNx,[(bNyNx(1)-1)*dydx(1) (bNyNx(2)-1)*dydx(2)]);
   % But then we still will want the RUNNING index of the zero in the
-  % UNBLURRED matrix without running this same function again
+  % UNBLURRED matrix without running this same function again, so
+  % produce that under the fake name that gets used on the inside only
   dci=sub2ind(NyNx,floor(NyNx(1)/2)+1,floor(NyNx(2)/2)+1);
 end
