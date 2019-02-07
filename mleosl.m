@@ -80,9 +80,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/25/2018
-
-% FJS NEED proper accounting for kiso
+% Last modified by fjsimons-at-alum.mit.edu, 06/26/2018
 
 if ~isstr(Hx)
   defval('algo','unc')
@@ -115,6 +113,7 @@ if ~isstr(Hx)
   defval('xver',0)
 
   % The parameters used in the simulation for demos, or upon which to base "thini"
+  % Check Vanmarcke 1st edition for suggestions on initial rho
   defval('aguess',[var(Hx) 2.0 sqrt(prod(dydx.*NyNx))/5]);
   % Scale the parameters by this factor; fix it unless "thini" is supplied
   defval('scl',10.^round(log10(abs(aguess))));
@@ -166,6 +165,7 @@ if ~isstr(Hx)
 
   % Always demean the data sets
   Hx(:,1)=Hx(:,1)-mean(Hx(:,1));
+  % FJS think about deplaning as well
 
   % Turn the observation vector to the spectral domain
   % Watch the 2pi in SIMULOSL
@@ -437,8 +437,7 @@ elseif strcmp(Hx,'demo1')
     % Form the maximum-likelihood estimate, pass on the params, use th0
     % as the basis for the perturbed initial values. Remember hes is scaled.
     t0=clock;
-    [thhat,covFHh,lpars,scl,thini,p,Hk,k]=...
-	mleosl(Hx,[],p,algo,[],th0);
+    [thhat,covFHh,lpars,scl,thini,p,Hk,k]=mleosl(Hx,[],p,algo,[],th0);
     ts=etime(clock,t0);
 
     % Initialize the THZRO file... note that the bounds may change
@@ -453,19 +452,15 @@ elseif strcmp(Hx,'demo1')
 
     % IF NUMBER OF FUNCTION ITERATIONS IS TOO LOW DEFINITELY BAD
     itmin=0;
-    % A measure of first-order optimality (which in this
-    % unconstrained case is the infinity norm of the gradient at the
-    % solution)  
-    % FJS to update what it means to be good - should be in function of
-    % the data size as more precision will be needed to navigate things
-    % with smaller variance! At any rate, you want this not too low.
+    % A measure of first-order optimality (which in the unconstrained case is
+    % the infinity norm of the gradient at the solution). Maybe what it
+    % means to be 'good' should be in function of the data size as more
+    % precision will be needed to navigate things with smaller variance! At
+    % any rate, you want this not too low.
     optmin=Inf;
     % Maybe just print it and decide later? No longer e>0 as a condition.
     % e in many times is 0 even though the solution was clearly found, in
     % other words, this condition IS a way of stopping with the solution
-    % Remember that the correlation coefficient can be negative or zero!
-    % The HS is not always real, might be all the way from the BLUROS?
-    % Because if there are NaNs or not estimate it won't work
     try
       % Maybe I'm too restrictive in throwing these out? Maybe the
       % Hessian can be slightly imaginary and I could still find thhat
@@ -480,16 +475,16 @@ elseif strcmp(Hx,'demo1')
 	% Reapply the scaling before writing it out
 	fprintf(fids(2),fmts{1},thhat.*scl);
 	fprintf(fids(3),fmts{1},thini.*scl);
-        % We don't compare the second and third outputs of LOGLIOSL
-        % since these are analytical, poorly approximately blurred,
-        % derivates, and we be writing the numerical versions 
+        % We don't compare the second and third outputs of LOGLIOSL since these are
+        % analytical, poorly approximately blurred, derivatives, and we be
+        % writing the numerical versions. Be aware that covFHh{3} is the
+        % current favorite covariance estimate on the parameters!
 	% Print optimization results and diagnostics to different file 
-        % Be aware that covFHh{3} is the best covariance estimate!
 	oswdiag(fids(4),fmts,lpars,thhat,thini,scl,ts,var(Hx),covFHh{3})
       end
     end
   end
-  % If there was any success at all, finalize the THZERO file 
+  % If there was any success at all, finalize the THZRO file 
   % If for some reason this didn't end well, do an N==0 run.
 
   % Initialize if all you want is to close the file
