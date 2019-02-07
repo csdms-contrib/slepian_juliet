@@ -55,8 +55,9 @@ else
   % Seems like we should, but doing it makes the errors behaved
   % inconsistently for the even and odd cases, as gleaned from BLUROSY_CHECK.
   % I can only infer the preference to emerge from CONV2 or
-  % INTERP2, possibly symmetry is to  be preferred. So from now we
-  % avoid any additions or substitutions.
+  % INTERP2, possibly symmetry is to  be preferred. Maybe it's
+  % because linear can't deal with the period symmetry of the grid.
+  % So from now we avoid any additions or substitutions.
   % pp=mod(NyNx,2)~=mod(bNyNx,2); 
   % bNyNx=bNyNx+pp;
   % if ~all(pp)==0

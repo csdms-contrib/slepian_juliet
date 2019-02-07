@@ -132,9 +132,10 @@ for in=1:size(S,2)
 
   % disp(sprintf('\nSUBSAMPLE:')) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  %  There may be a simpler way in which the new grid is a superset of the old
-  sx=1+mod(NyNx2(2),2);
-  sy=1+mod(NyNx2(1),2);
+  % There may be a simpler way in which the new grid is a superset of the old
+  sx=1+mod(NyNx(2),2);
+  sy=1+mod(NyNx(1),2);
+
   if round(blurs)==blurs && ...
           [sum(abs(kx2(sx:blurs:end)-kx))+sum(abs(ky2(sy:blurs:end)-ky))]==0
     tic
@@ -155,10 +156,18 @@ for in=1:size(S,2)
 
   % Need to consider that we can subsample in even more cases
 
-  % In the even case only, we adjust for the bits that aren't
-  % already doubly present
-  if ~mod(NyNx(1),2); Hh(1,:)=Hh(1,:)*2; end
-  if ~mod(NyNx(2),2); Hh(:,1)=Hh(:,1)*2; end
+  % We adjust for the bits that aren't already doubly present, 
+  % watching where they are coming from, i.e. at the Nyquist
+  if ~mod(NyNx(1),2)
+    Hh(1,:)=Hh(1,:)*2;
+  else
+       Hh(end,:)=Hh(end,:)*2; 
+  end
+  if ~mod(NyNx(2),2)
+    Hh(:,1)=Hh(:,1)*2; 
+  else
+     Hh(:,end)=Hh(:,end)*2; 
+  end
   % Unwrap
   Sbar(:,in)=Hh(:);
 
@@ -168,9 +177,9 @@ for in=1:size(S,2)
     kzx2=floor(NyNx2(2)/2)+1; kzy2=floor(NyNx2(1)/2)+1;
     % We need the running zero-wavenumber location for the REFINED grid
     kz2=[kzx2-1]*NyNx2(1)+kzy2;
-    % I am not sure yet which one of these two things it should be 
-    disp('Checking center portion')
-    diferm(Sbar(kzero,in),S(kz2,in)*Fejk(kzy2,kzx2)); 
+    % I am not sure yet which one of these two things it should be yet
+    %    disp('Checking center portion')
+    %diferm(Sbar(kzero,in),S(kz2,in)*Fejk(kzy2,kzx2)); 
     % Playing with this in order to find out as part of BLUROSY_DEMO
     disp(sprintf('\nArea factor %g\n',1/(1/sqrt(prod(NyNx))/sqrt(prod(NyNx2)))))
   end
