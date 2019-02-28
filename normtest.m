@@ -27,8 +27,7 @@ function [pf,pv,pr,alfa]=normtest(stat,mn,vr,alfa)
 % 
 % EXAMPLE:
 %
-% mu=randn; vr=rand; al=randi(100)/100; mn=randi(1e3);
-% [a,b,c]=normtest(randn(mn,1),0,1,al);
+% mu=randn; vr=rand; al=randi(100)/100; mn=randi(1e3); [a,b,c]=normtest(mu+sqrt(vr)*randn(mn,1),mu,vr,al);
 %
 % SEE ALSO: 
 %
@@ -53,6 +52,6 @@ pr=sum(pf)/length(pf)*100;
 
 % Provide an uplifting message
 if length(stat)>1
-  disp(sprintf('\n%s %i%% rejected at the %i%% confidence level',...
-	       upper(mfilename),round(pr),round(alfa*100))) 
+  disp(sprintf('\n%s %i : %i%% at the %i%% confidence level rejected for m %8.3f v %8.3f',...
+	       upper(mfilename),length(stat),round(pr),round(alfa*100),mn,vr)) 
 end
