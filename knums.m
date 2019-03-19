@@ -3,7 +3,7 @@ function [k,dci,dcn,kx,ky]=knums(params,doit)
 % [kblur,kzero,dcn,kx,ky]=KNUMS(params,1)
 % 
 % Produces a grid of wavenumbers suitable for the spectral analysis
-% of spatial dataas part of the Olhede & Simons suite
+% of spatial data as part of the Olhede & Simons suite
 %
 % INPUT:
 %

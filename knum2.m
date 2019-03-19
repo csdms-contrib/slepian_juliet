@@ -27,6 +27,10 @@ function [K,kx,ky,dci,dcn,dx,dy]=knum2(mn,pl)
 % IFFT/FFTSHIFT expect it. Note that this is not for geographical data!
 % The negative x and y frequencies are in the TOP LEFT corner -> FLIPUD.
 %
+% SEE ALSO:
+%
+% KNUMS, which is called by this function to take into account blurring
+%
 % EXAMPLE:
 %
 % N=60+round(rand); h=peaks(N); H=fftshift(fft2(h)); F=randn*10
