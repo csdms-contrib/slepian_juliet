@@ -2,7 +2,7 @@ function varargout=randgpn(k,dc,dcn,xver)
 % [Zk,Zx]=randgpn(k,dc,dcn,xver)
 % 
 % Returns a set of (complex proper) normal variables suitable for
-% IFFT, most notably this works for even and/or odd sized rectangles.
+% IFFT2, most notably this works for even and/or odd sized rectangles.
 %
 % INPUT:
 %
@@ -12,6 +12,7 @@ function varargout=randgpn(k,dc,dcn,xver)
 %         --> Note that these three are straight out of KNUM2, and that
 %         the actual wavenumbers are not used, only size(k) is needed. 
 % xver    1 Checks the Hermiticity of the result by inverse transformation
+%         0 No such check is being conducted 
 %
 % OUTPUT:
 %
@@ -30,9 +31,9 @@ function varargout=randgpn(k,dc,dcn,xver)
 % imagef([0 0],size(Zf),Zf); axis image ;
 % title(sprintf('exp(%3.3gk)',-F)); colorbar('hor')
 %
-% SEE ALSO: KNUM2
+% SEE ALSO: KNUM2, KNUM1
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/12/2013
+% Last modified by fjsimons-at-alum.mit.edu, 03/18/2019
 
 defval('xver',0)
 
@@ -89,6 +90,8 @@ if nargout>1 || xver==1
   Zx=ifft2(ifftshift(Zk));
   % You could now check that the IFFT2 is real (don't forget the "2"!!)
   if ~isreal(Zx) ; error(sprintf('Not Hermitian by %5g',mean(imag(Zx(:))))); end
+  % You can perform this check more directly as well
+  hermcheck(Zk)
 else
   Zx=NaN;
 end
