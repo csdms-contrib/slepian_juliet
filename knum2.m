@@ -33,7 +33,7 @@ function [K,kx,ky,dci,dcn,dx,dy]=knum2(mn,pl)
 %
 % EXAMPLE:
 %
-% N=60+round(rand); h=peaks(N); H=fftshift(fft2(h)); F=randn*10
+% N=60+round(rand); h=peaks(N); H=fftshift(fft2(h)); F=randn*10;
 % hf=ifft2(ifftshift(H.*exp(-F*knum2([N N],[100 100])))); imagef(hf)
 % 
 % EXAMPLE:
@@ -57,20 +57,23 @@ function [K,kx,ky,dci,dcn,dx,dy]=knum2(mn,pl)
 % fx=-fliplr(indeks(kx,selekt)/2/pi);
 % difer(fx(:)-fax(:))
 %
-% SEE ALSO: FFTAXIS, FFTAXIS1D, KNUMS, RANDGPN, BRACEWELL
+% SEE ALSO: FFTAXIS, FFTAXIS1D, KNUMS, RANDGPN, BRACEWELL, KNUM1
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/23/2018
+% Last modified by fjsimons-at-alum.mit.edu, 03/19/2019
 
 % Supply defaults for testing
 defval('mn',[32 32]+round(rand))
 defval('pl',mn-1)
 
+% Matrix size
 M=mn(1);
 N=mn(2);
 
+% Physical dimension
 ly=pl(1);
 lx=pl(2);
 
+% Sampling interval
 dx=lx/(N-1);
 dy=ly/(M-1);
 
