@@ -49,6 +49,13 @@ function [K,kx,ky,dci,dcn,dx,dy]=knum2(mn,pl)
 % [xfaks,yfaks,fnx,fny,xsint,ysint]=fftaxis(size(H),size(Hk),size(H)-1);
 % difer(kx/2/pi+fliplr(xfaks))
 % difer(ky/2/pi+fliplr(yfaks))
+% 
+% The equivalence of FFTAXIS1D and KNUM2 is explicit:
+% N=256;
+% [fax,selekt]=fftaxis1D(rand(N,1),N,N-1);
+% [K,kx]=knum2([2 N],[2 N]-1);
+% fx=-fliplr(indeks(kx,selekt)/2/pi);
+% difer(fx(:)-fax(:))
 %
 % SEE ALSO: FFTAXIS, FFTAXIS1D, KNUMS, RANDGPN, BRACEWELL
 %
