@@ -45,18 +45,18 @@ function [K,kx,ky,dci,dcn,dx,dy]=knum2(mn,pl)
 %% How is Parseval's theorem satisfied?
 % difer(H(:)'*H(:)-Hk(:)'*Hk(:)/prod(size(Hk)),8)
 %
-%% This is only subtly different from FFTAXIS, which is becoming obsolete:
-% [xfaks,yfaks,fnx,fny,xsint,ysint]=fftaxis(size(H),size(Hk),size(H)-1);
-% difer(kx/2/pi+fliplr(xfaks))
-% difer(ky/2/pi+fliplr(yfaks))
-% 
-% The equivalence of FFTAXIS1D and KNUM2 is explicit:
+%% The equivalence of FFTAXIS1D and KNUM2 is explicit:
 % N=256;
 % [fax,selekt]=fftaxis1D(rand(N,1),N,N-1);
 % [K,kx]=knum2([2 N],[2 N]-1);
 % fx=-fliplr(indeks(kx,selekt)/2/pi);
 % difer(fx(:)-fax(:))
 %
+%% This is only subtly different from FFTAXIS, which is becoming obsolete:
+% [xfaks,yfaks,fnx,fny,xsint,ysint]=fftaxis(size(H),size(Hk),size(H)-1);
+% difer(kx/2/pi+fliplr(xfaks))
+% difer(ky/2/pi+fliplr(yfaks))
+% 
 % SEE ALSO: FFTAXIS, FFTAXIS1D, KNUMS, RANDGPN, BRACEWELL, KNUM1
 %
 % Last modified by fjsimons-at-alum.mit.edu, 03/19/2019
@@ -77,9 +77,11 @@ lx=pl(2);
 dx=lx/(N-1);
 dy=ly/(M-1);
 
+% Wave vector axes
 kx=2*pi*linspace(-floor(N/2),floor((N-1)/2),N)/N/dx;
 ky=2*pi*linspace(-floor(M/2),floor((M-1)/2),M)/M/dy;
 
+% Wavenumbers
 [KX,KY]=meshgrid(kx(:),ky(:));
 K=sqrt(KX.^2+KY.^2);
 
@@ -98,6 +100,3 @@ for ind=isev
   difer(K(dcn(ind,1),dcn(ind,2))/2/pi*pl(ind)/(mn(ind)-1)-1/2,[],[],NaN)
 end
 dcn=dcn(isev,:);
-
-% There may be others that are close... by chance, let's ignore them
-%[i,j]=find(abs(abs(k/2/pi/what*what)-1/2)<eps)
