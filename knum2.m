@@ -1,16 +1,16 @@
 function [K,kx,ky,dci,dcn,dx,dy]=knum2(mn,pl)
 % [K,kx,ky,dci,dcn,dx,dy]=knum2([M N],[lY lX])
 %
-% Wavenumber axis for a 2D Fourier transform, suitable after FFTSHIFT and
-% for manipulation ensuring real-field Hermitian symmetry under IFFT. The
-% wavenumbers increase symmetrically away from zero, but the Nyquist
-% frequency is only reached on the top and/or left parts of the dimensions
-% that have an even number of samples.
+% Angular wavenumber (not frequency!) axis for a 2D Fourier transform,
+% suitable after FFTSHIFT and for manipulation ensuring real-field Hermitian
+% symmetry under IFFT. The wavenumbers increase symmetrically away from
+% zero, but the Nyquist frequency is only reached on the top and/or left
+% parts of the dimensions that have an even number of samples.
 %
 % INPUT:
 % 
 % M,N       Sample size of FFT matrix, equal to size of original matrix 
-%           [M   N] [rows columns]. The need to be larger than one, obviously.
+%           [M  N] [rows columns]. They need to be larger than one, obviously.
 % lY,lX     Physical size of original matrix
 %           [lY lX] [down across]
 %
@@ -39,11 +39,16 @@ function [K,kx,ky,dci,dcn,dx,dy]=knum2(mn,pl)
 % EXAMPLE:
 %
 % H=peaks(200); Hk=fftshift(fft2(H));
-% [K,kx,ky,dci,dcn,dx,dy]=knum2(size(Hk),[1000 1000]);
+% [K,kx,ky,dci,dcn,dx,dy]=knum2(size(Hk),size(H)-1);
 %% Where and what is the "DC" component?
 % difer(sum(H(:))-Hk(dci(1),dci(2)))
 %% How is Parseval's theorem satisfied?
 % difer(H(:)'*H(:)-Hk(:)'*Hk(:)/prod(size(Hk)),8)
+%
+%% This is only subtly different from FFTAXIS, which is becoming obsolete:
+% [xfaks,yfaks,fnx,fny,xsint,ysint]=fftaxis(size(H),size(Hk),size(H)-1);
+% difer(kx/2/pi+fliplr(xfaks))
+% difer(ky/2/pi+fliplr(yfaks))
 %
 % SEE ALSO: FFTAXIS, FFTAXIS1D, KNUMS, RANDGPN, BRACEWELL
 %
@@ -86,7 +91,3 @@ dcn=dcn(isev,:);
 
 % There may be others that are close... by chance, let's ignore them
 %[i,j]=find(abs(abs(k/2/pi/what*what)-1/2)<eps)
-
-% This is only subtly different from FFTAXIS and can be obtained from
-% it. Just fliplr the kx and ky axes from fftaxis. See notes. (Not yet in
-% Notebook.)
