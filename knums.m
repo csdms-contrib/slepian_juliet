@@ -15,7 +15,7 @@ function [k,dci,dcn,kx,ky]=knums(params,doit)
 % doit     1 Actually USE the params.blurs value to interpolate the k-grid 
 %          (Anything goes for this parameter, only the presence counts)
 % 
-% OUTPUT (either THREE, or TWO, depending on the input, in addition to kx,ky):
+% OUTPUT (either THREE, or TWO, depending on the input, IN ADDITION to kx,ky):
 %
 % kor       The wavenumber matrix (the norm of the wave vectors)
 % dci       The (m,n) indices to the DC component [at floor(dim/2)+1]
@@ -29,7 +29,11 @@ function [k,dci,dcn,kx,ky]=knums(params,doit)
 %
 % kx,ky     The components of the wave vector
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/26/2018
+% SEE ALSO:
+%
+% KNUM2, which is called by this function
+%
+% Last modified by fjsimons-at-alum.mit.edu, 03/18/2019
 
 % Extract the variables explicitly from this structure
 NyNx=params.NyNx;
