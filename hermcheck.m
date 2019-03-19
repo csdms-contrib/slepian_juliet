@@ -9,7 +9,7 @@ function hermcheck(A)
 %
 % SEE ALSO:
 %
-% KNUM2
+% KNUM2, RANDGPN
 %
 % Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
 
