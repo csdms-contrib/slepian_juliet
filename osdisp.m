@@ -11,16 +11,16 @@ function varargout=osdisp(th0,thhats,nl,avhs,F0,covavhs)
 % th0        True parameter vector
 % thhats     Estimated parameter vector, OR
 %  params    A structure with the fixed parameter settings, AND
-% nl         Number of experiments over which the average Hessian is reported
+%  nl        Number of experiments over which the average Hessian is reported
 % avhs       Median numerical Hessian matrix at the estimates (after TRILOS)
 % F0         Fisher matrix evaluated at at the truth (after TRILOS)
-% covavhs    The covariance based on the average median Hessian (full form)
+% covavhs    The covariance based on the median Hessian (full form)
 %
 % OUTPUT:
 %
 % The strings used 
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/25/2018
+% Last modified by fjsimons-at-alum.mit.edu, 08/06/2021
 
 % The necessary strings for formatting
 str0='%18s';
