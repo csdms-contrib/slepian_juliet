@@ -16,9 +16,10 @@ function varargout=simulosl(th0,params,xver,varargin)
 %          blurs 0 Don't blur likelihood using the Fejer window
 %                N Blur likelihood using the Fejer window [default: N=2]
 %               -1 Blur likelihood using the exact BLUROSY procedure
+%              Inf Perform simulation using invariant embedding
 %          kiso  wavenumber beyond which we are not considering the spectrum
 %          quart 1 quadruple, then QUARTER
-%                0 size as is, watch for periodic correlation behavior
+%                0 size as is, watch for periodic correlation behavior!
 % xver     1 for extra verification, 0 if not needed
 % ... Only for 'demo4', which is used by EGGERS4
 % th0      ... as above
@@ -67,7 +68,9 @@ function varargout=simulosl(th0,params,xver,varargin)
 % MLEOSL, LOADING, SIMULOS, EGGERS1, EGGERS2, EGGERS4, etc
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
-% Last modified by fjsimons-at-alum.mit.edu, 06/13/2018
+% Last modified by fjsimons-at-alum.mit.edu, 08/10/2021
+
+% Make a demo7 with Baig's example
 
 % Here is the true parameter vector and the only variable that gets used 
 defval('th0',[1e6 2.5 2e4]);
@@ -77,7 +80,7 @@ if ~isstr(th0)
   % Supply the needed parameters, keep the givens, extract to variables
   fields={               'dydx','NyNx','blurs','kiso','quart'};
 
- defstruct('params',fields,...
+  defstruct('params',fields,...
 	    {                      [10 10]*1e3,[64 64],-1,NaN,0});
   struct2var(params)
 
@@ -102,50 +105,65 @@ if ~isstr(th0)
   % This should make sense as the spacing in wavenumber domain
   dkxdky=2*pi./NyNx./dydx;
 
-  % Now construct the whole-spectral matrix
-  Z1=randgpn(k,dci,dcn);
-  % This cramps the style. But still. Should I put in a zero at dci? 
-  % disp(sprintf('Z1: mean %+6.3f ; stdev %6.3f',...
-  %    mean(Z1(:)),std(Z1(:))))
-
-  % We need the (blurred) power spectrum
-  Sb=maternosp(th0,params,xver);
-  
-  % Should make sure that this is real! Why wouldn't it be?
-  Lb=realize(sqrt(Sb));
-
-  % Blurred or unblurred, go on
-
-  % And put it all together, unwrapped over k and over x
-  Hk=Lb.*Z1(:);
-
-  % Zero out the corners if so asked
-  if any(~isnan(params.kiso))
-    disp('SIMULOSL: kiso comes into play!')
-    Hk(k>params.kiso)=0;
-  end
-
-  % And go to the space domain - unitary scaled transform
-  % Watch the 2pi in MLEOSL
-  Hx=(2*pi)*tospace(Hk,params);
-  if xver==1
-    % Check Hermiticity before transformation, absolute tolerance
-    hermcheck(reshape(Hk,NyNx))
-    % Check unitarity of the transform; relative tolerance
-    diferm(Hk-tospec(Hx,params)/(2*pi),[],9-round(log10(mean(abs(Hk)))));
-  end
-  
-  % Big it down
-  if quart==1
-    Hx=quarter(reshape(Hx,NyNx));
+  % Bypass this procedure altogether and go for circulant embedding
+  if ~isinf(params.blurs)
+    % Now construct the whole-spectral matrix
+    Z1=randgpn(k,dci,dcn);
+    % This cramps the style. But still. Should I put in a zero at dci? 
+    % disp(sprintf('Z1: mean %+6.3f ; stdev %6.3f',...
+    %    mean(Z1(:)),std(Z1(:))))
+    
+    % We need the (blurred) power spectrum
+    Sb=maternosp(th0,params,xver);
+    
+    % Should make sure that this is real! Why wouldn't it be?
+    Lb=realize(sqrt(Sb));
+    
+    % Blurred or unblurred, go on
+    
+    % And put it all together, unwrapped over k and over x
+    Hk=Lb.*Z1(:);
+    
+    % Zero out the corners if so asked
+    if any(~isnan(params.kiso))
+      % disp('SIMULOSL: kiso comes into play!')
+      Hk(k>params.kiso)=0;
+    end
+    
+    % And go to the space domain - unitary scaled transform
+    % Watch the 2pi in MLEOSL
+    Hx=(2*pi)*tospace(Hk,params);
+    if xver==1
+      % Check Hermiticity before transformation, absolute tolerance
+      hermcheck(reshape(Hk,NyNx))
+      % Check unitarity of the transform; relative tolerance
+      diferm(Hk-tospec(Hx,params)/(2*pi),[],9-round(log10(mean(abs(Hk)))));
+    end
+    
+    % Big it down
+    if quart==1
+      Hx=quarter(reshape(Hx,NyNx));
+      Hx=Hx(:);
+      % Undo what was done above
+      params.NyNx=NyNx/2;
+      struct2var(params)
+      [k,dci,dcn]=knums(params);
+      % Now do not forget that Hk, Sb, Lb etc are still on the doubled grid
+      % This may have implications later on, that we choose to ignore now,
+      % an example is if some of this output were to be passed onto LKOSL
+    end
+  else
+    % Work by circulant embedding
+    [Hk,Sb,Lb]=deal(NaN);
+    % Make the Matern covariance object as required
+    Cmn=@(h) maternosy(sqrt([h(1)*params.dydx(1)]^2+[h(2)*params.dydx(2)]^2),th0);
+    % Double up? 
+    fax=2;
+    params.NyNx=params.NyNx*fax;
+    Hx=sgp(params,Cmn);
+    params.NyNx=params.NyNx/fax;
+    Hx=Hx(1:params.NyNx(1),1:params.NyNx(2));
     Hx=Hx(:);
-    % Undo what was done above
-    params.NyNx=NyNx/2;
-    struct2var(params)
-    [k,dci,dcn]=knums(params);
-    % Now do not forget that Hk, Sb, Lb etc are still on the doubled grid
-    % This may have implications later on, that we choose to ignore now,
-    % an example is if some of this output were to be passed onto LKOSL
   end
 
   % Return the output if requested
@@ -199,7 +217,14 @@ elseif strcmp(th0,'demo2')
   s2=0.001;
   nu=0.5;
   rho=30000;
-  z2=15000;
+  
+  % Baig's example
+  th0(2)=1/2
+  th0(3)=40000
+  p.dydx=[5000 5000]
+  p.NyNx=[64 64]
+  [Hx,th0,p]=simulosl(th0,p);
+  
   % Perform the simulation... not complete
   [Hx,   th0,k,Hk,   params]=simulosl;
 elseif strcmp(th0,'demo3')
@@ -287,7 +312,7 @@ elseif strcmp(th0,'demo4')
   fnams=fullfile(getenv('IFILES'),'HASHES',sprintf('%s_%s.mat','EGGERS4',fname));
   % Might need cleanup if you change your opinion on what the hash should contain
   % system(sprintf('mv %s %s',fnams1,fnams2))
-  
+
   if ~exist(fnams,'file') 
     % Values and statistics that will be collected and kept
     [h,s,n,r,b,hm,hv,sm,nm,rm,sv,nv,rv,h05,h95,s05,s95,n05,n95,r05,r95,s50,n50,r50,nn]=...
@@ -622,7 +647,7 @@ elseif strcmp(th0,'demo5')
 
   % Simulate
   [Hx,th0,p]=simulosl(th0,p);
-  
+
   % How about some dorky and really terrible spatial-covariance estimation?
   ex=[0:p.NyNx(2)-1]*p.dydx(2);
   wy=[0:p.NyNx(1)-1]*p.dydx(1);
