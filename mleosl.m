@@ -80,7 +80,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/26/2018
+% Last modified by fjsimons-at-alum.mit.edu, 08/12/2021
 
 if ~isstr(Hx)
   defval('algo','unc')
@@ -94,7 +94,7 @@ if ~isstr(Hx)
   % Supply the needed parameters, keep the givens, extract to variables
   fields={               'dydx','NyNx','blurs','kiso','quart'};
   defstruct('params',fields,...
-	    {                      [20 20]*1e3,sqrt(length(Hx))*[1 1],2,NaN,0});
+	    {                      [20 20]*1e3,sqrt(length(Hx))*[1 1],-1,NaN,0});
   struct2var(params)
 
   % These bounds are physically motivated...
@@ -121,6 +121,7 @@ if ~isstr(Hx)
   % Unless you supply an initial value, construct one from "aguess" by perturbation
   nperturb=0.25;
   % So not all the initialization points are the same!!
+  
   defval('thini',abs((1+nperturb*randn(size(aguess))).*aguess))
   % If you brought in your own initial guess, need an appropriate new scale
   if ~isempty(inputname(2)) || any(aguess~=thini)
@@ -166,7 +167,7 @@ if ~isstr(Hx)
   % Always demean the data sets
   Hx(:,1)=Hx(:,1)-mean(Hx(:,1));
   % FJS think about deplaning as well
-
+  
   % Turn the observation vector to the spectral domain
   % Watch the 2pi in SIMULOSL
   Hk(:,1)=tospec(Tx(:).*Hx(:,1),params)/(2*pi);
@@ -194,7 +195,7 @@ if ~isstr(Hx)
   if xver==1 && blurs>-1 && blurs<2 
     % Using the analytical gradient in the optimization is not generally a good
     % idea but if the likelihoods aren't blurred, you can set this option to
-    % 'on' and then let Matlab verify that the numerical calculations match
+    % 'on' and then let MATLAB verify that the numerical calculations match
     % the analytics. According to the manual, "solvers check the match at a
     % point that is a small random perturbation of the initial point". My
     % own "disp" output (further below) provides comparisons at the estimate
@@ -292,10 +293,12 @@ if ~isstr(Hx)
   df=length(k(~~k))/2; 
   matscl=[scl(:)*scl(:)'];
 
+  % Watch out for singularity or scaling warnings, they are prone to pop up
+  
   % Covariance from FMINUNC/FMINCON's numerical scaled Hessian NEAR estimate
   covh=inv(hes./matscl)/df;
   
-  if xver==1 & verLessThan('matlab','R2018a')
+  if xver==1 & verLessThan('matlab','8.4.0')
     % Try variable-precision arithmetic?
     vh=sym('vh',[np np]);
     for index=1:prod(size(vh))
@@ -505,7 +508,7 @@ elseif strcmp(Hx,'demo1')
     % Now compute the Fisher and Fisher-derived covariance at the truth
     [F0,covF0]=fishiosl(k,th0);
     matscl=[sclth0(:)*sclth0(:)'];
-    
+
     % Of course when we don't have the truth we'll build the covariance
     % from the single estimate that we have just obtained. This
     % covariance would then be the only thing we'd have to save.
