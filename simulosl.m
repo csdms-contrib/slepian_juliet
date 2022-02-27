@@ -68,7 +68,7 @@ function varargout=simulosl(th0,params,xver,varargin)
 % MLEOSL, LOADING, SIMULOS, EGGERS1, EGGERS2, EGGERS4, etc
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
-% Last modified by fjsimons-at-alum.mit.edu, 08/10/2021
+% Last modified by fjsimons-at-alum.mit.edu, 02/27/2022
 
 % Make a demo7 with Baig's example
 
@@ -79,7 +79,6 @@ defval('th0',[1e6 2.5 2e4]);
 if ~isstr(th0)
   % Supply the needed parameters, keep the givens, extract to variables
   fields={               'dydx','NyNx','blurs','kiso','quart'};
-
   defstruct('params',fields,...
 	    {                      [10 10]*1e3,[64 64],-1,NaN,0});
   struct2var(params)
@@ -154,16 +153,20 @@ if ~isstr(th0)
     end
   else
     % Work by circulant embedding
-    [Hk,Sb,Lb]=deal(NaN);
     % Make the Matern covariance object as required
     Cmn=@(h) maternosy(sqrt([h(1)*params.dydx(1)]^2+[h(2)*params.dydx(2)]^2),th0);
     % Double up? 
-    fax=2;
+    fax=3
     params.NyNx=params.NyNx*fax;
     Hx=sgp(params,Cmn);
     params.NyNx=params.NyNx/fax;
     Hx=Hx(1:params.NyNx(1),1:params.NyNx(2));
+    % Spatial-domain result
     Hx=Hx(:);
+    % Spectral-domain result
+    Hk=tospec(Hx,params)/(2*pi);
+    % I suppose we could get an instance from Hk, if not an average
+    [Sb,Lb]=deal(NaN);
   end
 
   % Return the output if requested
@@ -173,7 +176,7 @@ if ~isstr(th0)
   varargout=varns(1:nargout);
 elseif strcmp(th0,'demo1')
   % Pulls out the demo name
-  svnm=th0
+  svnm=th0;
   % Does the simulation straight from this very own filename, all defaults
   [Hx,   th0,p,k,Hk   ]=feval(mfilename);
   struct2var(p)
@@ -195,19 +198,21 @@ elseif strcmp(th0,'demo1')
 	 'xlim',thex([1 end])+[-1 1]/2,...
 	 'ytick',they,...
 	 'xtick',thex,...
-	 'ytickl',-spunkm(1)/2+(they-1)*dydx(1)/1e3,...
-	 'xtickl',-spunkm(2)/2+(thex-1)*dydx(2)/1e3)
+	 'yticklabel',-spunkm(1)/2+(they-1)*dydx(1)/1e3,...
+	 'xticklabel',-spunkm(2)/2+(thex-1)*dydx(2)/1e3)
   longticks([ah cb])
 
   % Plot the parameters here
   axes(ah(2))
-  axis([-1 1 -1 1])
-  nolabels(ah(2)); noticks(ah(2)); box on; axis image
-  
   xof=-0.75;
   tx(1)=text(xof, 0.00,sprintf('%s = %12.3g','\sigma^2',th0(end-2)));
   tx(2)=text(xof,-0.25,sprintf('%s = %12.3g','\nu',     th0(end-1)));
   tx(3)=text(xof,-0.50,sprintf('%s = %12.3g','\rho',    th0(end)));
+  % Add simulation method
+  tx(4)=text(xof, 0.30,sprintf('%s = %12.3g','blurs',p.blurs));
+  % AXIS IMAGE behaved differently under R2014 and R2016
+  nolabels(ah(2)); noticks(ah(2)); box on; axis equal
+  axis([-1 1 -1 1])
 
   fig2print(gcf,'portrait')
   figdisp([],svnm,[],1,'pdf')
@@ -219,18 +224,13 @@ elseif strcmp(th0,'demo2')
   rho=30000;
   
   % Baig's example
-  th0(2)=1/2
-  th0(3)=40000
-  p.dydx=[5000 5000]
-  p.NyNx=[64 64]
-  [Hx,th0,p]=simulosl(th0,p);
-  
-  % Perform the simulation... not complete
-  [Hx,   th0,k,Hk,   params]=simulosl;
+  p.dydx=[5000 5000];
+  p.NyNx=[64 64];
+  [Hx,th0,p]=simulosl([1 1/2 40000],p);
 elseif strcmp(th0,'demo3')
   % Input some trial parameters
   % Cannot use QUARTERING without adjusting Hk
-  params.quart=1;
+  params.quart=0;
   % With a negative the data size can grow a lot
   params.blurs=-1;
   params.NyNx=randi(200,[1 2]);
@@ -247,7 +247,7 @@ elseif strcmp(th0,'demo3')
   end
 
   % Check out these two different things and think about them
-  Lk1=Lkosl(k,th0,params,Hk);
+  Lk1=lkosl(k,th0,params,Hk);
   axes(ah(1))
   imagesc(decibel(reshape(Lk1,params.NyNx)))
   axis image
@@ -264,7 +264,7 @@ elseif strcmp(th0,'demo3')
   % and Lk2 which should be nothing - and of course it is, watching (2pi)
   axes(ah(2))
   Hk2=tospec(Hx,params)/(2*pi);
-  Lk2=Lkosl(k,th0,params,Hk2); 
+  Lk2=lkosl(k,th0,params,Hk2); 
   imagesc(decibel(reshape(Lk2,params.NyNx)))
   axis image
   title(sprintf('The likelihood computed from Hx using %s','LKOSL'))
@@ -696,7 +696,7 @@ elseif strcmp(th0,'demo6')
 
   % Different, very labor-intensive tack to get to spatial covariance
   % Simulate N numbers of time
-  N=102;
+  N=100;
   [Hx,th0,p]=simulosl(th0,p);
   Hxx=deal(nan(N,size(v2s(Hx),2)));
   Hxxp=deal(nan(N,1));
@@ -759,6 +759,11 @@ tls=title(stronk);
 xa=xlabel(sprintf('mean %+6.3f ; stdev %6.3f %s',...
 		  mean(dats(:)),std(dats(:)),unid));
 cbs=colorbar('ver');
-axes(cbs)
-xcb=ylabel(sprintf(strink,unid));
+try
+  axes(cbs)
+  xcb=ylabel(sprintf(strink,unid));
+catch
+  cbs.YLabel.String=sprintf(strink,unid);
+  xcb=NaN;
+end
 set(cbs,'ylim',limc)
