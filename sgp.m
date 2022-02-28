@@ -1,5 +1,5 @@
-function varargout=sgp(params,Cmn)
-% varargout=SGP(params,Cmn)
+function varargout=sgp(params,Cnm)
+% [f1,f2,x,y]=SGP(params,Cnm)
 %
 % Simulating stationary Gaussian field over a two-dimensional grid
 %
@@ -8,41 +8,48 @@ function varargout=sgp(params,Cmn)
 % params  parameters to the data grid, i.e. at least
 %      params.dydx with the grid spacings
 %      params.NyNx with the grid dimensions
-% Cmn    scalar function handle to the covariance function
-%         with one two-vector input C([m n])
+% Cnm     VECTORIZED scalar function handle to the covariance function
+%         with one two-vector input such that cov(x_t,y_s)=Cnm(t-s) is the
+%         covariance function of a 2-dimensional stationary Gaussian field
 % 
 % OUTPUT:
 %
 %  f1,f2   two statistically independent fields over the mxn grid;
-%  tx,ty   vectors so the field can be plotted via IMAGESC(tx,ty,f1)
+%  x,y   vectors so the field can be plotted via IMAGESC(x,y,f1)
+%
+% SEE ALSO:
+%
+% STATIONARY_GAUSSIAN_PROCESS2
 %
 % EXAMPLES:
 %
-%% Exponential covariance function, specified inline
-% Cmn=@(h)([1-h(1)^2/th(1)^2-h(1)*h(2)/(th(2)*th(1))-h(2)^2/th(2)^2]...
-%      *exp(-[h(1)^2/th(1)^2+h(2)^2/th(2)^2]));
-%% Matern covariance, specified via 
-% th0=[10 2.4 8]; params.NyNx=[512 384]; params.dydx=[1 1];
-% Cmn=@(h) cov_matern_1(h,th,params.dydx);
-%% Matern covariance, specified via MATERNOSY
-% Cmn=@(h) maternosy(sqrt([h(1)*params.dydx(1)]^2+[h(2)*params.dydx(2)]^2),th0)
-%% Perform the calculation
-% sgp(params,Cmn)
+% m=512; n=384;
+% th0=[10 2.4 30]; params.NyNx=[512 384]; params.dydx=[10 10];
+% rho2=@(h) maternosy(sqrt([h(:,1)*params.dydx(2)].^2+[h(:,2)*params.dydx(1)].^2),th0);
+% figure(1)
+% stationary_Gaussian_process2(m,n,rho2)
+% t=title(sprintf('%s^2 %g, %s %g, %s %g','\sigma',th0(1),'\nu',th0(2),'\rho',th0(3))); movev(t,-m/30)
+%
+% figure(2)
+% rho2=@(h) maternosy(sqrt([h(:,1)*params.dydx(2)].^2+[h(:,2)*params.dydx(1)].^2),th0);
+% sgp(params,rho2)
+% t=title(sprintf('%s^2 %g, %s %g, %s %g','\sigma',th0(1),'\nu',th0(2),'\rho',th0(3))); movev(t,-m/30)
 %
 %% Compare blurred simulation versus circulant-embedding simulation
+% figure(3)
 % ah=krijetem(subnum(2,2));
 % [Hx1,th0,params1,k,Hk1,Sb1]=simulosl; axes(ah(1)); imagesc(v2s(Hx1));
 % title(sprintf('blurs %i',params1.blurs))
 % params2=params1; params2.blurs=Inf;
 % [Hx2,th0,params2,k,Hk2]=simulosl(th0,params2); axes(ah(2)); imagesc(v2s(Hx2));
 % title(sprintf('blurs %i',params2.blurs))
-%% This needs to absolutely agree
+%% Thes needs to absolutely agree
 % axes(ah(3)); imagesc(v2s(log10(abs(Hk1).^2)));
 %% axes(ah(3)); imagesc(v2s(log10(Sb1)));
 % axes(ah(4)); imagesc(v2s(log10(abs(Hk2).^2)));
 %
 % Written by Arthur Guillaumin, 10/27/2017
-% Last modified by fjsimons-at-alum.mit.edu, 08/16/2021
+% Last modified by fjsimons-at-alum.mit.edu, 02/28/2022
 
 %% Reference:
 % Kroese, D. P. & Botev, Z. I. (2015). Spatial Process Simulation.
@@ -54,21 +61,17 @@ function varargout=sgp(params,Cmn)
 M=params.NyNx(1);
 N=params.NyNx(2);
 
-% Create grid for spatial field
+% Create grid for spatial field in samples
 tx=[0:N-1]; 
 ty=[0:M-1];
 % Initialize auxiliary matrices
 [Rows,Cols]=deal(zeros(M,N));
+
 % Sample covariance function at grid points
-for i=1:N 
-  for j=1:M
-    % Rows of blocks of cov matrix
-    Rows(j,i)=Cmn([tx(i)-tx(1) ty(j)-ty(1)]);
-    % Columns of blocks of cov matrix
-    Cols(j,i)=Cmn([tx(1)-tx(i) ty(j)-ty(1)]);
-  end
-end
-% FJS Really need to vectorize the above a bit, shouldn't I
+[TX,TY]=meshgrid(tx,ty);
+% Remember that the function handle takes into account the sampling step
+Rows=reshape(Cnm([ TX(:) TY(:)]),size(TX));
+Cols=reshape(Cnm([-TX(:) TY(:)]),size(TX));
 
 % Create the first row of the block circulant matrix with circular blocks
 % and store it as a matrix suitable for FFT2
@@ -90,14 +93,19 @@ F=F(1:M,1:N);
 f1=real(F); 
 f2=imag(F);
 
+% Proper grid
+x=tx*params.dydx(2);
+y=ty*params.dydx(1);
+
 % Optional output
-varns={f1,f2,tx,ty};
+varns={f1,f2,x,y};
 varargout=varns(1:nargout);
 
 if nargout==0
   % Plot if no output requested
-  imagesc(tx,ty,f1)
+  clf
+  imagesc(x,y,f1)
   colormap bone
-  axis image
+  axis image; xlabel('x'); ylabel('y'); longticks(gca); shrink(gca,1.1,1.1)
 end
 
