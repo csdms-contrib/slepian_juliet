@@ -1,12 +1,10 @@
 function [Sbar,k]=blurosy(th,params,xver,method)
 % [Sbar,k]=blurosy(th,params,xver,method)
 %
-% LOOKS LIKE 'ef' is ALWAYS, RIGHT, 'efs' needs to be made RIGHT and
-% similarly, now works for even, BLUROS needs an overhaul for even-length data
-%
-% Spectral blurring with periodogram of a boxcar, for univariate cases.
-% This is the exact, fast, explicit way which requires no convolutional
-% grid refinement. Later, will build in other types of windows. 
+% Spectral blurring of a univariate Matern covariance structure with the
+% periodogram of a boxcar. This is the exact (fast) explicit way which
+% requires no convolutional grid refinement. Later, will build in other
+% types of windows. Note this is the expected periodogram.
 %
 % INPUT:
 %
@@ -32,16 +30,14 @@ function [Sbar,k]=blurosy(th,params,xver,method)
 %
 % SIMULOSL, BLUROS, MATERNOSP, BLURCHECK
 %
-%
-% A WHOLE LONG EXAMPLE WHILE TROUBLESHOOTING:
+% EXAMPLE:
 %
 % BLUROSY_DEMO
-% 
 % S2, S3, and S4 are close but need to be reconciled in minor details
 % depending on whether the parity is even or odd, as 2 agrees with 3 or 4
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 11/02/2018
+% Last modified by fjsimons-at-alum.mit.edu, 03/01/2022
 
 if params.blurs>=0
   error('Are you sure you should be running BLUROSY, not BLUROS?')
@@ -117,6 +113,8 @@ trix=1-abs(xrow)/NyNx(2);
 
 % See Arthur's note for more general windows, use IFF2/FFT2 you need, see
 % ~/POSTDOCS/ArthurGuillaumin/NewSimulations/NonParametricEstimation/Periodogram.m
+% ~/POSTDOCS/ArthurGuillaumin/CodeArthur/QuickRunX/expected_periodogram.m
+% ~/POSTDOCS/ArthurGuillaumin/CodeArthur/QuickRunX/kernel_modulation.m
 
 % Here is the distance grid
 y=sqrt(bsxfun(@plus,[ycol*dydx(1)].^2,[xrow*dydx(2)].^2));
