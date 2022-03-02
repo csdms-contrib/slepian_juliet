@@ -51,27 +51,6 @@ else
   % Proposed new dimensions
   bNyNx=blurs*NyNx;
 
-  % Shouldn't we indeed be able to use ANY refinement grid?
-  % Should we protect against odd->even parity CHANGE? The original
-  % motivation was to avoid HERMCHECK errors, which, however, could
-  % be made to go away with higher-order interpolation, which,
-  % however, could lead to negatives in the convolved kernels. 
-  % Seems like we should, but doing it makes the errors behaved
-  % inconsistently for the even and odd cases, as gleaned from BLUROSY_CHECK.
-  % I can only infer the preference to emerge from CONV2 or
-  % INTERP2, possibly symmetry is to be preferred. Maybe it's
-  % because linear can't deal with the period symmetry of the grid.
-  % So from now we avoid any additions or substitutions.
-  pp=mod(NyNx,2)~=mod(bNyNx,2);
-  % e o -> e v pass no parity change of original
-  % o o -> o v pass no parity change of original
-  % e e -> e v pass no parity change of original
-  % o e -> e x fail no parity change of original
-  % Don't just ADD a dimension but add a multiple!
-  %   if ~all(pp)==0
-  %disp(sprintf('Blurred grid fixed to preserve parity of original'))
-  % end
-
   % And then we run KNUM2 again to do the blurring later
   [k,kx,ky,~,dcn]=knum2(bNyNx,[(bNyNx(1)-1)*dydx(1) (bNyNx(2)-1)*dydx(2)]);
   % But then we still will want the RUNNING index of the zero in the
