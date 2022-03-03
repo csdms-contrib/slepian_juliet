@@ -31,9 +31,9 @@ function [k,dci,dcn,kx,ky]=knums(params,doit)
 %
 % SEE ALSO:
 %
-% KNUM2, which is called by this function
+% KNUM2, which is called by this function, BLUROS
 %
-% Last modified by fjsimons-at-alum.mit.edu, 03/18/2019
+% Last modified by fjsimons-at-alum.mit.edu, 03/02/2022
 
 % Extract the variables explicitly from this structure
 NyNx=params.NyNx;
@@ -58,3 +58,22 @@ else
   % produce that under the fake name that gets used on the inside only
   dci=sub2ind(NyNx,floor(NyNx(1)/2)+1,floor(NyNx(2)/2)+1);
 end
+
+% SEE BLUROSY TO FIGURE OUT THE REVERSE SUBSAMPLING!
+
+% CONSIDERATIONS THAT WERE AT ONE TIME PART OF TESTING
+%
+% We should indeed be able to use ANY refinement grid. 
+% Should we protect against odd->even parity CHANGE? 
+% pp=mod(NyNx,2)~=mod(bNyNx,2);
+% As gleaned from BLUROS('demo1') there remains a slight preference for
+% combining odd dimensions with odd refinements, it's just got to do with
+% the way they funky Fejk works out. It's not an interpolation issues -
+% we're subsampling everything now. The trick is to keep the product of
+% the grid size and the refined factor as high as possible .
+% e o -> e v no parity change of original
+% o o -> o v no parity change of original
+% e e -> e v no parity change of original
+% o e -> e x no parity change of original
+% This last case gave us so much of the trouble that helped us track down
+% all the other mistakes. Not it's just slightly less accurate, that's all. 
