@@ -1,13 +1,13 @@
 function [Sbar,k,Fejk]=bluros(S,params,xver)
 % [Sbar,k,Fejk]=BLUROS(S,params,xver)
 %
-% Blurring of a spectral matrix with the periodogram of a spatial
-% windowing function (for now: the boxcar), in the approximate,
-% discretized convolutional manner. The wavenumber-dependent input is
-% given on a grid that was specified to be an integer refinement from
-% an original that remains the target. The result is obtained by
-% interpolation or subsampling to the original grid. This function is
-% designed to be called only by MATERNOSP.
+% Blurring of a spectral matrix with the periodogram of a spatial windowing
+% function (for now: the boxcar), in the approximate, discretized
+% convolutional manner. The wavenumber-dependent input is given on a grid
+% that was specified to be an integer refinement from an original that
+% remains the target. The result is obtained by subsampling (or
+% interpolation) to the original grid. This function is designed to be
+% called only by MATERNOSP or BLUROSY_DEMO
 %
 % INPUT:
 %
@@ -177,11 +177,9 @@ for in=1:size(S,2)
    
    % Now check to make absolutely Hermitian, fix any weird combinations?
 
-
    % So if the input is e/o and the refinement o, no parity change, all
    % good, but if the input is e/o and the refinement e, parity changes for
-   % the odd and then going back from even to odd messes things up. THAT is
-   % the case to be fixed. So how about no blurrings for odd grids?
+   % the odd and then going back from even to odd messes things up.
        
    % Unwrap
    Sbar(:,in)=Hh(:);
@@ -214,6 +212,8 @@ if xver==1
   % Remember if it's even we disregard the Nyquist for symmetry
   A=Hh(1+~mod(size(Hh,1),2):end,1+~mod(size(Hh,2),2):end);
 
+%  conj(fliplr(flipud(A)))./A
+  
   subplot(211)
 %  imagesc(log10(abs(conj(fliplr(flipud(A)))-A))); axis image; colorbar
   imagesc(conj(fliplr(flipud(A)))-A); axis image; colorbar
