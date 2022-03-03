@@ -43,7 +43,7 @@ function varargout=sgp(params,Cnm)
 % params2=params1; params2.blurs=Inf;
 % [Hx2,th0,params2,k,Hk2]=simulosl(th0,params2); axes(ah(2)); imagesc(v2s(Hx2));
 % title(sprintf('blurs %i',params2.blurs))
-%% Thes needs to absolutely agree
+%% These needs to absolutely agree
 % axes(ah(3)); imagesc(v2s(log10(abs(Hk1).^2)));
 %% axes(ah(3)); imagesc(v2s(log10(Sb1)));
 % axes(ah(4)); imagesc(v2s(log10(abs(Hk2).^2)));
