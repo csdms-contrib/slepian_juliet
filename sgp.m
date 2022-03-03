@@ -35,7 +35,7 @@ function varargout=sgp(params,Cnm)
 % sgp(params,rho2)
 % t=title(sprintf('%s^2 %g, %s %g, %s %g','\sigma',th0(1),'\nu',th0(2),'\rho',th0(3))); movev(t,-m/30)
 %
-%% Compare blurred simulation versus circulant-embedding simulation
+%% Compare blurred simulation versus circulant-embedding simulation    
 % figure(3)
 % ah=krijetem(subnum(2,2));
 % [Hx1,th0,params1,k,Hk1,Sb1]=simulosl; axes(ah(1)); imagesc(v2s(Hx1));
