@@ -32,12 +32,12 @@ function [Sbar,k]=blurosy(th,params,xver,method)
 %
 % EXAMPLE:
 %
-% BLUROSY_DEMO
-% S2, S3, and S4 are close but need to be reconciled in minor details
-% depending on whether the parity is even or odd, as 2 agrees with 3 or 4
+% BLUROS('demo1',pp,bb) compares against BLUROS where
+%                pp     A square matrix size (one number)
+%                   bb  A MATERNOSP blurring densification (one number)
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 03/01/2022
+% Last modified by fjsimons-at-alum.mit.edu, 03/03/2022
 
 if params.blurs>=0
   error('Are you sure you should be running BLUROSY, not BLUROS?')
