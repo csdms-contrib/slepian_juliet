@@ -36,7 +36,7 @@ function [Sbar,k,Fejk]=bluros(S,params,xver)
 %
 % MATERNOSP, SIMULOSL, BLUROSY, BLUROSY_DEMO
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/26/2018
+% Last modified by fjsimons-at-alum.mit.edu, 03/01/2022
 
 % If you tried running it as a stand-alone with the wrong parameters
 if params.blurs<0
@@ -54,7 +54,7 @@ dydx=params.dydx;
 blurs=params.blurs;
 
 % The unblurred-property ORIGINAL wavenumber grid
-[k,dci,~,kx,ky]=knums(params);
+[k,dci,dcn,kx,ky]=knums(params);
 % The blurred-property REFINED wavenumber grid
 [~,kzero,~,kx2,ky2]=knums(params,1);
 % Find out what you've actually been given, do not jump to
@@ -74,7 +74,8 @@ end
 % See http://blinkdagger.com/matlab/matlab-fft-and-zero-padding/
 % In our subsequent formalism we force the fft/ifft pair to be unitary.
 % If blurs were to be 1, we would get a single 1 in the center.
-% Note that the kernel values are very different depending on even/odd dimensions
+% Note that the kernel values are very different depending on even/odd
+% dimensions. But it's not like it ever needs to be IFFTSHIFT
 Fejk=fftshift(abs(fft2(repmat(1/sqrt(prod(NyNx))/sqrt(prod(NyNx2)),NyNx),NyNx2(1),NyNx2(2))).^2);
 
 if xver==1
@@ -82,6 +83,10 @@ if xver==1
   difer(sum(Fejk(:))-1,[],[],NaN)
   % Check Hermiticity of the Fejer kernel, this NEVER fails
   hermcheck(Fejk)
+  % Check Hermiticity of the input spectrum, this NEVER fails
+  for in=1:size(S,2)
+    hermcheck(reshape(S(:,in),NyNx2))
+  end
 end
 
 % Check that there is no roundoff going on in the interpolation
@@ -104,73 +109,83 @@ for in=1:size(S,2)
   % zero-wavenumber, see KNUMS and KNUM2
   HhC=conv2(Fejk,reshape(S(:,in),NyNx2),'same');
 
-  % You just need to supply the correct zero-wavenumber value,
-  % while it gets progressively better for larger patches and
-  % higher refinement factors, it remains different in the
-  % exact and the approximate methods. We need to do this outside,
-  % in MATERNOSP, since that's the only place we have access to the
-  % Matern parameters that tell us EXACTLY what is going on.
-
-  % CORRECTION: MAYBE IT'S RIGHT? STILL ARGUES WE MIGHT EXCLUDE
-  % THE ZERO WAVENUMBER, RATHER REPLACE THE ZERO WAVENUMBER BY THE
-  % CORRECTLY SCALED VERSION WHICH IS VIA THE SPATIAL AVERAGE OF
-  % THE WINDOW FUNCTION... 
+  % If F and S don't commute?
+  % When the dimensions are even this fails to be Hermitian
+  % but we're not concerned as the result is - we do see roundoff
+   %disp(sprintf('Checking HhC for dimensions %ix%i',size(HhC)))
+   %hermcheck(HhC)
+   %disp(sprintf('%s\n','No message if passed'))
+  % log10(HhC) % Seems to be not perfect but at least appropriate
   
-  % disp(sprintf('\nINTERPOLATE:')) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  tic
-  disp(sprintf('Interpolating %ix%i to %ix%i',length(ky2),length(kx2),length(kx),length(ky)))
-   % Interpolate, maybe later consider using griddedInterpolant
-   HhI=interp2(kx2(:)',ky2(:),HhC,...
-               kx(:)' ,ky(:) ,'linear');
-    % The result, the convolution of two positive definite kernels,
-    % cannot be negative! Happens under 'cubic' or 'spline'...
-   if any(HhI<0); error('Convolved variance kernel contains negatives'); end
-  d=toc;
+  % You might need to supply the correct zero-wavenumber value, while it gets
+  % progressively better for larger patches and higher refinement factors,
+  % it remains different in the exact and the approximate methods. We need
+  % to do this outside, in MATERNOSP, since that's the only place we have
+  % access to the Matern parameters that tell us EXACTLY what is going
+  % on. Maybe replace the zero wavenumber by the correctly scaled version
+  % which is via the spatial average of the window function...
   
-  % That is it for now, unless the below changes it
-  Hh=HhI;
-
-  % disp(sprintf('\nSUBSAMPLE:')) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-  % There may be a simpler way in which the new grid is a superset of the old
-  sx=1+mod(NyNx(2),2);
-  sy=1+mod(NyNx(1),2);
-
-  if round(blurs)==blurs && ...
-          [sum(abs(kx2(sx:blurs:end)-kx))+sum(abs(ky2(sy:blurs:end)-ky))]==0
-    tic
-     HhS=HhC(sx:blurs:end,sy:blurs:end);
-    e=toc;
-
-    if e<d
-      disp(sprintf('\nSUBSAMPLING FASTER THAN INTERPOLATION by %i%%',round((1-e/d)*100)))
-    end
-
-    % Check the difference
-    disp('Relative difference between interpolated and subsampled versions')
-    difer([HhI-HhS]/norm(HhS))
-
+  % This works out how the blurred grid is a superset of the blurred grid!
+  sx=1+mod(NyNx(2),2)*floor(blurs/2);
+  sy=1+mod(NyNx(1),2)*floor(blurs/2);
+  
+  if round(blurs)==blurs &&  ...
+          [sum(abs(kx2(sx:blurs:end)-kx))+sum(abs(ky2(sy:blurs:end)-ky))]<eps
+    % disp(sprintf('\nSUBSAMPLE:')) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    disp(sprintf('Subsampling %ix%i to %ix%i',length(ky2),length(kx2),length(kx),length(ky)))
+    HhS=HhC(sx:blurs:end,sy:blurs:end);
     % Isn't subsampling always to be preferred over interpolation?
     Hh=HhS;
-  end
-
-  % Need to consider that we can subsample in even more cases
-
-  % We adjust for the bits that aren't already doubly present, 
-  % watching where they are coming from, i.e. at the Nyquist
-  if ~mod(NyNx(1),2)
-    Hh(1,:)=Hh(1,:)*2;
   else
-       Hh(end,:)=Hh(end,:)*2; 
-  end
-  if ~mod(NyNx(2),2)
-    Hh(:,1)=Hh(:,1)*2; 
-  else
-     Hh(:,end)=Hh(:,end)*2; 
-  end
-  % Unwrap
-  Sbar(:,in)=Hh(:);
+    % disp(sprintf('\nINTERPOLATE:')) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    disp(sprintf('Interpolating %ix%i to %ix%i',length(ky2),length(kx2),length(kx),length(ky)))
+    % Interpolate, maybe later consider using griddedInterpolant
+    HhI=interp2(kx2(:)',ky2(:),HhC,...
+                kx(:)' ,ky(:) ,'nearest');
+    % The result, the convolution of two positive definite kernels,
+    % cannot be negative! Happens under 'cubic' or 'spline'...
+    if any(HhI<0); error('Convolved variance kernel contains negatives'); end
+    
+    % That is it for now, unless the below changes it
+    Hh=HhI;
 
+    % Keep the comparison for while you're developing
+    % disp('Relative difference between interpolated and subsampled versions')
+    % diferm([HhI-HhS]/norm(HhS))
+  end
+
+   % We adjust for the bits that aren't already doubly present, 
+   % watching where they are coming from, i.e. at the Nyquist
+   % which is only at the top and left for even dimensions
+   % And watch the zero? See RANDGPN? Not quite there yet, are we
+   % but in the comparison that's definitely the ticket
+   % As in - double all the points that don't have symmetric
+   % counterparts, that's all, isn't it. But not the zero lines since
+   % these already existed in the original. 
+   d=0;
+   if ~mod(NyNx(1),2)
+     Hh(1,:)=Hh(1,:)*2;
+     d=d+1;
+   end
+   if ~mod(NyNx(2),2)
+     Hh(:,1)=Hh(:,1)*2;
+     d=d+2;
+   end
+   if d==2
+     Hh(1,1)=Hh(1,1)/2;
+   end
+   
+   % Now check to make absolutely Hermitian, fix any weird combinations?
+
+
+   % So if the input is e/o and the refinement o, no parity change, all
+   % good, but if the input is e/o and the refinement e, parity changes for
+   % the odd and then going back from even to odd messes things up. THAT is
+   % the case to be fixed. So how about no blurrings for odd grids?
+       
+   % Unwrap
+   Sbar(:,in)=Hh(:);
+  
   % Make sure the zero wavenumber gets the correct value, the zero-wavenumber
   if xver==1
     % We need the indicial zero-wavenumber location for the REFINED grid
@@ -179,9 +194,10 @@ for in=1:size(S,2)
     kz2=[kzx2-1]*NyNx2(1)+kzy2;
     % I am not sure yet which one of these two things it should be yet
     %    disp('Checking center portion')
-    %diferm(Sbar(kzero,in),S(kz2,in)*Fejk(kzy2,kzx2)); 
+    % diferm(Sbar(kzero,in),S(kz2,in)*Fejk(kzy2,kzx2));
+    %Sbar(kzero,in)=S(kz2,in)*Fejk(kzy2,kzx2);
     % Playing with this in order to find out as part of BLUROSY_DEMO
-    disp(sprintf('\nArea factor %g\n',1/(1/sqrt(prod(NyNx))/sqrt(prod(NyNx2)))))
+    % disp(sprintf('\nArea factor %g\n',1/(1/sqrt(prod(NyNx))/sqrt(prod(NyNx2)))))
   end
 end
 
@@ -189,8 +205,23 @@ if xver==1
   % Check that no extrapolation was demanded, effectively
   % but know that griddedInterpolant would have EXTRApolated fine
   difer(sum(isnan(Sbar(:))),[],2,NaN)
-  % Check Hermiticity and positive-definiteness
+  % Check Hermiticity and positive-definiteness - later loop for multi-D
+%  keyboard
+  disp(sprintf('Checking Sbar for dimensions %ix%i',params.NyNx))
   blurcheck(Sbar,params)
+  disp(sprintf('%s\n','No message if passed'))
+  figure(3)
+  % Remember if it's even we disregard the Nyquist for symmetry
+  A=Hh(1+~mod(size(Hh,1),2):end,1+~mod(size(Hh,2),2):end);
+
+  subplot(211)
+%  imagesc(log10(abs(conj(fliplr(flipud(A)))-A))); axis image; colorbar
+  imagesc(conj(fliplr(flipud(A)))-A); axis image; colorbar
+  title('Additive non-symmetry of the blurred spectral matrix')
+
+  subplot(212)
+  imagesc(conj(fliplr(flipud(A)))./A); axis image; colorbar
+  title('Multiplicative non-symmetry of the blurred spectral matrix')
 end
 
 % Produce the unwrapped wavenumbers if you've request them to be output
