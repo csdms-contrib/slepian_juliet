@@ -153,10 +153,10 @@ if ~isstr(th0)
     end
   else
     % Work by circulant embedding
-    % Make the Matern covariance object as required
-    Cmn=@(h) maternosy(sqrt([h(1)*params.dydx(1)]^2+[h(2)*params.dydx(2)]^2),th0);
-    % Double up? 
-    fax=3
+    % Make the Matern covariance object as required - vectorized
+    Cmn=@(h) maternosy(sqrt([h(:,1)*params.dydx(1)].^2+[h(:,2)*params.dydx(2)].^2),th0);
+    % Double/triple up? 
+    fax=1;
     params.NyNx=params.NyNx*fax;
     Hx=sgp(params,Cmn);
     params.NyNx=params.NyNx/fax;
@@ -166,7 +166,11 @@ if ~isstr(th0)
     % Spectral-domain result
     Hk=tospec(Hx,params)/(2*pi);
     % I suppose we could get an instance from Hk, if not an average
-    [Sb,Lb]=deal(NaN);
+    % Let's make Sb the periodogram? And forget about Lb
+    Lb=deal(NaN);
+    % Make the periodogram
+    Sb=Hk.*conj(Hk);
+    hermcheck(reshape(Sb,params.NyNx));
   end
 
   % Return the output if requested
