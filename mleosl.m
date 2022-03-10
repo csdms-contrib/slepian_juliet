@@ -20,6 +20,8 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %          kiso   wavenumber beyond which we are not considering the likelihood
 %          quart 1 quadruple, then QUARTER the spatial size
 %                0 size as is, watch for periodic correlation behavior
+%          taper 1 a certain taper
+%                0 no taper
 % algo     'unc' uses FMINUNC for unconstrained optimization
 %          'con' uses FMINCON with positivity constraints [default]
 %          'klose' simply closes out a run that got stuck [defaulted when needed ]
@@ -62,7 +64,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % EXAMPLE:
 %
-% p.quart=0; p.blurs=0; p.kiso=NaN; clc; [Hx,~,p]=simulosl([],p,1); mleosl(Hx,[],p,[],[],[],1);
+% p.quart=0; p.blurs=Inf; p.kiso=NaN; clc; [Hx,th,p]=simulosl([],p,1); mleosl(Hx,[],p,[],[],[],1);
 %
 % You can stick in partial structures, e.g. only specifying params.kiso
 %
@@ -80,7 +82,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/12/2021
+% Last modified by fjsimons-at-alum.mit.edu, 03/10/2022
 
 if ~isstr(Hx)
   defval('algo','unc')
@@ -92,9 +94,9 @@ if ~isstr(Hx)
   str3s='%13s ';
 
   % Supply the needed parameters, keep the givens, extract to variables
-  fields={               'dydx','NyNx','blurs','kiso','quart'};
+  fields={               'dydx','NyNx','blurs','kiso','quart','taper'};
   defstruct('params',fields,...
-	    {                      [20 20]*1e3,sqrt(length(Hx))*[1 1],-1,NaN,0});
+	    {                      [20 20]*1e3,sqrt(length(Hx))*[1 1],Inf,NaN,0,1});
   struct2var(params)
 
   % These bounds are physically motivated...
@@ -110,7 +112,7 @@ if ~isstr(Hx)
   end
   
   % Being extra careful or not?
-  defval('xver',0)
+  defval('xver',1)
 
   % The parameters used in the simulation for demos, or upon which to base "thini"
   % Check Vanmarcke 1st edition for suggestions on initial rho
@@ -141,19 +143,32 @@ if ~isstr(Hx)
   % Now scale so the minimization doesn't get into trouble
   thini=thini./scl;
   
-  defval('taper',0)
+  % I do believe that when params.blurs=Inf we should be tapering since
+  % then the data are no longer periodic on the space grid...
   if taper==1
-    % Were going to want to make a 2D taper - any taper
-    disp(sprintf('%s with TAPERING, DO NOT DO THIS YET',upper(mfilename)))
-    NW=2;
-    E1=dpss(NyNx(1),NW,1);
-    E2=dpss(NyNx(2),NW,1);
-    Tx=repmat(E1,1,NyNx(2)).*repmat(E2',NyNx(1),1);
+    % We're going to want to make a 2D taper - any taper
+    % disp(sprintf('%s with TAPERING',upper(mfilename)))
+    Tx=ones(params.NyNx);
+    %NW=2;
+    %E1=dpss(NyNx(1),NW,1); E2=dpss(NyNx(2),NW,1);
+    %E1=shanning(NyNx(1),0.2); E2=shanning(NyNx(2),0.2); E1=E1/sqrt(E1'*E1); E2=E2/sqrt(E2'*E2);
+    %Tx=repmat(E1,1,NyNx(2)).*repmat(E2',NyNx(1),1);
     % But should still watch out for the spectral gain I suppose, this isn't
     % done just yet, although it appears already properly normalized
     % However, this looks better now, doesn't it?
-    Tx=Tx*sqrt(prod(NyNx));
-    % Not doing anything still amounts to saying Tx=1
+    %Tx=Tx*sqrt(prod(NyNx));
+    % Just the rim removal
+    Tx(1,:)=0; Tx(end,:)=0; Tx(:,1)=0; Tx(:,end)=0;
+    
+    % A whole Tukey/Hanning window
+    % [w,wl,wr]=fhanning(floor(sqrt(prod(params.NyNx)))/5);
+    % Tx(:,1:length(wl))=repmat(wl',size(Tx,1),1);
+    % Tx(:,end-length(wl)+1:end)=repmat(wr',size(Tx,1),1);
+    % Tx(1:length(wr),:)=Tx(1:length(wr),:).*repmat(wl,1,size(Tx,2));
+    % Tx(end-length(wr)+1:end,:)=Tx(end-length(wr)+1:end,:).*repmat(wr,1,size(Tx,2));
+    
+    % Make sure to renormalize the taper
+    Tx=Tx*sqrt(prod(NyNx)/[Tx(:)'*Tx(:)]);
   else
     Tx=1;
   end
@@ -161,13 +176,13 @@ if ~isstr(Hx)
   % Create the appropriate wavenumber axis
   k=knums(params);
   
-  % We get into the habit of never involving the zero-wavenumber
+  % We could get into the habit of never involving the zero-wavenumber
   knz=(~~k);
 
   % Always demean the data sets
   Hx(:,1)=Hx(:,1)-mean(Hx(:,1));
   % FJS think about deplaning as well
-  
+
   % Turn the observation vector to the spectral domain
   % Watch the 2pi in SIMULOSL
   Hk(:,1)=tospec(Tx(:).*Hx(:,1),params)/(2*pi);
@@ -276,7 +291,7 @@ if ~isstr(Hx)
   % It is not impossible that a solution is reached which yields a
   % negative rho - which only appears in the square in MATERNOS. But if
   % we're going to calculate (approximately blurred) analytical
-  % gradients and  Hessians (even using exact blurring of the spectral
+  % gradients and Hessians (even using exact blurring of the spectral
   % densities) we are going to be using MATERNOSY, which will complain...
   if thhat(1)<0
     error(sprintf('%s Negative variance',upper(mfilename)))
@@ -319,7 +334,7 @@ if ~isstr(Hx)
   % the blurring (though it's much better than not trying at all), and thus,
   % are expected to be close to numerical results only without blurring
   if xver==1 
-    % Analytic (unblurred) gradient, scaled for numerical comparison
+    % Analytic (poorly blurred) gradient, scaled for numerical comparison
     gros=gammiosl(k,thhat.*scl,params,Hk,xver).*scl(:);
 
     % Compare the analytic Hessian with the numerical Hessian and with
@@ -375,9 +390,10 @@ if ~isstr(Hx)
   end
 
   % Here we compute the moment parameters and recheck the likelihood
-  [L,~,~,momx,vr]=logliosl(k,thhat,scl,params,Hk,xver);
+  [L,~,Hagain,momx,vr]=logliosl(k,thhat,scl,params,Hk,xver);
   diferm(L,logli)
- 
+  diferm(Hagain,H)
+
   % Reorganize the output into cell arrays
   covFHh{1}=covF;
   covFHh{2}=covH;
@@ -440,7 +456,8 @@ elseif strcmp(Hx,'demo1')
     % Form the maximum-likelihood estimate, pass on the params, use th0
     % as the basis for the perturbed initial values. Remember hes is scaled.
     t0=clock;
-    [thhat,covFHh,lpars,scl,thini,p,Hk,k]=mleosl(Hx,[],p,algo,[],th0);
+    % Put a try catch here to catch the rare negative variance??
+    [thhat,covFHh,lpars,scl,thini,p,Hk,k]=mleosl(Hx,[],p,algo,[],th0,xver);
     ts=etime(clock,t0);
 
     % Initialize the THZRO file... note that the bounds may change
@@ -495,7 +512,7 @@ elseif strcmp(Hx,'demo1')
     [Hx,th0,p,k]=simulosl(th0,params); 
     good=1; avhsz=avhsz+1; 
     [~,~,lpars]=mleosl(Hx,[],[],'klose');
-    oswzerob(fids(1),th0,p,lpars{6},lpars{7},fmts)
+    oswzerob(fids(1),th0,p,lpars,fmts)
   end
   
   if good>=1 
@@ -537,7 +554,7 @@ elseif strcmp(Hx,'demo2')
 	      mean(momx),var(momx(:,end))))
   
   % Plot it all - perhaps some outlier selection?
-  %figure(1)
+  figure(1)
   fig2print(gcf,'landscape')
   clf
 
