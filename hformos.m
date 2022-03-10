@@ -21,7 +21,7 @@ function Xk=hformos(S,Hk,A,xver)
 %
 % In our formalism, this should result in a real-valued function. 
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/23/2017
+% Last modified by fjsimons-at-alum.mit.edu, 03/10/2022
 
 defval('A',1)
 defval('xver',1)
@@ -38,6 +38,9 @@ end
 % Still may have a tiny imaginary part, get rid of it if it is small 
 Xk=realize(Xk);
 
-if A==1
-  diferm(Xk,abs(Hk).^2./S);
+if xver==1
+  if A==1
+    diferm(Xk,abs(Hk).^2./S,8);
+  end
 end
+
