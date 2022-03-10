@@ -14,12 +14,14 @@ function varargout=simulosl(th0,params,xver,varargin)
 %          dydx  sampling interval in the y and x directions [m m]
 %          NyNx  number of samples in the y and x directions
 %          blurs 0 Don't blur likelihood using the Fejer window
-%                N Blur likelihood using the Fejer window [default: N=2]
+%                N Blur likelihood using the Fejer window
 %               -1 Blur likelihood using the exact BLUROSY procedure
 %              Inf Perform simulation using invariant embedding
 %          kiso  wavenumber beyond which we are not considering the spectrum
 %          quart 1 quadruple, then QUARTER
 %                0 size as is, watch for periodic correlation behavior!
+%          taper 1 a certain taper
+%                0 no taper
 % xver     1 for extra verification, 0 if not needed
 % ... Only for 'demo4', which is used by EGGERS4
 % th0      ... as above
@@ -62,15 +64,16 @@ function varargout=simulosl(th0,params,xver,varargin)
 % simulosl('demo4') % Naive and mle variance and their biases, e.g. by EGGERS4
 % simulosl('demo5',th0,p) % A really poor space-domain covariance estimator
 % simulosl('demo6',th0,p) % A better space-domain covariance estimator
+% simulosl('demo7',th0,p) % Illustrates p.blurs=-1 versus p.blurs=Inf
 %
 % SEE ALSO:
 %
 % MLEOSL, LOADING, SIMULOS, EGGERS1, EGGERS2, EGGERS4, etc
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
-% Last modified by fjsimons-at-alum.mit.edu, 02/27/2022
+% Last modified by fjsimons-at-alum.mit.edu, 03/10/2022
 
-% Make a demo7 with Baig's example
+% Make a demo8 with Baig's example
 
 % Here is the true parameter vector and the only variable that gets used 
 defval('th0',[1e6 2.5 2e4]);
@@ -78,9 +81,9 @@ defval('th0',[1e6 2.5 2e4]);
 % If not a demo...
 if ~isstr(th0)
   % Supply the needed parameters, keep the givens, extract to variables
-  fields={               'dydx','NyNx','blurs','kiso','quart'};
+  fields={               'dydx','NyNx','blurs','kiso','quart','taper'};
   defstruct('params',fields,...
-	    {                      [10 10]*1e3,[64 64],-1,NaN,0});
+	    {                      [10 10]*1e3,[64 64],Inf,NaN,0,1});
   struct2var(params)
 
   % Here is the extra verification parameter
@@ -99,10 +102,14 @@ if ~isstr(th0)
   end
 
   % First make the wavenumbers, given the data size and the data length
-  [k,dci,dcn]=knums(params);
+  [k,dci,dcn,kx,ky]=knums(params);
 
-  % This should make sense as the spacing in wavenumber domain
-  dkxdky=2*pi./NyNx./dydx;
+  if xver
+    % This should make sense as the spacing in wavenumber domain
+    dkydkx=2*pi./NyNx./dydx;
+    diferm(unique(diff(ky))-dkydkx(1))
+    diferm(unique(diff(kx))-dkydkx(2))
+  end
 
   % Bypass this procedure altogether and go for circulant embedding
   if ~isinf(params.blurs)
@@ -152,12 +159,12 @@ if ~isstr(th0)
       % an example is if some of this output were to be passed onto LKOSL
     end
   else
-    % Work by circulant embedding
     % Make the Matern covariance object as required - vectorized
     Cmn=@(h) maternosy(sqrt([h(:,1)*params.dydx(1)].^2+[h(:,2)*params.dydx(2)].^2),th0);
     % Double/triple up? 
     fax=1;
     params.NyNx=params.NyNx*fax;
+    % Work by circulant embedding
     Hx=sgp(params,Cmn);
     params.NyNx=params.NyNx/fax;
     Hx=Hx(1:params.NyNx(1),1:params.NyNx(2));
@@ -166,7 +173,7 @@ if ~isstr(th0)
     % Spectral-domain result
     Hk=tospec(Hx,params)/(2*pi);
     % I suppose we could get an instance from Hk, if not an average
-    % Let's make Sb the periodogram? And forget about Lb
+    % Let's make Sb the periodogram to look at later? And forget about Lb.
     Lb=deal(NaN);
     % Make the periodogram
     Sb=Hk.*conj(Hk);
@@ -218,7 +225,7 @@ elseif strcmp(th0,'demo1')
   nolabels(ah(2)); noticks(ah(2)); box on; axis equal
   axis([-1 1 -1 1])
 
-  fig2print(gcf,'portrait')
+  %fig2print(gcf,'portrait')
   figdisp([],svnm,[],1,'pdf')
 elseif strcmp(th0,'demo2')
   % Try to get close to the example we had in 2000
@@ -743,8 +750,29 @@ elseif strcmp(th0,'demo6')
   title(sprintf('blurs %i quart %i sims %i',p.blurs,p.quart,N))
   figna=figdisp([],sprintf('%i_%i_%i',p.blurs,p.quart,N),[],1);
   system(sprintf('epstopdf %s.eps',figna));
+elseif strcmp(th0,'demo7')
+  % Shift the inputs so you can default them but also supply them
+  % No further inputs needed, but if you have them, you keep them
+  defval('params',[])
+  defval('xver',[])
+  % No inputs needed, but if you had them, you should use them in this order
+  th0=params; p=xver;
+  % Just get some default parameters already 
+  [Hx,th0,p]=simulosl;
+  figure(1)
+  clf
+  % Show the periodicity
+  subplot(121)
+  p.blurs=-1; h=reshape(simulosl(th0,p),p.NyNx); imagesc(repmat(h,3,3))
+  set(gca,'ytick',[1:p.NyNx(1):3*p.NyNx(1)]-0.5); longticks(gca)
+  set(gca,'xtick',[1:p.NyNx(2):3*p.NyNx(2)]-0.5); grid on
+  title(sprintf('blurs %i',p.blurs)); axis image
+  subplot(122)
+  p.blurs=Inf; h=reshape(simulosl(th0,p),p.NyNx); imagesc(repmat(h,3,3))
+  set(gca,'ytick',[1:p.NyNx(1):3*p.NyNx(1)]-0.5); longticks(gca)
+  set(gca,'xtick',[1:p.NyNx(2):3*p.NyNx(2)]-0.5); grid on
+  title(sprintf('blurs %i',p.blurs)); axis image
 end
-
 
 % Plotting routine %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [tls,cbs,xcb,xa]=plotit(aha,dats,nm,stronk,strink,unid)
