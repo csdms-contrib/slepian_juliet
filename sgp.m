@@ -56,6 +56,8 @@ function varargout=sgp(params,Cnm)
 % In Stochastic Geometry, Spatial Statistics and Random Fields
 % DOI: 10.1007/978-3-319-10064-7_12 (pp. 369-404)
 
+% disp(upper(mfilename))
+
 % M,N     row and column dimensions of the 2-D spatial output grid
 %          (note that size of the covariance matrix is MNxMN)
 M=params.NyNx(1);
