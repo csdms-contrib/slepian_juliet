@@ -33,11 +33,11 @@ function [F,covF,cF]=fishiosl(k,th,xver,params)
 % 
 % p.quart=0; p.blurs=0; p.kiso=NaN; clc; [~,th0,p,k,Hk]=simulosl([],p,1);
 % F=fishiosl(k,th0); g=gammiosl(k,th0,p,Hk); H=hessiosl(k,th0,p,Hk);
-% round(abs((F+H)./F)*100) % should be small numbers
+% round(abs((F+H)./F)*100) % should be single-digit small numbers
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
+% Last modified by fjsimons-at-alum.mit.edu, 08/12/2021
 
 % Early setup exactly as in HESSIOSL
 defval('xver',1)
@@ -65,16 +65,16 @@ cF=nan(npp,1);
 % We're abusing the 'xver' switch to bypass saving wavenumber-dependencies
 if xver==0
   % Attempt to do this otherwise
-% FJS  [~,kz,W]=blurosy(th,params);
+  % FJS [~,kz,W]=blurosy(th,params);
 
   % Do not save the wavenumber-dependent entities
   for ind=1:npp
     % Eq. (A60) in doi: 10.1093/gji/ggt056
     cF(ind)=mean(mth{i(ind)}.*mth{j(ind)});
     % Attempt to do this otherwise
-% FJS    cFb(ind)=indeks(bsxfun(@times,mth{i(ind)},mth{j(ind)}'),':').*W(~~kz));
+    % FJS cFb(ind)=indeks(bsxfun(@times,mth{i(ind)},mth{j(ind)}'),':').*W(~~kz));
   end
-% FJS keyboard
+  % FJS keyboard
 elseif xver==1
   % Initialize; some of them depend on the wave vectors, some don't
   cFk=cellnan([npp 1],[1 repmat(lk,1,5)],repmat(1,1,6));
