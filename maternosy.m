@@ -1,13 +1,13 @@
 function Cy=maternosy(y,th,varargin)
 % Cy=MATERNOSY(y,th,d)
 %
-% Calculates the three-parameter isotropic d-dimensional Matern
-% covariance used by Olhede & Simons (2013). Independent of d. 
+% Calculates the three-parameter isotropic d-dimensional Matern covariance
+% used by Olhede & Simons (2013). Independent of d. Fully vectorized.
 %
 % INPUT:
 %
 % y        Lag parameter, the distance between spatial positions,
-%          e.g. from XXPDIST or SSPDIST [m]
+%          e.g. from XXPDIST or SSPDIST [m], can be any dimension
 % th       The unscaled parameter vector, with, in the last three slots: 
 %          s2    The first Matern parameter [variance in units^2]
 %          nu    The second Matern parameter [differentiability]
@@ -34,10 +34,11 @@ function Cy=maternosy(y,th,varargin)
 %
 %% The Fourier relation is impossible to verify... since we never observe
 %% all lags fine enough... and that is the point of estimating it
-%% differently. See the comparison in SIMULOSL1 which is more fruitful.
+%% differently. See the comparison in SIMULOSL1('demo1') which is more fruitful.
 % th=[2000 0.5 1];
 % p.NyNx=[4300 5500]; lY=13; lX=24;
-% [k,kx,ky,dci]=knum2(p.NyNx,[lY lX]); p.dydx=[lY/(M-1) lX/(N-1)];
+% [k,kx,ky,dci]=knum2(p.NyNx,[lY lX]); 
+% p.dydx=[lY/(p.NyNx(1)-1) lX/(p.NyNx(2)-1)];
 % x=[-floor(p.NyNx(2)/2):1:+floor(p.NyNx(2)/2)-1]*p.dydx(2);
 % y=[-floor(p.NyNx(1)/2):1:+floor(p.NyNx(1)/2)-1]*p.dydx(1);
 % [X,Y]=meshgrid(x,y); yy=sqrt(X.^2+Y.^2);
@@ -58,4 +59,3 @@ argu=2*sqrt(nu)/pi/rh*abs(y);
 Cy=2^(1-nu)*s2/gamma(nu)*argu.^nu.*besselk(nu,argu);
 % Supply the smallest arguments
 Cy(y==0)=s2;
-
