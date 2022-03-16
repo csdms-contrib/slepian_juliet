@@ -329,7 +329,11 @@ if ~isstr(Hx)
 
   % Analytic (poorly blurred) Hessian AT the estimate, and derived covariance
   [H,covH]=hessiosl(k,thhat.*scl,params,Hk,xver);
- 
+
+  % FJS how about a step further, use F-1 H F-T to get any influence at all
+  covFHF=inv(F)*[-H]*inv(F)/df;
+  covFhF=inv(F)*[hes./matscl]*inv(F)/df;
+
   % Analytical calculations of the gradient and the Hessian poorly represent
   % the blurring (though it's much better than not trying at all), and thus,
   % are expected to be close to numerical results only without blurring
@@ -368,6 +372,8 @@ if ~isstr(Hx)
     disp(sprintf(sprintf(' Cov (Numer Hess.) : %s',str3),trilos(covh)))
     disp(sprintf(sprintf(' Cov (Analy Hess.) : %s',str3),trilos(covH)))
     disp(sprintf(sprintf(' Cov (Analy Fish.) : %s',str3),trilos(covF)))
+    disp(sprintf(sprintf(' Cov ( FishHFish.) : %s',str3),trilos(covFHF)))
+    disp(sprintf(sprintf(' Cov ( FishHFish.) : %s',str3),trilos(covFhF)))
     disp(sprintf('%s',repmat('_',119,1)))
   end
 
@@ -383,6 +389,10 @@ if ~isstr(Hx)
 	       'Analy Hessi std',sqrt(diag(covH))))
   disp(sprintf(sprintf('%s : %s\n ',str0,str2),...
 	       'Anal Fisher std',sqrt(diag(covF))))
+  disp(sprintf(sprintf('%s : %s ',str0,str2),...
+	       ' FishHFish. std',sqrt(diag(covFHF))))
+  disp(sprintf(sprintf('%s : %s\n ',str0,str2),...
+	       ' FishHFish. std',sqrt(diag(covFhF))))
   if xver==1 | xver==0
     disp(sprintf('%s\n',repmat('_',119,1)))
     disp(sprintf('%8.3gs per %i iterations or %8.3gs per %i function counts',...
@@ -413,27 +423,40 @@ if ~isstr(Hx)
   varns={thhat,covFHh,lpars,scl,thini,params,Hk,k};
   varargout=varns(1:nargout);
 elseif strcmp(Hx,'demo1')
+  more off
   % Runs a series of simulations. See 'demo2' to display them.
   % If you run this again on the same date, the files THINI and
   % THHAT get appended, but a blank THZERO is created. 
   defval('thini',[]);
   % How many simulations? The SECOND argument, after the demo id.
   N=thini; clear thini
-  defval('N',500)
-  more off
   % What th-parameter set? The THIRD argument, after the demo id
-  defval('params',[]);
+  defval('params',[])
   % If there is no preference, then that's OK, it gets taken care of
   th0=params; clear params
   % What fixed-parameter set? The FOURTH argument, after the demo id
-  defval('algo',[]);
+  defval('algo',[])
   % If there is no preference, then that's OK, it gets taken care of
   params=algo; clear algo
   % What algorithm? The FIFTH argument, after the demo id
-  defval('bounds',[]);
+  defval('bounds',[])
   % If there is no preference, then that's OK, it gets taken care of
   algo=bounds; clear bounds
-    
+  % The SIXTH argument, after the demo id
+  defval('aguess',[])
+  % If there is no preference, then that's OK, it gets taken care of
+  bounds=aguess; clear aguess
+  % The SEVENTH argument, after the demo id
+  defval('xver',[])
+  % If there is no preference, then that's OK, it gets taken care of
+  aguess=xver; clear xver
+
+  % You can't stick in an EIGHT argument so you'll have to default 
+  defval('xver',0)
+
+  % What you make of all of that if there hasn't been a number specified
+  defval('N',500)
+
   % The number of parameters to solve for
   np=3;
   
@@ -448,7 +471,7 @@ elseif strcmp(Hx,'demo1')
   % Set N to zero to simply close THZERO out
   for index=1:N
     % Simulate data from the same lithosphere, watch the blurring
-    [Hx,th0,p,k,Hk]=simulosl(th0,params);
+    [Hx,th0,p,k,Hk]=simulosl(th0,params,xver);
 
     % Check the dimensions of space and spectrum are right
     difer(length(Hx)-length(k(:)),[],[],NaN)
