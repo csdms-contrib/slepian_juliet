@@ -19,6 +19,7 @@ function [H,covH,cH]=hessiosl(k,th,params,Hk,xver)
 %          blurs 0 Don't blur likelihood using the Fejer window
 %                N Blur likelihood using the Fejer window [default: N=2]
 %               -1 Blur likelihood using the exact procedure
+%                Inf in which case it gets a hard reset to -1
 %          NOTE: It's not going to be a great derivative unless you could
 %          change MAOSL also. Still, the order of magnitude will be OK.
 % Hk       A complex matrix of Fourier-domain observations
@@ -44,7 +45,11 @@ function [H,covH,cH]=hessiosl(k,th,params,Hk,xver)
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
+% Last modified by fjsimons-at-alum.mit.edu, 08/12/2021
+
+% params.blurs=Inf can only refer to spatial-domain generation and at
+% this point we are already in the spectral domain; reset not returned
+if isinf(params.blurs); params.blurs=-1; end
 
 % Early setup exactly as in FISHIOSL
 defval('xver',1)
@@ -65,7 +70,7 @@ k = k(~~k);
 % The number of nonzero wavenumbers
 lk=length(k(:));
 
-% The statistics of Xk will be tested in LOGLIOS
+% The statistics of Xk are computed in LOGLIOSL
 Xk=hformos(S,Hk,[],xver);
 
 % First compute the auxiliary parameters
@@ -82,7 +87,7 @@ if xver==0
   % Do it all at once, don't save the wavenumber-dependent entities
   for ind=1:npp
     % Eq. (135) in doi: 10.1093/gji/ggt056
-    cH(ind)=mean(-mththp{ind}-[mth{i(ind)}.*mth{j(ind)}-mththp{ind}].*Xk);
+    cH(ind)=nanmean(-mththp{ind}-[mth{i(ind)}.*mth{j(ind)}-mththp{ind}].*Xk);
   end
 elseif xver==1
   % Initialize; no cell since all of them depend on the wave vectors
@@ -91,7 +96,7 @@ elseif xver==1
   for ind=1:npp
     cHk(:,ind)=-mththp{ind}-[mth{i(ind)}.*mth{j(ind)}-mththp{ind}].*Xk;
     % Eq. (135) in doi: 10.1093/gji/ggt056
-    cH(ind)=mean(cHk(:,ind));
+    cH(ind)=nanmean(cHk(:,ind));
     % Can do an additional TRACECHECK here, using Option 2
     % And other tests, using HFORMOS, as in GAMMIOSL that for later
   end
