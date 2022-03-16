@@ -19,7 +19,9 @@ function [L,g,H,momx,vr,Lk]=logliosl(k,th,scl,params,Hk,xver)
 %          blurs 0 Don't blur likelihood using the Fejer window
 %                N Blur likelihood using the Fejer window [default: N=2]
 %                -1 Blur likelihood using the exact BLUROSY procedure
+%                Inf in which case it gets a hard reset to -1
 %          kiso   wavenumber beyond which we are not considering the likelihood
+%          (ksel   logical structure with wavenumbers being taken into account)
 % Hk       A [prod(params.NyNx)*1]-column of complex Fourier-domain observations
 % xver     Excessive verification [0 or 1, which also computes L(k)]
 %
@@ -41,13 +43,17 @@ function [L,g,H,momx,vr,Lk]=logliosl(k,th,scl,params,Hk,xver)
 % 
 % p.quart=0; p.blurs=0; p.kiso=NaN; clc; [~,th0,p,k,Hk]=simulosl([],p,1);
 % F=fishiosl(k,th0); g=gammiosl(k,th0,p,Hk); H=hessiosl(k,th0,p,Hk);
-% round(abs((F+H)./F)*100) % should be small numbers
+% round(abs((F+H)./F)*100) % should be small percentages
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/25/2018
+% Last modified by fjsimons-at-alum.mit.edu, 03/08/2022
 
 % Make sure that this does render LKOSL obsolete
+
+% params.blurs=Inf can only refer to spatial-domain generation and at
+% this point we are already in the spectral domain; reset not returned
+if isinf(params.blurs); params.blurs=-1; end
 
 defval('xver',1)
 
@@ -80,9 +86,6 @@ else
   ksel=logical(ones(prod(size(k)),1));
 end
 
-% Note: should we restrict this to the upper halfplane? or will MEAN do
-% Should we use NANMEAN anywhere here? 
-
 % We're abusing the 'xver' switch to bypass saving wavenumber-dependencies
 if xver==0
   % Do it all at once, don't save the wavenumber-dependent entities
@@ -90,9 +93,9 @@ if xver==0
   L=-mean(-log(S(ksel))-Xk(ksel));
   Lk=NaN;
 elseif xver==1
-  % Will need to stick the deselected wavenumbers back in!
-  % Maybe here make them NaN, that have been deselected
   % Do save the wavenumber-dependent entities
+  % FJS Will need to stick the deselected wavenumbers back in!
+  % Maybe here make them NaN, that have been deselected
   Lk=realize(-log(S)-Xk);
   % Eq. (A52) in doi: 10.1093/gji/ggt056
   L=-nanmean(Lk);
@@ -107,18 +110,17 @@ end
 if nargout>=2
   % FJS needs ksel fix
   % Get the appropriately scaled scores here
-  g=gammiosl(k,th,params,Hk,xver).*scl(:);
+  g=gammiosl(k,th,params,Hk,xver);
 end
 
 if nargout>=3
   % FJS needs ksel fix
   % Get the appropriately scaled Hessian values here
-  H=hessiosl(k,th,params,Hk,xver).*[scl(:)*scl(:)'];
+  H=hessiosl(k,th,params,Hk,xver);
 end
 
-
 if nargout>=4
-% Extract the moments we'll be needing for evaluation later
+  % Extract the moments we'll be needing for evaluation later
   df=2;
   % First should be close to df/2, second close to df/2, third is like
   % the second except formally from a distribution that should be normal
