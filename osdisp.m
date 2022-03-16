@@ -20,7 +20,7 @@ function varargout=osdisp(th0,thhats,nl,avhs,F0,covavhs)
 %
 % The strings used 
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/06/2021
+% Last modified by fjsimons-at-alum.mit.edu, 03/09/2022
 
 % The necessary strings for formatting
 str0='%18s';
@@ -44,10 +44,10 @@ if isstruct(thhats) && nargin==2
                  'Parameters',params.DEL,params.g,params.z2,...
                  params.dydx,params.NyNx,params.blurs,params.quart))
   else
-    disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3,1,6)),...
-		 ' ','dy','dx','Ny','Nx','blurs','quart'))
-    disp(sprintf(sprintf('%s : %s ',str0,repmat(str1,1,6)),...
-                 'Parameters',params.dydx,params.NyNx,params.blurs,params.quart))
+    disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3,1,7)),...
+		 ' ','dy','dx','Ny','Nx','blurs','quart','taper'))
+    disp(sprintf(sprintf('%s : %s ',str0,repmat(str1,1,7)),...
+                 'Parameters',params.dydx,params.NyNx,params.blurs,params.quart,params.taper))
   end
 else
   if nl==1
