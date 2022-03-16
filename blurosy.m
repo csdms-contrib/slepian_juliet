@@ -15,10 +15,12 @@ function [Sbar,k]=blurosy(th,params,xver,method)
 % params  Parameters of this experiment, the ones that are needed are:
 %         dydx  sampling interval in the y and x directions [m m]
 %         NyNx  number of samples in the y and x directions
+%         blurs -1 or Inf as appropriate for this procedure
 % xver    1 Extra verification via BLURCHECK
 %         0 No checking at all
-% method  'ef' exact, efficient and fast [default]
-%         'efs' exact, efficient and faster, exploiting Hermitian symmetry
+% method  'ef' exact, efficient and fast
+%         'efs' exact, efficient and faster, exploiting Hermitian
+%         symmetry [default]
 %
 % OUTPUT:
 %
@@ -39,7 +41,7 @@ function [Sbar,k]=blurosy(th,params,xver,method)
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
 % Last modified by fjsimons-at-alum.mit.edu, 03/03/2022
 
-if params.blurs>=0
+if params.blurs>=0 & ~isinf(params.blurs)
   error('Are you sure you should be running BLUROSY, not BLUROS?')
 end
 
@@ -106,6 +108,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function Cyy=spatmat(ycol,xrow,th,NyNx,dydx)
 % Returns the modified spatial covariance whose transform is the blurred spectrum 
+% when the taper is a rectangular boxcar, i.e. the expected periodogram.
 
 % The triangles coming out of the convolution of the unit window function  
 triy=1-abs(ycol)/NyNx(1);
@@ -118,7 +121,7 @@ trix=1-abs(xrow)/NyNx(2);
 
 % Here is the distance grid
 y=sqrt(bsxfun(@plus,[ycol*dydx(1)].^2,[xrow*dydx(2)].^2));
-% Here is the triangle grid
+% Here is the triangle grid c_g,n(u) of eqs (12), (13),
 t=bsxfun(@times,triy,trix);
   
 % Need the modified spatial covariance
