@@ -110,9 +110,35 @@ if ~isstr(S)
     % a=repmat(Dy(:).^2,1,NyNx2(2));
     % b=repmat(Dx(:)'.^2,NyNx2(1),1);
     % This is much faster obviously
-    Fejkk=Dy(:).^2*Dx(:)'.^2;
+    Dirkk=Dy(:)*Dx(:)';
+    Fejkk=Dirkk.^2;
     % Check the difference
     diferm(Fejk-Fejkk)
+    % Now play with the convolution of the product of two Dirichlet kernels?
+    DD=conv2(Dirkk,Dirkk,'same');
+    D2=DD.^2;
+    % Maybe THAT is what we should use on the inside of the Fisher
+    % approximation, first subsample dd
+    sx=1+mod(NyNx(2),2)*floor(blurs/2);
+    sy=1+mod(NyNx(1),2)*floor(blurs/2);
+    dd=DD(sx:blurs:end,sy:blurs:end);
+    % All the other ones - clearly underexploiting symmetry
+    sp=1:prod(NyNx);
+    % Unwrapped k versus unwrapped k'
+    for s=1:prod(NyNx)
+      % Calculate the offsets from the center
+      [~,di,dj]=sspdist(s,sp,NyNx);
+      % Then fill them all in
+      % Decide what to do when the indices exceed what you have
+      % available. Maybe periodic or mod somehow.
+      noy=[dci(1)+di]>0 & [dci(1)+di]<=NyNx(1);
+      nox=[dci(2)+dj]>0 & [dci(2)+dj]<=NyNx(2);
+      they=dci(1)+di;
+      thex=dci(2)+dj;
+      con=noy & nox;
+      % This is the coupling matrix...
+      c2(s,sp(con))=dd(sub2ind(NyNx,they(con),thex(con))).^2;
+    end
   end
   
   if xver==1
@@ -378,7 +404,6 @@ end
 % Variable output
 varns={Sbar,k(:),Fejk};
 varargout=varns(1:nargout);
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function Fejk=blurosy_demo(pp,bb)
