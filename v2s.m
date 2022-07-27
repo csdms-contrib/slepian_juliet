@@ -6,8 +6,8 @@ function s=v2s(v,varargin)
 % INPUT:
 %
 % v       A vector that is the unwrapping of a matrix
-% p       Optional parameter structure as from the MLEOSL suite, at least:
-%         NyNx  number of samples in the y and x directions
+% p       A parameter structure with AT LEAST this constant
+%           NyNx  number of samples in the y and x directions
 %
 % Last modified by fjsimons-at-alum.mit.edu, 06/26/2018
 
