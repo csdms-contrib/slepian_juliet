@@ -2,7 +2,12 @@ function varargout=simulosl(th0,params,xver,varargin)
 % [Hx,th0,params,k,Hk,Sb,Lb,gane,miy]=SIMULOSL(th0,params,xver)
 % [gane,miy,ax,legs]=SIMULOSL('demo4',th0,params,ptype,N,rindj,npr,ah,gane,miy,pix)
 %
-% Simulates single-field data in the Matern form. 
+% Simulates a univariate two-dimensional Matern covariance field,
+% either (blurs=-1,0,1,N>1) in the spectral domain via MATERNOSP,
+% which does not (blurs=0,1) or does (blurs>1) take into account
+% rectangular finite-field wavenumber blurring effects, or (blurs=Inf)
+% in the spatial domain via MATERNOSY, by circulant embedding, which
+% implicitly takes into account blurring AND wavenumber correlation.
 %
 % INPUT:
 %
@@ -13,10 +18,11 @@ function varargout=simulosl(th0,params,xver,varargin)
 % params   A structure with constants that are (assumed to be) known:
 %          dydx  sampling interval in the y and x directions [m m]
 %          NyNx  number of samples in the y and x directions
-%          blurs 0 Don't blur likelihood using the Fejer window
-%                N Blur likelihood using the Fejer window
-%               -1 Blur likelihood using the exact BLUROSY procedure
-%              Inf Perform simulation using invariant embedding
+%          blurs 0 No wavenumber blurring
+%                1 No wavenumber blurring, effectively
+%                N Fejer convolutional  BLUROS  on an N-times refined grid
+%               -1 Fejer multiplicative BLUROSY using exact procedure
+%              Inf Simulate using SGP invariant embedding
 %          kiso  wavenumber beyond which we are not considering the spectrum
 %          quart 1 quadruple, then QUARTER
 %                0 size as is, watch for periodic correlation behavior!
@@ -71,7 +77,7 @@ function varargout=simulosl(th0,params,xver,varargin)
 % MLEOSL, LOADING, SIMULOS, EGGERS1, EGGERS2, EGGERS4, etc
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
-% Last modified by fjsimons-at-alum.mit.edu, 03/10/2022
+% Last modified by fjsimons-at-alum.mit.edu, 01/26/2023
 
 % Make a demo8 with Baig's example
 
@@ -83,7 +89,7 @@ if ~isstr(th0)
   % Supply the needed parameters, keep the givens, extract to variables
   fields={               'dydx','NyNx','blurs','kiso','quart','taper'};
   defstruct('params',fields,...
-	    {                      [10 10]*1e3,[64 64],Inf,NaN,0,1});
+	    {                      [10 10]*1e3,[64 64],Inf,NaN,0,0});
   struct2var(params)
 
   % Here is the extra verification parameter
@@ -159,7 +165,7 @@ if ~isstr(th0)
       % an example is if some of this output were to be passed onto LKOSL
     end
   else
-    % Make the Matern covariance object as required - vectorized
+    % Make the Matern covariance OBJECT as required - vectorized
     Cmn=@(h) maternosy(sqrt([h(:,1)*params.dydx(1)].^2+[h(:,2)*params.dydx(2)].^2),th0);
     % Double/triple up? 
     fax=1;
