@@ -14,9 +14,11 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 % params   A parameter structure with constants assumed known, see SIMULOSL
 %          [dydx NyNx blurs kiso] in the units of 
 %          m (2x), "nothing" (3x), rad/m, "nothing", namely, in order:
-%          blurs  0 Don't blur likelihood using the Fejer window
-%                 N Blur likelihood using the [default: N=2] resampled Fejer window
-%                -1 Blur likelihood using the exact BLUROSY procedure
+%          blurs 0 No wavenumber blurring
+%                1 No wavenumber blurring, effectively
+%                N Fejer convolutional  BLUROS  on an N-times refined grid
+%               -1 Fejer multiplicative BLUROSY using exact procedure
+%              Inf Simulate using SGP invariant embedding, error
 %          kiso   wavenumber beyond which we are not considering the likelihood
 %          quart 1 quadruple, then QUARTER the spatial size
 %                0 size as is, watch for periodic correlation behavior
@@ -68,21 +70,21 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % You can stick in partial structures, e.g. only specifying params.kiso
 %
-%% Perform a series of N simulations centered on th0
+% Perform a series of N simulations centered on th0
 % mleosl('demo1',N,th0,params)
 %
-%% Statistical study of a series of simulations using MLEPLOS
+% Statistical study of a series of simulations using MLEPLOS
 % mleosl('demo2','20-Jun-2018')
 %
-%% Covariance study of a series of simulations using COVPLOS
+% Covariance study of a series of simulations using COVPLOS
 % mleosl('demo4','20-Jun-2018')
 %
-%% One simulation and a chi-squared plot using MLECHIPLOS
+% One simulation and a chi-squared plot using MLECHIPLOS
 % mleosl('demo5',th0,params)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 03/10/2022
+% Last modified by fjsimons-at-alum.mit.edu, 01/26/2023
 
 if ~isstr(Hx)
   defval('algo','unc')
@@ -96,9 +98,13 @@ if ~isstr(Hx)
   % Supply the needed parameters, keep the givens, extract to variables
   fields={               'dydx','NyNx','blurs','kiso','quart','taper'};
   defstruct('params',fields,...
-	    {                      [20 20]*1e3,sqrt(length(Hx))*[1 1],Inf,NaN,0,1});
+	    {                      [20 20]*1e3,sqrt(length(Hx))*[1 1],Inf,NaN,0,0});
   struct2var(params)
 
+  % You cannot call MLEOSL with blur parameter Inf, since that's for
+  % simulation only, we can go for safe reset or else straight error
+  error('The blurs parameter Inf is reserved for SIMULOSL')
+  
   % These bounds are physically motivated...
   if strcmp(algo,'con')
     % Parameters for FMINCON in case that's what's being used, which is recommended
@@ -144,7 +150,14 @@ if ~isstr(Hx)
   thini=thini./scl;
   
   % I do believe that when params.blurs=Inf we should be tapering since
-  % then the data are no longer periodic on the space grid...
+  % then the data are no longer periodic on the space grid... Indeed
+  % they then have been simulated using SGP which takes into account
+  % wavenumber correlations and indeed that then sometimes can lead to
+  % the need for further stabilization. The best we can do now, with
+  % the debiasing step, is to build the blurring in to the procedure,
+  % but we cannot take the correlation into account for the
+  % estimation, although we will be building its effects into the
+  % variance estimation
   if taper==1
     % We're going to want to make a 2D taper - any taper
     % disp(sprintf('%s with TAPERING',upper(mfilename)))
