@@ -1,7 +1,6 @@
 function varargout=maskit(v,p,scl,w)
 % [v,cr,I,w,vw]=MASKIT(v,p,scl,w)
 %
-%
 % INPUT:
 %
 % v       A vector that is the unwrapping of a matrix
