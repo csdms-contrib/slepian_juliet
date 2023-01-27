@@ -23,7 +23,7 @@ function [newmat,trimi]=trimit(oldmat,perc,maxi,col)
 % 
 % WINSOR
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/18/2016
+% Last modified by fjsimons-at-alum.mit.edu, 06/25/2018
 
 defval('perc',100)
 defval('maxi',0)
@@ -58,7 +58,9 @@ else
     trimi=[oldmat(:,col)>=cutpts(1)] & [oldmat(:,col)<=cutpts(2)];
     newmat=oldmat(trimi,:);
   end
-  % Report on the trimmings
-  disp(sprintf('%s %3.3i%s preserved',upper(mfilename),...
-               round(length(newmat(:))/length(oldmat(:))*100),'%'))
+  if perc~=100
+    % Report on the trimmings
+    disp(sprintf('%s %3.3i%s preserved',upper(mfilename),...
+                 round(length(newmat(:))/length(oldmat(:))*100),'%'))
+  end
 end
