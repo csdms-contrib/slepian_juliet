@@ -2,7 +2,7 @@ function varargout=maternosy(y,th,varargin)
 % varargout=MATERNOSY(y,th,d)
 %
 % Calculates d-dimensional isotropic Matern correlation, which is
-% independent of d, and the counterpart to the spectral covariance.
+% independent of d, also the counterpart to the spectral covariance.
 % See Olhede & Simons (2013), doi: 10.1093/gji/ggt056.x, eq. (72)
 %
 % INPUT:
@@ -25,16 +25,15 @@ function varargout=maternosy(y,th,varargin)
 %
 % EXAMPLE:
 %
+% Discrete approximation of the integral compared to exact result:
+%
 % [Hx,th0,p]=simulosl; bigN=1000;
 % y=linspace(0,sqrt(prod(p.dydx))*sqrt(prod(p.NyNx)),bigN);
-%
-% Discrete approximation of the integral compared to exact result:
 % [sum(y.*maternosy(y,th0))*(y(2)-y(1))/(2*pi) maternos(0,th0)]
 %
 % maternosy('demo1')
 % 
 % Last modified by fjsimons-at-alum.mit.edu, 02/23/2023
-
 
 if ~isstr(y)
     % These are always the last three elements of the input 
@@ -81,6 +80,7 @@ elseif strcmp(y,'demo1')
     % Compare two profiles somehow
     m=median(Sbb(dci(1),:)./abs(Skk(dci(1),:)));
     m=max(max(Sbb))./max(max((Skk)));
+    
     plot(log10(abs(Skk(dci(1),:))),'Color','r');
     hold on
     plot(log10(Sbb(dci(1),:))-log10(m),'LineWidth',2,'Color','m');
