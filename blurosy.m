@@ -28,7 +28,7 @@ function [Sbar,k,t]=blurosy(th,params,xver,method)
 % xver    1 Extra verification via BLURCHECK
 %         0 No checking at all
 % method  'ef' exact, efficient and fast
-%         'efs' exact, efficient and faster, exploiting Hermiticity [default]
+%         'efs' exact, efficient and faster, exploiting symmetry [default]
 %
 % OUTPUT:
 %
@@ -60,41 +60,43 @@ end
 
 % Defaults
 defval('xver',1)
-% It is here and now only that we decide to always go with 'efs'
 defval('method','efs')
 
 % Target dimensions, the original ones
 NyNx=params.NyNx;
 dydx=params.dydx;
 
-method='ef'
-
 switch method 
   case 'ef'
-    % http://blogs.mathworks.com/steve/2010/07/16/complex-surprises-from-fft/
-
+    % Generates a double grid from which we subsample
     % Fully exact and not particularly fast, still much faster than BLUROS
+
+    % Here are the full lags
     ycol=[-NyNx(1):NyNx(1)-1]';
     xrow=[-NyNx(2):NyNx(2)-1] ;
 
-    % Here is the Matern spatial covariance on the distance grid,
+    % Here is the Matern spatial covariance on the double distance grid,
     % multiplied by the spatial taper in a way that its Fourier
     % transform can be the convolution of the spectral density with the
     % spectral density of the taper, i.e. the expected periodogram
-    [Cyy,t]=spatmat(ycol,xrow,th,params,xver);
+    [Cyy,tyy]=spatmat(ycol,xrow,th,params,xver);
 
+    % http://blogs.mathworks.com/steve/2010/07/16/complex-surprises-from-fft/
     % Here is the blurred covariance on the 'double' grid
     Hh=fftshift(realize(fft2(ifftshift(Cyy))));
 
     % Play with a culled DFTMTX? Rather now subsample to the 'complete' grid
     Hh=Hh(1+mod(NyNx(1),2):2:end,1+mod(NyNx(2),2):2:end);
   case 'efs'
+    % Generates a sample-size grid by working from a quarter, rest symmetric
     % Fully exact and trying to be faster for advanced symmetry in the covariance
+
+    % Here are the partial lags
     ycol=[0:NyNx(1)-1]';
     xrow=[0:NyNx(2)-1] ;
     
-    % Here is the Matern spatial covariance on the distance grid again, see above
-    [Cyy,t]=spatmat(ycol,xrow,th,params,xver);
+    % Here is the Matern spatial covariance on the quarter distance grid, see above
+    [Cyy,tyy]=spatmat(ycol,xrow,th,params,xver);
 
     % Exploit the symmetry just a tad, which allows us to work with smaller matrices
     q1=fft2(Cyy);
@@ -124,17 +126,16 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [Cyy,t]=spatmat(ycol,xrow,th,params,xver)
-% Returns the Modified spatial covariance whose Fourier transform is
+% [Cyy,t]=spatmat(ycol,xrow,th,params,xver)
+%
+% Returns the modified spatial covariance whose Fourier transform is
 % the blurred spectrum after spatial data tapering, i.e. the expected
-% periodogram. Also returns the autocovariance of the applied taper in
-% case it was not a boxcar.
+% periodogram. Also returns the autocovariance of the applied taper
+% which is an essential part of this operation
 
-% Target dimensions, the original ones
+% Dimensions of the original grid
 NyNx=params.NyNx;
 dydx=params.dydx;
-
-% Here is the distance grid
-y=sqrt(bsxfun(@plus,[ycol*dydx(1)].^2,[xrow*dydx(2)].^2));
 
 disp('Next force us in the loop even for unit taper')
 
@@ -155,9 +156,14 @@ if prod(size(params.taperx))>1
     t=zeros(size(tx));
     % This is directly compatible with the efs but for ef will need
     % to do something else, however, no rocket science
-    for i=1:NyNx(1)
-        for j=1:NyNx(2)
-            t(i,j)=sum(sum((tx(1:NyNx(1)-i+1,1:NyNx(2)-j+1)).*(conj(tx(i:end,j:end)))));
+    %    for i=1:NyNx(1)
+    %       for j=1:NyNx(2)
+    % It's quite vital that these be colon ranges (faster) or (like
+    % here) row index vectors... row/column won't work
+    for i=xrow(:)'+1
+        for j=ycol(:)'+1
+            % Vectorize? Check out XCORR2, that's good
+            t(i,j)=sum(sum(tx(1:NyNx(1)-i+1,1:NyNx(2)-j+1)).*(conj(tx(i:end,j:end)))));
         end
     end
     % Normalize - that probably should be using the values and not just
@@ -195,14 +201,17 @@ if xver==1
     t2=[zeros(size(t2,1)+1,1) [zeros(1,size(t2,2)) ; t2]];
     % Check the difference between these two implementations,
     % all checked for even/odd/method combinations on 2/24/2023
-    if size(t)==NyNx
+    if all(size(t)==NyNx)
         % Then the doubling inside this block needs to be undone
         t2=t2(NyNx(1)+1:end,NyNx(2)+1:end);
     end
     diferm(t,t2); %disp('I checked')
 end
 
-% Need the modified spatial covariance
+% Here is the distance grid, whose size depends on the input
+y=sqrt(bsxfun(@plus,[ycol*dydx(1)].^2,[xrow*dydx(2)].^2));
+
+% Modified the spatial covariance
 Cyy=maternosy(y,th).*t;
 
 % Remind me:
