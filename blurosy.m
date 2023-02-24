@@ -1,5 +1,5 @@
-function [Sbar,k]=blurosy(th,params,xver,method)
-% [Sbar,k]=blurosy(th,params,xver,method)
+function [Sbar,k,t]=blurosy(th,params,xver,method)
+% [Sbar,k,t]=blurosy(th,params,xver,method)
 %
 % Wavenumber blurring of a univariate Matern spectral density with the
 % periodogram of a spatial taper. This is the exact (fast) explicit
@@ -35,6 +35,8 @@ function [Sbar,k]=blurosy(th,params,xver,method)
 % Sbar    The blurred spectral matrix, on the original requested
 %         dimension as identified by 'params' from the input
 % k       The wavenumber matrix (the norm of the wave vectors), unwrapped
+% t       The autocorrelation of the spatial taper... 
+%         may never need it explicitly, used in SIMULOSL and LOGLIOSL
 %
 % SEE ALSO:
 %
@@ -64,6 +66,8 @@ defval('method','efs')
 % Target dimensions, the original ones
 NyNx=params.NyNx;
 dydx=params.dydx;
+
+method='ef'
 
 switch method 
   case 'ef'
@@ -100,6 +104,8 @@ switch method
     Hh=fftshift(2*real(q4-repmat(fft(Cyy(:,1)),1,NyNx(2)))...
 	        -repmat(2*real(fft(Cyy(1,1:end))),NyNx(1),1)...
 	        +Cyy(1,1));
+    % If you ever wanted t to come out you'll need to unquarter it
+    % t=
 end
 
 % Normalize and vectorize
@@ -130,30 +136,38 @@ dydx=params.dydx;
 % Here is the distance grid
 y=sqrt(bsxfun(@plus,[ycol*dydx(1)].^2,[xrow*dydx(2)].^2));
 
+disp('Next force us in the loop even for unit taper')
+
 % Specify the spatial taper
+kb
 if prod(size(params.taperx))>1
+    % Now compare with the other mechanisms
     % Completely general windows
     % See Arthur's note for more general windows, use IFF2/FFT2 you need, see
     % ~/POSTDOCS/ArthurGuillaumin/CodeArthur/NonParametricEstimation/Periodogram.m
     % ~/POSTDOCS/ArthurGuillaumin/CodeArthur/QuickRunX/expected_periodogram.m
     % ~/POSTDOCS/ArthurGuillaumin/CodeArthur/QuickRunX/kernel_modulation.m
-    keyboard
     tx=params.taperx;
-    txx=zeros(size(tx));
+    % Make sure it's normalized
+    tx=tx./sum(sum(tx.^2));
+
     % Produce the normalized autocorrelation sequence eq. (12)
+    t=zeros(size(tx));
+    % This is directly compatible with the efs but for ef will need
+    % to do something else, however, no rocket science
     for i=1:NyNx(1)
         for j=1:NyNx(2)
-            txx(i,j)=sum(sum((tx(1:NyNx(1)-i+1,1:NyNx(2)-j+1)).*(conj(tx(i:end,j:end)))));
+            t(i,j)=sum(sum((tx(1:NyNx(1)-i+1,1:NyNx(2)-j+1)).*(conj(tx(i:end,j:end)))));
         end
     end
     % Normalize - that probably should be using the values and not just
     % counting them, as is of course the case for a unit window
-    txx=txx/prod(NyNx);
+    t=t/prod(NyNx);
 
     % Here too should use FFT where we can, see compute_kernels
-    % internally and below
+    % internally and below, I would image that's just the same thing
     if xver==1
-        
+        disp('Do something or skip')
     end
 else
     % Just a single number, could be 0 or 1 both telling us "not" spatially
@@ -166,58 +180,37 @@ else
     % Here is the gridded triangle for this case
     t=bsxfun(@times,triy,trix);
 
+    % It was a unit taper all along
     if xver==1
-        % Try alternative for the boxcar all-ones
         tx=ones(NyNx)/sqrt(prod(NyNx));
-        % Need to cut one off Arthur says, possibly need to
-        % re-re-visit these even/odd comparisons in BLUROS, if it ever
-        % gets to that point; currently the comparison is favorable
-        t2=fftshift(ifft2(abs(fft2(tx,2*size(tx,1)-1,2*size(tx,2)-1)).^2));
-        % Fix the rim by adding zeroes top and left
-        t2=[zeros(size(t2,1)+1,1) [zeros(1,size(t2,2)) ; t2]];
-        % Check the difference between these two implementations,
-        % all checked for even/odd/method combinations on 2/24/2023
-        if size(t)==NyNx
-            % Then the doubling inside this block needs to be undone
-            t2=t2(NyNx(1)+1:end,NyNx(2)+1:end);
-        end
-        diferm(t,t2); disp('I checked')
     end
+end
+
+if xver==1
+    % Need to cut one off Arthur says, possibly need to
+    % re-re-visit these even/odd comparisons in BLUROS, if it ever
+    % gets to that point; currently the comparison is favorable
+    t2=fftshift(ifft2(abs(fft2(tx,2*size(tx,1)-1,2*size(tx,2)-1)).^2));
+    % Fix the rim by adding zeroes top and left
+    t2=[zeros(size(t2,1)+1,1) [zeros(1,size(t2,2)) ; t2]];
+    % Check the difference between these two implementations,
+    % all checked for even/odd/method combinations on 2/24/2023
+    if size(t)==NyNx
+        % Then the doubling inside this block needs to be undone
+        t2=t2(NyNx(1)+1:end,NyNx(2)+1:end);
+    end
+    diferm(t,t2); %disp('I checked')
 end
 
 % Need the modified spatial covariance
 Cyy=maternosy(y,th).*t;
 
+% Remind me:
 % Arthur: diag(U* * Cyy * U) where U is the DFMTX
 % is the expected periodogram but to get the variance of the gradient we need the whole thing
-% (U* * Cyy * U)
+% (U * Cyy * U)
 % of course in two dimensions
 % periodogram is diag of covariance of dft
 
 % keyboard
 
-% % I would be weighted in case of irregular sampling
-
-
-% clf
-
-% subplot(221)
-% imagesc(t); axis image; title('t')
-% subplot(222)
-% imagesc(t2); axis image; title('t2')
-% % No sense in comparing the rims
-% subplot(223)
-% imagesc(t(2:end,2:end)-t2(2:end,2:end)); axis image; title('difference'); colorbar
-% subplot(224)
-% imagesc(t(2:end,2:end)./t2(2:end,2:end)); axis image; title('ratio'); colorbar
-% caxis(1+[-1 1]*1e-10)
-
-% % A third way for a quadrant
-% for nrow=1:NyNx(1)
-%     for ncol=1:NyNx(2)
-%         % Autocorrelation of the index sequence, i.e. spatial version of above
-%         t3(nrow,ncol)=sum(sum((I(1:NyNx(1)-nrow+1,1:NyNx(2)-ncol+1)).*(conj(I(nrow:end, ncol:end)))));
-%     end
-% end
-% % t3=t3/sqrt(prod(NyNx));
-% diferm(t(51:100,51:100),t3)
