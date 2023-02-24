@@ -1,13 +1,16 @@
 function [Sbar,k]=blurosy(th,params,xver,method)
 % [Sbar,k]=blurosy(th,params,xver,method)
 %
-% Wavenumber blurring of a univariate Matern covariance structure with
-% the periodogram of a boxcar. This is the exact (fast) explicit way
-% which requires no convolutional grid refinement. Later, will build
-% in other types of windows. Note this is the expected
-% periodogram. Unlike BLUROS, this IS a stand-alone code, in that it
-% is not blurring an input parameterized-spectral-density but rather
-% producing a blurred-spectral-density from input spectral-parameters.
+% Wavenumber blurring of a univariate Matern spectral density with the
+% periodogram of a spatial taper. This is the exact (fast) explicit
+% way which requires no convolutional grid refinement. Note that the
+% result is the expected periodogram. Unlike BLUROS, this IS a
+% stand-alone code, in that it is not blurring an input parameterized
+% spectral density but rather producing a blurred spectral density
+% from input spectral-parameters, through Fourier transformation of
+% the product of the Matern correlation function with the
+% autocorrelation of the taper window function. Equations refer to
+% Guillaumin et al., 2022, doi: 10.1111/rssb.12539
 %
 % INPUT:
 %
@@ -26,7 +29,6 @@ function [Sbar,k]=blurosy(th,params,xver,method)
 %         0 No checking at all
 % method  'ef' exact, efficient and fast
 %         'efs' exact, efficient and faster, exploiting Hermiticity [default]
-%         'tocome' Arthurs' latest, after January 2023 discussion
 %
 % OUTPUT:
 %
@@ -55,7 +57,7 @@ if isinf(params.blurs)
 end
 
 % Defaults
-defval('xver','1')
+defval('xver',1)
 % It is here and now only that we decide to always go with 'efs'
 defval('method','efs')
 
@@ -64,40 +66,40 @@ NyNx=params.NyNx;
 dydx=params.dydx;
 
 switch method 
- case 'ef'
-  % http://blogs.mathworks.com/steve/2010/07/16/complex-surprises-from-fft/
+  case 'ef'
+    % http://blogs.mathworks.com/steve/2010/07/16/complex-surprises-from-fft/
 
-  % Fully exact and not particularly fast, still much faster than BLUROS
-  ycol=[-NyNx(1):NyNx(1)-1]';
-  xrow=[-NyNx(2):NyNx(2)-1] ;
+    % Fully exact and not particularly fast, still much faster than BLUROS
+    ycol=[-NyNx(1):NyNx(1)-1]';
+    xrow=[-NyNx(2):NyNx(2)-1] ;
 
-  % Here is the Matern spatial covariance on the distance grid,
-  % multiplied by the spatial taper in a way that its Fourier
-  % transform can be the convolution of the spectral density with the
-  % spectral density of the taper, i.e. the expected periodogram
-  Cyy=spatmat(ycol,xrow,th,params);
+    % Here is the Matern spatial covariance on the distance grid,
+    % multiplied by the spatial taper in a way that its Fourier
+    % transform can be the convolution of the spectral density with the
+    % spectral density of the taper, i.e. the expected periodogram
+    [Cyy,t]=spatmat(ycol,xrow,th,params,xver);
 
-  % Here is the blurred covariance on the 'double' grid
-  Hh=fftshift(realize(fft2(ifftshift(Cyy))));
+    % Here is the blurred covariance on the 'double' grid
+    Hh=fftshift(realize(fft2(ifftshift(Cyy))));
 
-  % Play with a culled DFTMTX? Rather now subsample to the 'complete' grid
-  Hh=Hh(1+mod(NyNx(1),2):2:end,1+mod(NyNx(2),2):2:end);
+    % Play with a culled DFTMTX? Rather now subsample to the 'complete' grid
+    Hh=Hh(1+mod(NyNx(1),2):2:end,1+mod(NyNx(2),2):2:end);
   case 'efs'
-  % Fully exact and trying to be faster for advanced symmetry in the covariance
-  ycol=[0:NyNx(1)-1]';
-  xrow=[0:NyNx(2)-1] ;
+    % Fully exact and trying to be faster for advanced symmetry in the covariance
+    ycol=[0:NyNx(1)-1]';
+    xrow=[0:NyNx(2)-1] ;
+    
+    % Here is the Matern spatial covariance on the distance grid again, see above
+    [Cyy,t]=spatmat(ycol,xrow,th,params,xver);
 
-  % Here is the Matern spatial covariance on the distance grid again, see above
-  Cyy=spatmat(ycol,xrow,th,params);
+    % Exploit the symmetry just a tad, which allows us to work with smaller matrices
+    q1=fft2(Cyy);
+    q4=q1+[q1(:,1) fliplr(q1(:,2:end))];
 
-  % Exploit the symmetry just a tad, which allows us to work with smaller matrices
-  q1=fft2(Cyy);
-  q4=q1+[q1(:,1) fliplr(q1(:,2:end))];
-
-  % Here is the blurred covariance on the 'complete' grid
-  Hh=fftshift(2*real(q4-repmat(fft(Cyy(:,1)),1,NyNx(2)))...
-	      -repmat(2*real(fft(Cyy(1,1:end))),NyNx(1),1)...
-	      +Cyy(1,1));
+    % Here is the blurred covariance on the 'complete' grid
+    Hh=fftshift(2*real(q4-repmat(fft(Cyy(:,1)),1,NyNx(2)))...
+	        -repmat(2*real(fft(Cyy(1,1:end))),NyNx(1),1)...
+	        +Cyy(1,1));
 end
 
 % Normalize and vectorize
@@ -115,10 +117,11 @@ if nargout>1
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [Cyy,t]=spatmat(ycol,xrow,th,params)
-% Returns the modified spatial covariance whose transform is the
-% blurred spectrum when the taper is a rectangular boxcar, i.e. the
-% expected periodogram, and also returns the applied taper
+function [Cyy,t]=spatmat(ycol,xrow,th,params,xver)
+% Returns the Modified spatial covariance whose Fourier transform is
+% the blurred spectrum after spatial data tapering, i.e. the expected
+% periodogram. Also returns the autocovariance of the applied taper in
+% case it was not a boxcar.
 
 % Target dimensions, the original ones
 NyNx=params.NyNx;
@@ -134,23 +137,52 @@ if prod(size(params.taperx))>1
     % ~/POSTDOCS/ArthurGuillaumin/CodeArthur/NonParametricEstimation/Periodogram.m
     % ~/POSTDOCS/ArthurGuillaumin/CodeArthur/QuickRunX/expected_periodogram.m
     % ~/POSTDOCS/ArthurGuillaumin/CodeArthur/QuickRunX/kernel_modulation.m
+    keyboard
+    tx=params.taperx;
+    txx=zeros(size(tx));
+    % Produce the normalized autocorrelation sequence eq. (12)
+    for i=1:NyNx(1)
+        for j=1:NyNx(2)
+            txx(i,j)=sum(sum((tx(1:NyNx(1)-i+1,1:NyNx(2)-j+1)).*(conj(tx(i:end,j:end)))));
+        end
+    end
+    % Normalize - that probably should be using the values and not just
+    % counting them, as is of course the case for a unit window
+    txx=txx/prod(NyNx);
 
+    % Here too should use FFT where we can, see compute_kernels
+    % internally and below
+    if xver==1
+        
+    end
 else
+    % Just a single number, could be 0 or 1 both telling us "not" spatially
+    % tapered which is of course the same as a "unit" taper, in essence
     % It's a unit spatial taper operation, the triangles coming out of
-    % the convolution of the unit window functions, the triangle c_g,n(u) of
+    % the autocorrelation of the unit window functions, the triangle c_g,n(u) of
     % eqs 12-13 in Guillaumin et al, 2022, doi: 10.1111/rssb.12539
     triy=1-abs(ycol)/NyNx(1);
     trix=1-abs(xrow)/NyNx(2);
-    % Here is the triangle grid c_g,n(u) of 
+    % Here is the gridded triangle for this case
     t=bsxfun(@times,triy,trix);
 
-    % % Try alternative for the boxcar all-ones
-    % I=ones(NyNx)/sqrt(prod(NyNx));
-    % % Need to cut one off Arthur says
-    % t2=fftshift(ifft2(abs(fft2(I,2*size(I,1)-1,2*size(I,2)-1)).^2));
-    % % Fix the rim by adding zeroes top and left
-    % t2=[zeros(size(t2,1)+1,1) [zeros(1,size(t2,2)) ; t2]];
-
+    if xver==1
+        % Try alternative for the boxcar all-ones
+        tx=ones(NyNx)/sqrt(prod(NyNx));
+        % Need to cut one off Arthur says, possibly need to
+        % re-re-visit these even/odd comparisons in BLUROS, if it ever
+        % gets to that point; currently the comparison is favorable
+        t2=fftshift(ifft2(abs(fft2(tx,2*size(tx,1)-1,2*size(tx,2)-1)).^2));
+        % Fix the rim by adding zeroes top and left
+        t2=[zeros(size(t2,1)+1,1) [zeros(1,size(t2,2)) ; t2]];
+        % Check the difference between these two implementations,
+        % all checked for even/odd/method combinations on 2/24/2023
+        if size(t)==NyNx
+            % Then the doubling inside this block needs to be undone
+            t2=t2(NyNx(1)+1:end,NyNx(2)+1:end);
+        end
+        diferm(t,t2); disp('I checked')
+    end
 end
 
 % Need the modified spatial covariance
@@ -166,11 +198,7 @@ Cyy=maternosy(y,th).*t;
 
 % % I would be weighted in case of irregular sampling
 
-% % Generic mask using blobi
-% %I=blobi;
 
-
-% diferm(t,t2)
 % clf
 
 % subplot(221)
