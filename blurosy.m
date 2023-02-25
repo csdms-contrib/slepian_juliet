@@ -148,20 +148,29 @@ if prod(size(params.taperx))>1
     % Make sure it's normalized
     tx=tx./sum(sum(tx.^2));
 
-    % Produce the normalized autocorrelation sequence eq. (12)
-    t=zeros(size(tx));
-    % It's quite vital that these be colon ranges (faster) or (like
-    % here) ROW index vectors... mixing rows/columns won't work
-    for i=xrow(:)'+1
-        for j=ycol(:)'+1
-            % Vectorize? Check out XCORR2, that's good
-            t(i,j)=sum(sum(tx(1:NyNx(1)-i+1,1:NyNx(2)-j+1).*(conj(tx(i:end,j:end)))));
+    % If you are here with efs the taper is explicit AND not
+    % symmetric, so must do something else
+    
+    if all([length(xrow) length(ycol)]==NyNx)
+        % Produce the normalized autocorrelation sequence eq. (12)
+        t=zeros(size(tx));
+        % It's quite vital that these be colon ranges (faster) or (like
+        % here) ROW index vectors... mixing rows/columns won't work
+        for i=xrow(:)'+1
+            for j=ycol(:)'+1
+                % Vectorize? Check out XCORR2, that's good
+                t(i,j)=sum(sum(tx(1:NyNx(1)-i+1,1:NyNx(2)-j+1).*(conj(tx(i:end,j:end)))));
+            end
         end
+    else
+        % This also obviates the extra test below, really this
+        % should be the top way, but leave the explicit way for illustration
+        t=xcorr2(tx);
     end
-
+    
     % Here too should use FFT where we can, see compute_kernels
     % internally and below, I would image that's just the same thing
-    if xver==1
+    if xver==1 & all(size(t)==NyNx)
         t3=xcorr2(tx);
         if all(size(t)==NyNx)
             % Then the doubling inside this block needs to be undone
