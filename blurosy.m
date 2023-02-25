@@ -1,5 +1,5 @@
-function [Sbar,k,t]=blurosy(th,params,xver,method)
-% [Sbar,k,t]=blurosy(th,params,xver,method)
+function [Sbar,k,tyy]=blurosy(th,params,xver,method)
+% [Sbar,k,tyy]=blurosy(th,params,xver,method)
 %
 % Wavenumber blurring of a univariate Matern spectral density with the
 % periodogram of a spatial taper. This is the exact (fast) explicit
@@ -35,7 +35,7 @@ function [Sbar,k,t]=blurosy(th,params,xver,method)
 % Sbar    The blurred spectral matrix, on the original requested
 %         dimension as identified by 'params' from the input
 % k       The wavenumber matrix (the norm of the wave vectors), unwrapped
-% t       The autocorrelation of the spatial taper... 
+% tyy     The autocorrelation of the spatial taper... 
 %         may never need it explicitly, used in SIMULOSL and LOGLIOSL
 %
 % SEE ALSO:
@@ -49,7 +49,7 @@ function [Sbar,k,t]=blurosy(th,params,xver,method)
 %                   bb  A MATERNOSP blurring densification (one number)
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 02/23/2023
+% Last modified by fjsimons-at-alum.mit.edu, 02/25/2023
 
 if params.blurs>=0 & ~isinf(params.blurs)
   error('Are you sure you should be running BLUROSY, not BLUROS?')
@@ -60,7 +60,7 @@ end
 
 % Defaults
 defval('xver',1)
-defval('method','efs')
+defval('method','ef')
 
 % Target dimensions, the original ones
 NyNx=params.NyNx;
@@ -107,7 +107,7 @@ switch method
 	        -repmat(2*real(fft(Cyy(1,1:end))),NyNx(1),1)...
 	        +Cyy(1,1));
     % If you ever wanted t to come out you'll need to unquarter it
-    % t=
+    tyy=[fliplr(tyy(:,2:end)) tyy]; tyy=[flipud(tyy) ; tyy];
 end
 
 % Normalize and vectorize
@@ -137,43 +137,37 @@ function [Cyy,t]=spatmat(ycol,xrow,th,params,xver)
 NyNx=params.NyNx;
 dydx=params.dydx;
 
-disp('Next force us in the loop even for unit taper')
-
 % Specify the spatial taper
-kb
 if prod(size(params.taperx))>1
     % Now compare with the other mechanisms
     % Completely general windows
     % See Arthur's note for more general windows, use IFF2/FFT2 you need, see
     % ~/POSTDOCS/ArthurGuillaumin/CodeArthur/NonParametricEstimation/Periodogram.m
-    % ~/POSTDOCS/ArthurGuillaumin/CodeArthur/QuickRunX/expected_periodogram.m
-    % ~/POSTDOCS/ArthurGuillaumin/CodeArthur/QuickRunX/kernel_modulation.m
+    % $MFILES/retired/QR?.m/map_*.m/whittle_*/expected_* etc
     tx=params.taperx;
     % Make sure it's normalized
     tx=tx./sum(sum(tx.^2));
 
     % Produce the normalized autocorrelation sequence eq. (12)
     t=zeros(size(tx));
-    % This is directly compatible with the efs but for ef will need
-    % to do something else, however, no rocket science
-    %    for i=1:NyNx(1)
-    %       for j=1:NyNx(2)
     % It's quite vital that these be colon ranges (faster) or (like
-    % here) row index vectors... row/column won't work
+    % here) ROW index vectors... mixing rows/columns won't work
     for i=xrow(:)'+1
         for j=ycol(:)'+1
             % Vectorize? Check out XCORR2, that's good
-            t(i,j)=sum(sum(tx(1:NyNx(1)-i+1,1:NyNx(2)-j+1)).*(conj(tx(i:end,j:end)))));
+            t(i,j)=sum(sum(tx(1:NyNx(1)-i+1,1:NyNx(2)-j+1).*(conj(tx(i:end,j:end)))));
         end
     end
-    % Normalize - that probably should be using the values and not just
-    % counting them, as is of course the case for a unit window
-    t=t/prod(NyNx);
 
     % Here too should use FFT where we can, see compute_kernels
     % internally and below, I would image that's just the same thing
     if xver==1
-        disp('Do something or skip')
+        t3=xcorr2(tx);
+        if all(size(t)==NyNx)
+            % Then the doubling inside this block needs to be undone
+            t3=t3(NyNx(1):end,NyNx(2):end);
+        end
+        diferm(t,t3);
     end
 else
     % Just a single number, could be 0 or 1 both telling us "not" spatially
@@ -205,13 +199,13 @@ if xver==1
         % Then the doubling inside this block needs to be undone
         t2=t2(NyNx(1)+1:end,NyNx(2)+1:end);
     end
-    diferm(t,t2); %disp('I checked')
+    diferm(t,t2);
 end
 
 % Here is the distance grid, whose size depends on the input
 y=sqrt(bsxfun(@plus,[ycol*dydx(1)].^2,[xrow*dydx(2)].^2));
 
-% Modified the spatial covariance
+% The modified spatial covariance
 Cyy=maternosy(y,th).*t;
 
 % Remind me:
@@ -219,7 +213,4 @@ Cyy=maternosy(y,th).*t;
 % is the expected periodogram but to get the variance of the gradient we need the whole thing
 % (U * Cyy * U)
 % of course in two dimensions
-% periodogram is diag of covariance of dft
-
-% keyboard
-
+% periodogram is diag of the covariance
