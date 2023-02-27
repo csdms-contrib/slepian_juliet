@@ -80,14 +80,14 @@ switch method
     % Fully exact and not particularly fast, still much faster than BLUROS
 
     % Here are the full lags
-    ycol=[-NyNx(1):NyNx(1)-1]';
-    xrow=[-NyNx(2):NyNx(2)-1] ;
+    ydim=[-NyNx(1):NyNx(1)-1]';
+    xdim=[-NyNx(2):NyNx(2)-1] ;
 
     % Here is the Matern spatial covariance on the double distance grid,
     % multiplied by the spatial taper in a way that its Fourier
     % transform can be the convolution of the spectral density with the
     % spectral density of the taper, i.e. the expected periodogram
-    [Cyy,tyy]=spatmat(ycol,xrow,th,params,xver);
+    [Cyy,tyy]=spatmat(ydim,xdim,th,params,xver);
 
     % http://blogs.mathworks.com/steve/2010/07/16/complex-surprises-from-fft/
     % Here is the blurred covariance on the 'double' grid
@@ -100,11 +100,11 @@ switch method
     % Fully exact and trying to be faster for advanced symmetry in the covariance
 
     % Here are the partial lags
-    ycol=[0:NyNx(1)-1]';
-    xrow=[0:NyNx(2)-1] ;
+    ydim=[0:NyNx(1)-1]';
+    xdim=[0:NyNx(2)-1] ;
     
     % Here is the Matern spatial covariance on the quarter distance grid, see above
-    [Cyy,tyy]=spatmat(ycol,xrow,th,params,xver);
+    [Cyy,tyy]=spatmat(ydim,xdim,th,params,xver);
 
     % Exploit the symmetry just a tad, which allows us to work with smaller matrices
     q1=fft2(Cyy);
@@ -140,8 +140,8 @@ varns={Sbar,k,tyy,Cyy};
 varargout=varns(1:nargout);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [Cyy,t]=spatmat(ycol,xrow,th,params,xver)
-% [Cyy,t]=spatmat(ycol,xrow,th,params,xver)
+function [Cyy,t]=spatmat(ydim,xdim,th,params,xver)
+% [Cyy,t]=spatmat(ydim,xdim,th,params,xver)
 %
 % Returns the modified spatial covariance whose Fourier transform is the
 % blurred spectrum after spatial data tapering, i.e. the expected
@@ -164,13 +164,13 @@ if prod(size(params.taperx))>1
 
     % If you are here with efs the taper is explicit AND not
     % symmetric, so must do something else
-    if all([length(ycol) length(xrow)]==NyNx)
+    if all([length(ydim) length(xdim)]==NyNx)
         % Produce the normalized autocorrelation sequence eq. (12)
         t=zeros(size(tx));
         % It's quite vital that these be colon ranges (faster) or (like
         % here) ROW index vectors... mixing rows/columns won't work
-        for i=xrow(:)'+1
-            for j=ycol(:)'+1
+        for i=ydim(:)'+1
+            for j=xdim(:)'+1
                 % Vectorize? Check out XCORR2, that's good
                 t(i,j)=sum(sum(tx(1:NyNx(1)-i+1,1:NyNx(2)-j+1).*(conj(tx(i:end,j:end)))));
             end
@@ -201,8 +201,8 @@ else
     % It's a unit spatial taper operation, the triangles coming out of
     % the autocorrelation of the unit window functions, the triangle c_g,n(u) of
     % eqs 12-13 in Guillaumin et al, 2022, doi: 10.1111/rssb.12539
-    triy=1-abs(ycol)/NyNx(1);
-    trix=1-abs(xrow)/NyNx(2);
+    triy=1-abs(ydim)/NyNx(1);
+    trix=1-abs(xdim)/NyNx(2);
     % Here is the gridded triangle for this case
     t=bsxfun(@times,triy,trix);
 end
@@ -227,7 +227,7 @@ if xver==1
 end
 
 % Here is the distance grid, whose size depends on the input
-y=sqrt(bsxfun(@plus,[ycol*dydx(1)].^2,[xrow*dydx(2)].^2));
+y=sqrt(bsxfun(@plus,[ydim*dydx(1)].^2,[xdim*dydx(2)].^2));
 
 % The modified spatial covariance
 Cyy=maternosy(y,th).*t;
