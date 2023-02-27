@@ -164,7 +164,7 @@ if prod(size(params.taperx))>1
 
     % If you are here with efs the taper is explicit AND not
     % symmetric, so must do something else
-    if all([length(xrow) length(ycol)]==NyNx)
+    if all([length(ycol) length(xrow)]==NyNx)
         % Produce the normalized autocorrelation sequence eq. (12)
         t=zeros(size(tx));
         % It's quite vital that these be colon ranges (faster) or (like
