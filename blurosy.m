@@ -1,5 +1,5 @@
-function [Sbar,k,tyy]=blurosy(th,params,xver,method)
-% [Sbar,k,tyy]=blurosy(th,params,xver,method)
+function varargout=blurosy(th,params,xver,method)
+% [Sbar,k,tyy,Cyy]=blurosy(th,params,xver,method)
 %
 % Wavenumber blurring of a univariate Matern spectral density with the
 % periodogram of a spatial taper. This is the exact (fast) explicit
@@ -24,8 +24,9 @@ function [Sbar,k,tyy]=blurosy(th,params,xver,method)
 %         blurs -1 as appropriate for this procedure, any other errors
 %         taperx  0 there is no taper near of far
 %                 1 it's a unit taper, implicitly
-%                OR an appropriately sized taper with proper values
-% xver    1 Extra verification via BLURCHECK
+%                OR an appropriately sized taper with proper values 
+%                   (1 is yes and 0 is no and everything in between)
+% xver    1 Extra verification via BLURCHECK and alternative computations
 %         0 No checking at all
 % method  'ef' exact, efficient and fast
 %         'efs' exact, efficient and faster, exploiting symmetry [default]
@@ -37,6 +38,7 @@ function [Sbar,k,tyy]=blurosy(th,params,xver,method)
 % k       The wavenumber matrix (the norm of the wave vectors), unwrapped
 % tyy     The autocorrelation of the spatial taper... 
 %         may never need it explicitly, used in SIMULOSL and LOGLIOSL
+% Cyy     The modified Matern correlation, may never need it explicitly
 %
 % SEE ALSO:
 %
@@ -44,12 +46,18 @@ function [Sbar,k,tyy]=blurosy(th,params,xver,method)
 %
 % EXAMPLE:
 %
+% [H,th,p]=simulosl; p.blurs=-1; p.taperx=1; 
+% [Sbar1,k1,tyy1,Cyy1]=blurosy(th,p,1,'ef');
+% [Sbar2,k2,tyy2,Cyy2]=blurosy(th,p,1,'efs'); p.taperx=ones(p.NyNx);
+% [Sbar3,k3,tyy3,Cyy3]=blurosy(th,p,1,'ef');
+% [Sbar4,k4,tyy4,Cyy4]=blurosy(th,p,1,'efs'); % Should be identical
+%
 % BLUROS('demo1',pp,bb) compares against BLUROS where
 %                pp     A square matrix size (one number)
 %                   bb  A MATERNOSP blurring densification (one number)
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 02/25/2023
+% Last modified by fjsimons-at-alum.mit.edu, 02/26/2023
 
 if params.blurs>=0 & ~isinf(params.blurs)
   error('Are you sure you should be running BLUROSY, not BLUROS?')
@@ -106,8 +114,9 @@ switch method
     Hh=fftshift(2*real(q4-repmat(fft(Cyy(:,1)),1,NyNx(2)))...
 	        -repmat(2*real(fft(Cyy(1,1:end))),NyNx(1),1)...
 	        +Cyy(1,1));
-    % If you ever wanted t to come out you'll need to unquarter it
-    tyy=[fliplr(tyy(:,2:end)) tyy]; tyy=[flipud(tyy) ; tyy];
+    % If you ever wanted tyy to come out you'll need to unquarter it
+    tyy=[fliplr(tyy(:,2:end)) tyy]; tyy=[flipud(tyy(2:end,:)) ; tyy];
+    tyy=[zeros(size(tyy,1)+1,1) [zeros(1,size(tyy,2)) ; tyy]];
 end
 
 % Normalize and vectorize
@@ -122,16 +131,23 @@ end
 if nargout>1
   k=knums(params);
   k=k(:);
+else
+  k=[];
 end
+
+% Optional output
+varns={Sbar,k,tyy,Cyy};
+varargout=varns(1:nargout);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [Cyy,t]=spatmat(ycol,xrow,th,params,xver)
 % [Cyy,t]=spatmat(ycol,xrow,th,params,xver)
 %
-% Returns the modified spatial covariance whose Fourier transform is
-% the blurred spectrum after spatial data tapering, i.e. the expected
-% periodogram. Also returns the autocovariance of the applied taper
-% which is an essential part of this operation
+% Returns the modified spatial covariance whose Fourier transform is the
+% blurred spectrum after spatial data tapering, i.e. the expected
+% periodogram. No user to return the autocovariance of the applied spatial
+% taper which is an essential part of this operation...  never need it
+% explicitly, used in SIMULOSL and LOGLIOSL via the intermediary of BLUROSY.
 
 % Dimensions of the original grid
 NyNx=params.NyNx;
@@ -140,17 +156,14 @@ dydx=params.dydx;
 % Specify the spatial taper
 if prod(size(params.taperx))>1
     % Now compare with the other mechanisms
-    % Completely general windows
+    % Completely general windows where 1 means you are taking a sample
     % See Arthur's note for more general windows, use IFF2/FFT2 you need, see
     % ~/POSTDOCS/ArthurGuillaumin/CodeArthur/NonParametricEstimation/Periodogram.m
     % $MFILES/retired/QR?.m/map_*.m/whittle_*/expected_* etc
     tx=params.taperx;
-    % Make sure it's normalized
-    tx=tx./sum(sum(tx.^2));
 
     % If you are here with efs the taper is explicit AND not
     % symmetric, so must do something else
-    
     if all([length(xrow) length(ycol)]==NyNx)
         % Produce the normalized autocorrelation sequence eq. (12)
         t=zeros(size(tx));
@@ -163,15 +176,19 @@ if prod(size(params.taperx))>1
             end
         end
     else
-        % This also obviates the extra test below, really this
-        % should be the top way, but leave the explicit way for illustration
+        % This also obviates the extra test below, really this should be the
+        % top way, but leave the explicit way for illustration
         t=xcorr2(tx);
+	% Add a row of zeros here
+	t=[zeros(size(t,1)+1,1) [zeros(1,size(t,2)) ; t]];
     end
-    
+    % Normalize the cross-correlations
+    t=t/sum(sum(tx.^2));
+
     % Here too should use FFT where we can, see compute_kernels
     % internally and below, I would image that's just the same thing
     if xver==1 & all(size(t)==NyNx)
-        t3=xcorr2(tx);
+        t3=xcorr2(tx); t3=t3/sum(sum(tx.^2));
         if all(size(t)==NyNx)
             % Then the doubling inside this block needs to be undone
             t3=t3(NyNx(1):end,NyNx(2):end);
@@ -188,14 +205,12 @@ else
     trix=1-abs(xrow)/NyNx(2);
     % Here is the gridded triangle for this case
     t=bsxfun(@times,triy,trix);
-
-    % It was a unit taper all along
-    if xver==1
-        tx=ones(NyNx)/sqrt(prod(NyNx));
-    end
 end
 
 if xver==1
+    % This is where the normalization, only here, everywhere else already
+    % in there! 
+    tx=ones(NyNx)/sqrt(prod(NyNx));
     % Need to cut one off Arthur says, possibly need to
     % re-re-visit these even/odd comparisons in BLUROS, if it ever
     % gets to that point; currently the comparison is favorable
@@ -217,9 +232,7 @@ y=sqrt(bsxfun(@plus,[ycol*dydx(1)].^2,[xrow*dydx(2)].^2));
 % The modified spatial covariance
 Cyy=maternosy(y,th).*t;
 
-% Remind me:
-% Arthur: diag(U* * Cyy * U) where U is the DFMTX
-% is the expected periodogram but to get the variance of the gradient we need the whole thing
-% (U * Cyy * U)
-% of course in two dimensions
-% periodogram is diag of the covariance
+% Remind me: Arthur: diag(U^T * Cyy * U) where U is the DFMTX is the
+% expected periodogram, the diagonal variance, but to get the variance of
+% the gradient we need the whole thing, the covariance, (U^T * Cyy * U) of
+% course in two dimensions, so properly arranged.
