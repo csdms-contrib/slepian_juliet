@@ -27,14 +27,15 @@ function varargout=maskit(v,p,scl,w)
 % maskit('demo1') % A geographical region masking a single field
 % maskit('demo2') % A geographical region merging two fields
 % maskit('demo1','england') % Etc for more geographical variability
+% [~,~,I]=maskit('demo1'); % To get a quick mask to look at
 %
-% Last modified by fjsimons-at-alum.mit.edu, 01/27/2023
+% Last modified by fjsimons-at-alum.mit.edu, 02/25/2023
 
 % The default is the demo, for once
 defval('v','demo1')
 
 if ~isstr(v)
-    % Get the mask
+    % Get the mask by name
     if isstr(p.mask)
         XY=eval(p.mask);
 
@@ -51,7 +52,7 @@ if ~isstr(v)
         % Determine the mask
         I=inpolygon(X,Y,cr(:,1),cr(:,2));
     else
-
+        % You already have it
     end
 
     % Apply the mask to v, w and merge into vw as desired
@@ -69,9 +70,6 @@ if ~isstr(v)
     % This is the order, dudes
     v(~I(:))=NaN;
 
-    % Variable output
-    varns={v,cr,I,w,vw};
-    varargout=varns(1:nargout);
 elseif strcmp(v,'demo1')
     % Capture the second input
     defval('p','france')
@@ -84,6 +82,7 @@ elseif strcmp(v,'demo1')
     subplot(121); plotit(Hx,p,cr,th)
     subplot(122); plotit(Hm,p,cr,[])
     % figdisp(sprintf('maskit_%s',p.mask),[],[],2)
+    v=Hm; [w,vw]=deal(NaN);
 elseif strcmp(v,'demo2')
     % Capture the second input
     defval('p','france')
@@ -103,8 +102,13 @@ elseif strcmp(v,'demo2')
     subplot(223); plotit(Gx,p,cr,th2)
     ah(4)=subplot(224); plotit(HG,p,cr,[])
     movev(ah(4),0.25)
-    figdisp(sprintf('maskit4_%s',p.mask),[],[],2)
+    % figdisp(sprintf('maskit4_%s',p.mask),[],[],2)
+    v=Hm; w=Gm; vw=HG;
 end
+
+% Variable output
+varns={v,cr,I,w,vw};
+varargout=varns(1:nargout);
 
 function plotit(v,p,cr,th)
 % Should use th(1) instead of halverange, shouldn't I...
@@ -113,6 +117,6 @@ hold on; twoplot(cr,'Color','k'); hold off; longticks; grid on
 xticks([1 round(p.NyNx(2)/2) p.NyNx(2)]); yticks([1 round(p.NyNx(1)/2) p.NyNx(1)])
 if ~isempty(th)
     t=title(sprintf('%i x %i | %s = [%g %g %g]',p.NyNx(1),p.NyNx(2),'\theta',...
-                    th./[1 1 sqrt(prod(p.dydx))]))
+                    th./[1 1 sqrt(prod(p.dydx))]));
     movev(t,-p.NyNx(1)/20)
 end
