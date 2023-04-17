@@ -22,8 +22,8 @@ function varargout=blurosy(th,params,xver,method)
 %         dydx  sampling interval in the y and x directions [m m]
 %         NyNx  number of samples in the y and x directions
 %         blurs -1 as appropriate for this procedure, any other errors
-%         taperx  0 there is no taper near of far
-%                 1 it's a unit taper, implicitly
+%         taper  0 there is no taper near of far
+%                1 it's a unit taper, implicitly
 %                OR an appropriately sized taper with proper values 
 %                   (1 is yes and 0 is no and everything in between)
 % xver    1 Extra verification via BLURCHECK and alternative computations
@@ -46,9 +46,9 @@ function varargout=blurosy(th,params,xver,method)
 %
 % EXAMPLE:
 %
-% [H,th,p]=simulosl; p.blurs=-1; p.taperx=1; 
+% [H,th,p]=simulosl; p.blurs=-1; p.taper=1; 
 % [Sbar1,k1,tyy1,Cyy1]=blurosy(th,p,1,'ef');
-% [Sbar2,k2,tyy2,Cyy2]=blurosy(th,p,1,'efs'); p.taperx=ones(p.NyNx);
+% [Sbar2,k2,tyy2,Cyy2]=blurosy(th,p,1,'efs'); p.taper=ones(p.NyNx);
 % [Sbar3,k3,tyy3,Cyy3]=blurosy(th,p,1,'ef');
 % [Sbar4,k4,tyy4,Cyy4]=blurosy(th,p,1,'efs'); % Should be identical
 %
@@ -57,7 +57,7 @@ function varargout=blurosy(th,params,xver,method)
 %                   bb  A MATERNOSP blurring densification (one number)
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 02/26/2023
+% Last modified by fjsimons-at-alum.mit.edu, 03/07/2023
 
 if params.blurs>=0 & ~isinf(params.blurs)
   error('Are you sure you should be running BLUROSY, not BLUROS?')
@@ -127,6 +127,7 @@ if xver==1
   blurcheck(Sbar,params)
 end
 
+
 % Produce the unwrapped wavenumbers if you've requested them to be output
 if nargout>1
   k=knums(params);
@@ -143,52 +144,52 @@ varargout=varns(1:nargout);
 function [Cyy,t]=spatmat(ydim,xdim,th,params,xver)
 % [Cyy,t]=spatmat(ydim,xdim,th,params,xver)
 %
-% Returns the modified spatial covariance whose Fourier transform is the
-% blurred spectrum after spatial data tapering, i.e. the expected
-% periodogram. No user to return the autocovariance of the applied spatial
-% taper which is an essential part of this operation...  never need it
-% explicitly, used in SIMULOSL and LOGLIOSL via the intermediary of BLUROSY.
+% Returns the modified spatial covariance whose Fourier transform is
+% the blurred spectrum after spatial data tapering, i.e. the expected
+% periodogram. No use to return the autocovariance of the applied spatial
+% taper which is an essential part of this operation...  never need it explicitly,
+% used in SIMULOSL and LOGLIOSL via the  intermediary of BLUROSY.
 
 % Dimensions of the original grid
 NyNx=params.NyNx;
 dydx=params.dydx;
 
 % Specify the spatial taper
-if prod(size(params.taperx))>1
+if prod(size(params.taper))>1
     % Now compare with the other mechanisms
     % Completely general windows where 1 means you are taking a sample
     % See Arthur's note for more general windows, use IFF2/FFT2 you need, see
     % ~/POSTDOCS/ArthurGuillaumin/CodeArthur/NonParametricEstimation/Periodogram.m
     % $MFILES/retired/QR?.m/map_*.m/whittle_*/expected_* etc
-    tx=params.taperx;
+    Tx=double(params.taper);
 
     % If you are here with efs the taper is explicit AND not
     % symmetric, so must do something else
     if all([length(ydim) length(xdim)]==NyNx)
         % Produce the normalized autocorrelation sequence eq. (12)
-        t=zeros(size(tx));
+        t=zeros(size(Tx));
         % It's quite vital that these be colon ranges (faster) or (like
         % here) ROW index vectors... mixing rows/columns won't work
         for i=ydim(:)'+1
             for j=xdim(:)'+1
                 % Vectorize? Check out XCORR2, that's good
-                t(i,j)=sum(sum(tx(1:NyNx(1)-i+1,1:NyNx(2)-j+1).*(conj(tx(i:end,j:end)))));
+                t(i,j)=sum(sum(Tx(1:NyNx(1)-i+1,1:NyNx(2)-j+1).*(conj(Tx(i:end,j:end)))));
             end
         end
     else
         % This also obviates the extra test below, really this should be the
         % top way, but leave the explicit way for illustration
-        t=xcorr2(tx);
+        t=xcorr2(Tx);
 	% Add a row of zeros here
 	t=[zeros(size(t,1)+1,1) [zeros(1,size(t,2)) ; t]];
     end
     % Normalize the cross-correlations
-    t=t/sum(sum(tx.^2));
+    t=t/sum(sum(Tx.^2));
 
     % Here too should use FFT where we can, see compute_kernels
     % internally and below, I would image that's just the same thing
-    if xver==1 & all(size(t)==NyNx)
-        t3=xcorr2(tx); t3=t3/sum(sum(tx.^2));
+    if xver==1 && all(size(t)==NyNx)
+        t3=xcorr2(Tx); t3=t3/sum(sum(Tx.^2));
         if all(size(t)==NyNx)
             % Then the doubling inside this block needs to be undone
             t3=t3(NyNx(1):end,NyNx(2):end);
@@ -205,25 +206,26 @@ else
     trix=1-abs(xdim)/NyNx(2);
     % Here is the gridded triangle for this case
     t=bsxfun(@times,triy,trix);
-end
 
-if xver==1
-    % This is where the normalization, only here, everywhere else already
-    % in there! 
-    tx=ones(NyNx)/sqrt(prod(NyNx));
-    % Need to cut one off Arthur says, possibly need to
-    % re-re-visit these even/odd comparisons in BLUROS, if it ever
-    % gets to that point; currently the comparison is favorable
-    t2=fftshift(ifft2(abs(fft2(tx,2*size(tx,1)-1,2*size(tx,2)-1)).^2));
-    % Fix the rim by adding zeroes top and left
-    t2=[zeros(size(t2,1)+1,1) [zeros(1,size(t2,2)) ; t2]];
-    % Check the difference between these two implementations,
-    % all checked for even/odd/method combinations on 2/24/2023
-    if all(size(t)==NyNx)
-        % Then the doubling inside this block needs to be undone
-        t2=t2(NyNx(1)+1:end,NyNx(2)+1:end);
+    if xver==1
+        % This is where the normalization, only here, everywhere else already
+        % in there! 
+        Tx=ones(NyNx)/sqrt(prod(NyNx));
+        % Need to cut one off Arthur says, possibly need to
+        % re-re-visit these even/odd comparisons in BLUROS, if it ever
+        % gets to that point; currently the comparison is favorable
+        t2=fftshift(ifft2(abs(fft2(Tx,2*size(Tx,1)-1,2*size(Tx,2)-1)).^2));
+        % Fix the rim by adding zeroes top and left
+        t2=[zeros(size(t2,1)+1,1) [zeros(1,size(t2,2)) ; t2]];
+        % Check the difference between these two implementations,
+        % all checked for even/odd/method combinations on 2/24/2023
+        if all(size(t)==NyNx)
+            % Then the doubling inside this block needs to be undone
+            t2=t2(NyNx(1)+1:end,NyNx(2)+1:end);
+        end
+        diferm(t,t2);
     end
-    diferm(t,t2);
+
 end
 
 % Here is the distance grid, whose size depends on the input
