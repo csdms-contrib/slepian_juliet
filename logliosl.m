@@ -22,6 +22,10 @@ function [L,g,H,momx,vr,Lk]=logliosl(k,th,scl,params,Hk,xver)
 %                Inf in which case it gets a hard reset to -1
 %          kiso   wavenumber beyond which we are not considering the likelihood
 %          (ksel   logical structure with wavenumbers being taken into account)
+%          taper  0 there is no taper near of far
+%                 1 it's a unit taper, implicitly
+%                 OR an appropriately sized taper with proper values 
+%                 (1 is yes and 0 is no and everything in between)
 % Hk       A [prod(params.NyNx)*1]-column of complex Fourier-domain observations
 % xver     Excessive verification [0 or 1, which also computes L(k)]
 %
