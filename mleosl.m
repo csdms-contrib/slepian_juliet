@@ -2,8 +2,10 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 % [thhat,covFHh,lpars,scl,thini,params,Hk,k]=...
 %          MLEOSL(Hx,thini,params,algo,bounds,aguess,xver)
 %
-% Performs a maximum-likelihood estimation for SINGLE FIELDS as in
-% Olhede & Simons (2013) by minimization using FMINUNC/FMINCON.
+% Maximum-likelihood estimation for univariate Gaussian
+% multidimensional fields with isotropic Matern covariance
+% See Olhede & Simons (2013), doi: 10.1093/gji/ggt056.x
+% See Guillaumin & al (2023), doi: 
 %
 % INPUT:
 %
@@ -22,8 +24,10 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %          kiso   wavenumber beyond which we are not considering the likelihood
 %          quart 1 quadruple, then QUARTER the spatial size
 %                0 size as is, watch for periodic correlation behavior
-%          taper 1 a certain taper
-%                0 no taper
+%         taper  0 there is no taper near of far
+%                1 it's a unit taper, implicitly
+%                OR an appropriately sized taper with proper values 
+%                   (1 is yes and 0 is no and everything in between)
 % algo     'unc' uses FMINUNC for unconstrained optimization
 %          'con' uses FMINCON with positivity constraints [default]
 %          'klose' simply closes out a run that got stuck [defaulted when needed ]
@@ -84,7 +88,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 01/26/2023
+% Last modified by fjsimons-at-alum.mit.edu, 03/07/2023
 
 if ~isstr(Hx)
   defval('algo','unc')
@@ -98,12 +102,14 @@ if ~isstr(Hx)
   % Supply the needed parameters, keep the givens, extract to variables
   fields={               'dydx','NyNx','blurs','kiso','quart','taper'};
   defstruct('params',fields,...
-	    {                      [20 20]*1e3,sqrt(length(Hx))*[1 1],Inf,NaN,0,0});
+	    {                      [20 20]*1e3,sqrt(length(Hx))*[1 1],-1,NaN,0,0});
   struct2var(params)
 
   % You cannot call MLEOSL with blur parameter Inf, since that's for
-  % simulation only, we can go for safe reset or else straight error
-  error('The blurs parameter Inf is reserved for SIMULOSL')
+  % SIMULOSL only, we can go for safe reset or else straight error
+  if isinf(blurs)
+      error('The blurs parameter Inf is reserved for SIMULOSL')
+  end
   
   % These bounds are physically motivated...
   if strcmp(algo,'con')
@@ -148,42 +154,13 @@ if ~isstr(Hx)
   
   % Now scale so the minimization doesn't get into trouble
   thini=thini./scl;
-  
-  % I do believe that when params.blurs=Inf we should be tapering since
-  % then the data are no longer periodic on the space grid... Indeed
-  % they then have been simulated using SGP which takes into account
-  % wavenumber correlations and indeed that then sometimes can lead to
-  % the need for further stabilization. The best we can do now, with
-  % the debiasing step, is to build the blurring in to the procedure,
-  % but we cannot take the correlation into account for the
-  % estimation, although we will be building its effects into the
-  % variance estimation
-  if taper==1
-    % We're going to want to make a 2D taper - any taper
-    % disp(sprintf('%s with TAPERING',upper(mfilename)))
-    Tx=ones(params.NyNx);
-    %NW=2;
-    %E1=dpss(NyNx(1),NW,1); E2=dpss(NyNx(2),NW,1);
-    %E1=shanning(NyNx(1),0.2); E2=shanning(NyNx(2),0.2); E1=E1/sqrt(E1'*E1); E2=E2/sqrt(E2'*E2);
-    %Tx=repmat(E1,1,NyNx(2)).*repmat(E2',NyNx(1),1);
-    % But should still watch out for the spectral gain I suppose, this isn't
-    % done just yet, although it appears already properly normalized
-    % However, this looks better now, doesn't it?
-    %Tx=Tx*sqrt(prod(NyNx));
-    % Just the rim removal
-    Tx(1,:)=0; Tx(end,:)=0; Tx(:,1)=0; Tx(:,end)=0;
-    
-    % A whole Tukey/Hanning window
-    % [w,wl,wr]=fhanning(floor(sqrt(prod(params.NyNx)))/5);
-    % Tx(:,1:length(wl))=repmat(wl',size(Tx,1),1);
-    % Tx(:,end-length(wl)+1:end)=repmat(wr',size(Tx,1),1);
-    % Tx(1:length(wr),:)=Tx(1:length(wr),:).*repmat(wl,1,size(Tx,2));
-    % Tx(end-length(wr)+1:end,:)=Tx(end-length(wr)+1:end,:).*repmat(wr,1,size(Tx,2));
-    
-    % Make sure to renormalize the taper
-    Tx=Tx*sqrt(prod(NyNx)/[Tx(:)'*Tx(:)]);
+
+  % Analysis taper
+  if length(taper)==1 && (taper==0 || taper==1)
+      Tx=1;
   else
-    Tx=1;
+      % Ones and zeros as suitable for BLUROSY
+      Tx=taper;
   end
 
   % Create the appropriate wavenumber axis
@@ -196,10 +173,14 @@ if ~isstr(Hx)
   Hx(:,1)=Hx(:,1)-mean(Hx(:,1));
   % FJS think about deplaning as well
 
-  % Turn the observation vector to the spectral domain
+  % Turn the tapered observation vector to the spectral domain
   % Watch the 2pi in SIMULOSL
   Hk(:,1)=tospec(Tx(:).*Hx(:,1),params)/(2*pi);
 
+  % Account for the size here?? Novelty 4/17/2023
+  % See BLUROSY and how to normalize there, maybe take values of Tx?
+  Hk(:,1)=Hk(:,1)/sqrt(sum(Tx(:).^2))*sqrt(prod(params.NyNx));
+  
   NN=200;
   % And now get going with the likelihood using Hk
   % [ off|iter|iter-detailed|notify|notify-detailed|final|final-detailed ] 
@@ -219,7 +200,7 @@ if ~isstr(Hx)
   np=length(thini);
   % The number of unique entries in an np*np symmetric matrix
   npp=np*(np+1)/2;
-  
+
   if xver==1 && blurs>-1 && blurs<2 
     % Using the analytical gradient in the optimization is not generally a good
     % idea but if the likelihoods aren't blurred, you can set this option to
