@@ -4,10 +4,12 @@ function varargout=simulosl(th0,params,xver,varargin)
 %
 % Simulates a univariate two-dimensional Matern covariance field,
 % either (blurs=-1,0,1,N>1) in the spectral domain via MATERNOSP,
-% which does not (blurs=0,1) or does (blurs>1) take into account
+% which does not (blurs=0,1) or does (blurs=-1, blurs>1) account for
 % rectangular finite-field wavenumber blurring effects, or (blurs=Inf)
 % in the spatial domain via MATERNOSY, by circulant embedding, which
-% implicitly takes into account blurring AND wavenumber correlation.
+% implicitly takes into account blurring AND wavenumber correlation, 
+% and some (blurs=-1,Inf) able to accommodate arbitrary spatial windows.
+% See Olhede & Simons (2013), doi: 10.1093/gji/ggt056
 %
 % INPUT:
 %
@@ -16,18 +18,20 @@ function varargout=simulosl(th0,params,xver,varargin)
 %          th0(2)=nu   The second Matern parameter 
 %          th0(3)=rho  The third Matern parameter 
 % params   A structure with constants that are (assumed to be) known:
-%          dydx  sampling interval in the y and x directions [m m]
-%          NyNx  number of samples in the y and x directions
-%          blurs 0 No wavenumber blurring
-%                1 No wavenumber blurring, effectively
-%                N Fejer convolutional  BLUROS  on an N-times refined grid
-%               -1 Fejer multiplicative BLUROSY using exact procedure
-%              Inf Simulate using SGP invariant embedding
-%          kiso  wavenumber beyond which we are not considering the spectrum
-%          quart 1 quadruple, then QUARTER
-%                0 size as is, watch for periodic correlation behavior!
-%          taper 1 a certain taper
-%                0 no taper
+%          dydx   sampling interval in the y and x directions [m m]
+%          NyNx   number of samples in the y and x directions
+%          blurs  0 No wavenumber blurring
+%                 1 No wavenumber blurring, effectively
+%                 N Fejer convolutional  BLUROS  on an N-times refined grid
+%                -1 Fejer multiplicative BLUROSY using exact procedure
+%               Inf Simulate using SGP invariant embedding
+%          kiso   wavenumber beyond which we are not considering the spectrum
+%          quart  1 quadruple, then QUARTER
+%                 0 size as is, watch for periodic correlation behavior!
+%          taper  0 there is no taper near of far
+%                 1 it's a unit taper, implicitly
+%                 OR an appropriately sized taper with proper values 
+%                    (1 is yes and 0 is no and everything in between)
 % xver     1 for extra verification, 0 if not needed
 % ... Only for 'demo4', which is used by EGGERS4
 % th0      ... as above
@@ -77,7 +81,7 @@ function varargout=simulosl(th0,params,xver,varargin)
 % MLEOSL, LOADING, SIMULOS, EGGERS1, EGGERS2, EGGERS4, etc
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
-% Last modified by fjsimons-at-alum.mit.edu, 01/26/2023
+% Last modified by fjsimons-at-alum.mit.edu, 04/17/2023
 
 % Make a demo8 with Baig's example
 
@@ -117,7 +121,7 @@ if ~isstr(th0)
     diferm(unique(diff(kx))-dkydkx(2))
   end
 
-  % Bypass this procedure altogether and go for circulant embedding
+  % Bypass this procedure altogether to go for circulant embedding
   if ~isinf(params.blurs)
     % Now construct the whole-spectral matrix
     Z1=randgpn(k,dci,dcn);
@@ -174,10 +178,23 @@ if ~isstr(th0)
     Hx=sgp(params,Cmn);
     params.NyNx=params.NyNx/fax;
     Hx=Hx(1:params.NyNx(1),1:params.NyNx(2));
+
     % Spatial-domain result
     Hx=Hx(:);
-    % Spectral-domain result
+
+    if length(params.taper)~=1
+        % Select the taper out of there
+        Hx=maskit(Hx,params);
+        Hx(isnan(Hx))=0;
+    end
+
+    % Spectral-domain result, don't really need it except for BLUROS('demo2')
     Hk=tospec(Hx,params)/(2*pi);
+    if length(params.taper)>1
+        % Adjust for the taper size
+        Hk=Hk/sqrt(sum(params.taper(:).^2))*sqrt(prod(params.NyNx));
+    end
+
     % I suppose we could get an instance from Hk, if not an average
     % Let's make Sb the periodogram to look at later? And forget about Lb.
     Lb=deal(NaN);
