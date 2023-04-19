@@ -29,7 +29,7 @@ function varargout=maskit(v,p,scl,w)
 % maskit('demo1','england') % Etc for more geographical variability
 % [~,~,I]=maskit('demo1'); % To get a quick mask to look at
 %
-% Last modified by fjsimons-at-alum.mit.edu, 02/25/2023
+% Last modified by fjsimons-at-alum.mit.edu, 04/18/2023
 
 % The default is the demo, for once
 defval('v','demo1')
@@ -53,6 +53,8 @@ if ~isstr(v)
         I=inpolygon(X,Y,cr(:,1),cr(:,2));
     else
         % You already have it
+        cr=NaN;
+        I=p.mask;
     end
 
     % Apply the mask to v, w and merge into vw as desired
@@ -69,7 +71,6 @@ if ~isstr(v)
     end
     % This is the order, dudes
     v(~I(:))=NaN;
-
 elseif strcmp(v,'demo1')
     % Capture the second input
     defval('p','france')
@@ -89,21 +90,47 @@ elseif strcmp(v,'demo2')
     defp=p; clear p
     % Now proceed with a fresh copy
     p.mask=defp;
+    % Simulate using invariant embedding, no taper
     p.quart=0; p.blurs=Inf; p.kiso=NaN; clc;
-    p.NyNx=[47 33];
-    % Simulate first field with defaults from simulosl
-    [Hx,th,p]=simulosl([],p,1);
-    % Simulate second field by making a small change
-    th2=th; th2(2)=0.5;
-    [Gx,th2,p]=simulosl(th2,p,1);
-    % Now do the masking and the merging
-    [Hm,cr,I,Gm,HG]=maskit(Hx,p,[],Gx);
-    subplot(221); plotit(Hx,p,cr,th)
-    subplot(223); plotit(Gx,p,cr,th2)
-    ah(4)=subplot(224); plotit(HG,p,cr,[])
-    movev(ah(4),0.25)
-    % figdisp(sprintf('maskit4_%s',p.mask),[],[],2)
-    v=Hm; w=Gm; vw=HG;
+    % Something manageable without overdoing it
+    p.NyNx=[188 233];
+
+    
+    N=3;
+    for index=1:N
+        % Simulate first field with defaults from simulosl
+        [Hx,th,p]=simulosl([],p,1);
+        % Simulate second field by making a small change
+        th2=th; th2(2)=2.5; th2(3)=30000;
+        [Gx,th2,p]=simulosl(th2,p,1);
+        % Now do the masking and the merging
+        [Hm,cr,I,Gm,HG]=maskit(Hx,p,[],Gx);
+        % No merging?
+        % [Hm,cr,I,Gm,HG]=maskit(Hx,p,[],Hx);
+        subplot(221); plotit(Hx,p,cr,th)
+        subplot(223); plotit(Gx,p,cr,th2)
+        ah(4)=subplot(224); plotit(HG,p,cr,[])
+        movev(ah(4),0.25)
+        % figdisp(sprintf('maskit4_%s',p.mask),[],[],2)
+        v=Hm; w=Gm; vw=HG;
+        % Now recover the parameters of HG but only in the region I
+        p.taper=I;
+        
+        % No masking?
+        % p.taper=1;
+        % As appropriate you'll force the use of BLUROSY in MATERNOSP in LOGLIOS
+        p.blurs=-1;
+        % Perform the optimization on the insert
+        try
+            [thhat(index,:),~,~,scl(index,:)]=mleosl(HG,[],p,[],[],[],[]);
+        end
+        % Perform the optimization on the ~insert
+        p.taper=~I;
+        try
+            [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,[],p,[],[],[],[]);
+        end
+    end
+keyboard
 end
 
 % Variable output
@@ -112,7 +139,7 @@ varargout=varns(1:nargout);
 
 function plotit(v,p,cr,th)
 % Should use th(1) instead of halverange, shouldn't I...
-imagefnan([1 1],p.NyNx([2 1]),v2s(v,p),[],halverange(v,80)); axis ij image 
+imagefnan([1 1],p.NyNx([2 1]),v2s(v,p),[],halverange(v,80,NaN)); axis ij image 
 hold on; twoplot(cr,'Color','k'); hold off; longticks; grid on
 xticks([1 round(p.NyNx(2)/2) p.NyNx(2)]); yticks([1 round(p.NyNx(1)/2) p.NyNx(1)])
 if ~isempty(th)
