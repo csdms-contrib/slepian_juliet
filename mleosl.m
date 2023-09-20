@@ -20,7 +20,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %                1 No wavenumber blurring, effectively
 %                N Fejer convolutional  BLUROS  on an N-times refined grid
 %               -1 Fejer multiplicative BLUROSY using exact procedure
-%              Inf Simulate using SGP invariant embedding, error
+%              Inf Error -> Only for SIMULOSL to use SGP invariant embedding
 %          kiso   wavenumber beyond which we are not considering the likelihood
 %          quart 1 quadruple, then QUARTER the spatial size
 %                0 size as is, watch for periodic correlation behavior
@@ -88,7 +88,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 04/17/2023
+% Last modified by fjsimons-at-alum.mit.edu, 09/20/2023
 
 if ~isstr(Hx)
   defval('algo','unc')
