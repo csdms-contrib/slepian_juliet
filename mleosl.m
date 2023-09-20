@@ -105,7 +105,7 @@ if ~isstr(Hx)
 	    {                      [20 20]*1e3,sqrt(length(Hx))*[1 1],-1,NaN,0,0});
   struct2var(params)
 
-  % You cannot call MLEOSL with blur parameter Inf, since that's for
+  % You cannot call MLEOSL with params.blurs=Inf, since that's for
   % SIMULOSL only, we can go for safe reset or else straight error
   if isinf(blurs)
       error('The blurs parameter Inf is reserved for SIMULOSL')
