@@ -7,7 +7,7 @@ function varargout=blurosy(th,params,xver,method)
 % Exact, fast, explicit way, no convolutional grid refinement (unlike BLUROS).
 % Also unlike BLUROS, this IS a stand-alone code: it is not blurring an input
 % parameterized spectral density but rather producing a blurred spectral density
-% directly from input spectral-parameters, through Fourier transformation of the
+% directly from input spectral parameters, through Fourier transformation of the
 % product of the Matern correlation function with the autocorrelation of the
 % taper window function.
 %
@@ -25,7 +25,7 @@ function varargout=blurosy(th,params,xver,method)
 %         blurs -1 as appropriate for this procedure, any other errors
 %         taper  0 there is no taper near of far
 %                1 it's a unit taper, implicitly
-%                OR an appropriately sized taper with proper values 
+%                OR an appropriately sized taper with explicit values 
 %                   (1 is yes and 0 is no and everything in between)
 % xver    1 Extra verification via BLURCHECK and alternative computations
 %         0 No checking at all
@@ -34,10 +34,10 @@ function varargout=blurosy(th,params,xver,method)
 %
 % OUTPUT:
 %
-% Sbar    The blurred spectral matrix, on the original requested
-%         dimension as identified by 'params' from the input
+% Sbar    The blurred spectral matrix, with the unwrapped requested dimension
+%         as identified by the input 'params' (wrap with V2S)
 % k       The wavenumber matrix (the norm of the wave vectors), unwrapped
-% tyy     The autocorrelation of the spatial taper... 
+% tyy     The autocorrelation of the spatial taper... which you 
 %         may never need it explicitly, used in SIMULOSL and LOGLIOSL
 % Cyy     The modified Matern correlation, may never need it explicitly
 %
@@ -47,11 +47,14 @@ function varargout=blurosy(th,params,xver,method)
 %
 % EXAMPLE:
 %
-% [H,th,p]=simulosl; p.blurs=-1; p.taper=1; 
+% [H,th,p]=simulosl; p.blurs=-1;
+% p.taper=1; % Implicit unit taper
 % [Sbar1,k1,tyy1,Cyy1]=blurosy(th,p,1,'ef');
-% [Sbar2,k2,tyy2,Cyy2]=blurosy(th,p,1,'efs'); p.taper=ones(p.NyNx);
+% [Sbar2,k2,tyy2,Cyy2]=blurosy(th,p,1,'efs');
+% p.taper=ones(p.NyNx); % Explicit unit taper
 % [Sbar3,k3,tyy3,Cyy3]=blurosy(th,p,1,'ef');
-% [Sbar4,k4,tyy4,Cyy4]=blurosy(th,p,1,'efs'); % Should be identical
+% [Sbar4,k4,tyy4,Cyy4]=blurosy(th,p,1,'efs');
+% % All of these should be virtually identical
 %
 % BLUROS('demo1',pp,bb) compares against BLUROS where
 %                pp     A square matrix size (one number)
@@ -115,17 +118,21 @@ switch method
     Hh=fftshift(2*real(q4-repmat(fft(Cyy(:,1)),1,NyNx(2)))...
 	        -repmat(2*real(fft(Cyy(1,1:end))),NyNx(1),1)...
 	        +Cyy(1,1));
-    % If you ever wanted tyy to come out you'll need to unquarter it
+    % If you ever wanted tyy/Cyy to come out you'll need to unquarter it
     tyy=[fliplr(tyy(:,2:end)) tyy]; tyy=[flipud(tyy(2:end,:)) ; tyy];
     tyy=[zeros(size(tyy,1)+1,1) [zeros(1,size(tyy,2)) ; tyy]];
+    Cyy=[fliplr(Cyy(:,2:end)) Cyy]; Cyy=[flipud(Cyy(2:end,:)) ; Cyy];
+    Cyy=[zeros(size(Cyy,1)+1,1) [zeros(1,size(Cyy,2)) ; Cyy]];
 end
 
 % Normalize and vectorize
 Sbar=Hh(:)*prod(dydx)/(2*pi)^2;
 
-% Check Hermiticity of the result
+% Check Hermiticity of the results
 if xver==1
-  blurcheck(Sbar,params)
+    blurcheck(Sbar,params)
+    hermcheck(tyy)
+    hermcheck(Cyy)
 end
 
 % Produce the unwrapped wavenumbers if you've requested them to be output
@@ -154,7 +161,7 @@ function [Cyy,t]=spatmat(ydim,xdim,th,params,xver)
 NyNx=params.NyNx;
 dydx=params.dydx;
 
-% Specify the spatial taper
+% Specify the spatial taper EXPLICITLY
 if prod(size(params.taper))>1
     % Now compare with the other mechanisms
     % Completely general windows where 1 means you are taking a sample
@@ -166,13 +173,13 @@ if prod(size(params.taper))>1
     % If you are here with efs the taper is explicit AND not
     % symmetric, so must do something else
     if all([length(ydim) length(xdim)]==NyNx)
-        % Produce the normalized autocorrelation sequence eq. (12)
+        % Produce the autocorrelation sequence eq. (12)
         t=zeros(size(Tx));
         % It's quite vital that these be colon ranges (faster) or (like
         % here) ROW index vectors... mixing rows/columns won't work
         for i=ydim(:)'+1
             for j=xdim(:)'+1
-                % Vectorize? Check out XCORR2, that's good
+                % Vectorize? Check out XCORR2, that's also good
                 t(i,j)=sum(sum(Tx(1:NyNx(1)-i+1,1:NyNx(2)-j+1).*(conj(Tx(i:end,j:end)))));
             end
         end
@@ -183,7 +190,7 @@ if prod(size(params.taper))>1
 	% Add a row of zeros here
 	t=[zeros(size(t,1)+1,1) [zeros(1,size(t,2)) ; t]];
     end
-    % Normalize the cross-correlations
+    % Now normalize the cross-correlations at the end
     t=t/sum(sum(Tx.^2));
 
     % Here too should use FFT where we can, see compute_kernels
@@ -197,19 +204,18 @@ if prod(size(params.taper))>1
         diferm(t,t3);
     end
 else
-    % Just a single number, could be 0 or 1 both telling us "not" spatially
-    % tapered which is of course the same as a "unit" taper, in essence
-    % It's a unit spatial taper operation, the triangles coming out of
-    % the autocorrelation of the unit window functions, the triangle c_g,n(u) of
-    % eqs 12-13 in Guillaumin et al, 2022, doi: 10.1111/rssb.12539
+    % Specify the spatial taper IMPLICITLY, taper is just a single number, could
+    % be 0 or 1 both telling us "not" spatially tapered which is of course in
+    % essence the same as a "unit" spatial taper taper operation. The triangle
+    % functions are the normalized autocorrelations of the unit window functions,
+    % i.e. c_{g,n}(u) of (12)-(13) in Guillaumin (2022), doi: 10.1111/rssb.12539
     triy=1-abs(ydim)/NyNx(1);
     trix=1-abs(xdim)/NyNx(2);
     % Here is the gridded triangle for this case
     t=bsxfun(@times,triy,trix);
 
     if xver==1
-        % This is where the normalization, only here, everywhere else already
-        % in there! 
+        % Do form the taper explicitly after all, normalize ahead of time
         Tx=ones(NyNx)/sqrt(prod(NyNx));
         % Need to cut one off Arthur says, possibly need to
         % re-re-visit these even/odd comparisons in BLUROS, if it ever
@@ -225,7 +231,6 @@ else
         end
         diferm(t,t2);
     end
-
 end
 
 % Here is the distance grid, whose size depends on the input
