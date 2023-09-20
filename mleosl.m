@@ -88,7 +88,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 03/07/2023
+% Last modified by fjsimons-at-alum.mit.edu, 04/17/2023
 
 if ~isstr(Hx)
   defval('algo','unc')
@@ -303,7 +303,7 @@ if ~isstr(Hx)
   matscl=[scl(:)*scl(:)'];
 
   % Watch out for singularity or scaling warnings, they are prone to pop up
-  
+
   % Covariance from FMINUNC/FMINCON's numerical scaled Hessian NEAR estimate
   covh=inv(hes./matscl)/df;
   
