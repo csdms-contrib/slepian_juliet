@@ -2,15 +2,16 @@ function varargout=blurosy(th,params,xver,method)
 % [Sbar,k,tyy,Cyy]=blurosy(th,params,xver,method)
 %
 % Wavenumber blurring of a univariate Matern spectral density with the
-% periodogram of a spatial taper. This is the exact (fast) explicit
-% way which requires no convolutional grid refinement. Note that the
-% result is the expected periodogram. Unlike BLUROS, this IS a
-% stand-alone code, in that it is not blurring an input parameterized
-% spectral density but rather producing a blurred spectral density
-% from input spectral-parameters, through Fourier transformation of
-% the product of the Matern correlation function with the
-% autocorrelation of the taper window function. Equations refer to
-% Guillaumin et al., 2022, doi: 10.1111/rssb.12539
+% periodogram of a spatial taper. The result is the expected periodogram.
+%
+% Exact, fast, explicit way, no convolutional grid refinement (unlike BLUROS).
+% Also unlike BLUROS, this IS a stand-alone code: it is not blurring an input
+% parameterized spectral density but rather producing a blurred spectral density
+% directly from input spectral-parameters, through Fourier transformation of the
+% product of the Matern correlation function with the autocorrelation of the
+% taper window function.
+%
+% Equation numbers refer to Guillaumin et al., 2022, doi: 10.1111/rssb.12539
 %
 % INPUT:
 %
@@ -57,7 +58,7 @@ function varargout=blurosy(th,params,xver,method)
 %                   bb  A MATERNOSP blurring densification (one number)
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 03/07/2023
+% Last modified by fjsimons-at-alum.mit.edu, 09/20/2023
 
 if params.blurs>=0 & ~isinf(params.blurs)
   error('Are you sure you should be running BLUROSY, not BLUROS?')
@@ -127,7 +128,6 @@ if xver==1
   blurcheck(Sbar,params)
 end
 
-
 % Produce the unwrapped wavenumbers if you've requested them to be output
 if nargout>1
   k=knums(params);
@@ -144,11 +144,11 @@ varargout=varns(1:nargout);
 function [Cyy,t]=spatmat(ydim,xdim,th,params,xver)
 % [Cyy,t]=spatmat(ydim,xdim,th,params,xver)
 %
-% Returns the modified spatial covariance whose Fourier transform is
-% the blurred spectrum after spatial data tapering, i.e. the expected
-% periodogram. No use to return the autocovariance of the applied spatial
-% taper which is an essential part of this operation...  never need it explicitly,
-% used in SIMULOSL and LOGLIOSL via the  intermediary of BLUROSY.
+% Returns the modified spatial covariance whose Fourier transform is the blurred
+% spectrum after spatial data tapering, i.e. the expected periodogram. No use to
+% return the autocovariance of the applied spatial taper which is an essential
+% part of this operation...  never need it explicitly, used in SIMULOSL and
+% LOGLIOSL via the intermediary of BLUROSY.
 
 % Dimensions of the original grid
 NyNx=params.NyNx;
