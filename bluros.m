@@ -46,19 +46,12 @@ function varargout=bluros(S,params,xver)
 % EXAMPLE:
 %
 % BLUROS('demo1',pp,bb) compares against BLUROSY where
-%                pp     A square matrix size (one number)
+%                pp     A square-matrix size (one number)
 %                   bb  A MATERNOSP blurring densification (one number)
 %
-% for index=1:100; [m(index),s(index),ann]=bluros('demo2',[33 33],index); end
-% H=errorbar(1:100,m,-2*s,2*s); set(getkids(H,1),'Linewidth',2)
-% set(getkids(H,2),'Color',grey); longticks(gca,2)
-% axis tight; grid on; xlabel('Sample size'); 
-% ylabel('Ratio of average to expected periodogram')
-% set(gca,'xtick',[1 10:10:100]); shrink(gca,1,1.1)
-% ylim([min(m-s*2)*1.1 max(m+2*s)*1.1])
-% title(sprintf('%i x %i | %s = [%g %g %g]',ann(1),ann(2),'\theta',...
-%               ann(5:7)./[1 1 sqrt(prod(ann(3:4)))]))
-% figdisp('bluros_demo_2',sprintf('%i_%i',33,100),[],2)
+% BLUROS('demo2',pp,nn) % Boxcar/Ukraine/France example
+%                pp     A matrix size (two numbers)
+%                   nn  A number of iterations over which will be averaged
 %
 % BLUROS('demo3',33,3)
 % 
@@ -310,12 +303,13 @@ elseif strcmp(S,'demo2')
   % density. We welcome variability around it, as this is in line with
   % the uncorrelated-wavenumber approximation of the debiased Whittle
   % approach, but we do fear systematic offsets.
-
+    
   % Some combinations - SIMULOSL
   p.NyNx=[params(1) params(2)];
   p.dydx=1e3*[1 1]; 
   th=1e6*[1 0.0000025 0.001]; 
 
+  % What kind of a test are we running? Boxcar, or France/Ukraine?
   testo=2;
   switch testo
     case 1
@@ -324,140 +318,128 @@ elseif strcmp(S,'demo2')
     case 2
       % Here's another one
       p.mask='france';
+      p.mask='ukraine';
       % Generate mask only
       [~,~,I]=maskit(rand(p.NyNx),p);
       p.mask=~I;
       p.taper=~I;
   end
-  
+
   % So you're going to simulate using SGP and compare with BLUROSY
   p.blurs=-1;
   Sbar=blurosy(th,p);
   p.blurs=Inf;
 
-  % The whole point of the demo is to make the plot, no?
-  pplot=1;
+  % First figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  figure(1)
+  clf
+  [ah,ha,H]=krijetem(subnum(2,3));
+        
+  % The spatial domain taper
+  axes(ah(4))
+  imagesc(p.taper); axis image
+  t(4)=title('mask');
+
+  % The expectation of the periodogram
+  axes(ah(3))
+  imagesc(log10(v2s(Sbar,p))); axis image
+  t(3)=title(sprintf('%s [%g %g %g] | Expectation',...
+                     '\theta =',th./[1 1 sqrt(prod(p.dydx))]))
+  % One random one from the sequence will be shown
+  randix=randi(xver);
   
-  if pplot
-    figure(1); clf
-    [ah,ha,H]=krijetem(subnum(2,3));
-
-    % The spatial domain
-    axes(ah(4))
-    imagesc(p.taper); axis image
-    t(4)=title('mask');
-    % The expectation of the periodogram
-    axes(ah(3))
-    imagesc(log10(v2s(Sbar,p))); axis image
-    t(3)=title(sprintf('%s [%g %g %g] | Expectation',...
-                  '\theta =',th./[1 1 sqrt(prod(p.dydx))]))
-    % One random one from the sequence will be shown
-    randix=randi(xver);
-  end
-
   % muck it up to purposely break it
   %th(3)=th(3)*1.5
-  
+    
   Sbb=0;
-  % The third input in the demo is xver
+  % The third input in the demo was the number of iterations, fake-called 'xver'
   for index=1:xver
-    % Simulate xver times and collect the average periodogram
-    [Hx,th0,p,k,Hk,Sb,Lb,gane,miy]=simulosl(th,p);
-
-    if pplot
-      figure(1)
+      % Simulate sequentially and collect the average periodogram
+      [Hx,th0,p,k,Hk,Sb,Lb,gane,miy]=simulosl(th,p);
       if index==randix;
-        axes(ah(1))
-        imagefnan([1 1],p.NyNx([2 1]),v2s(Hx,p),[],halverange(Hx,75)); axis image ij
-        % title(sprintf('%s [%g %g %g] | Realization # %i',...
-        %               '\theta =',th./[1 1 sqrt(prod(p.dydx))],index))
-        t(1)=title(sprintf('Realization # %i',index));
-
-        axes(ah(2))
-        imagesc(log10(v2s(Sb,p))); axis image
-        % title(sprintf('%s [%g %g %g] | Realization # %i',...
-        %               '\theta =',th./[1 1 sqrt(prod(p.dydx))],index))
-        t(2)=title(sprintf('Realization # %i',index));
+          axes(ah(1))
+          imagefnan([1 1],p.NyNx([2 1]),v2s(Hx,p),[],halverange(Hx,75)); axis image ij
+          % title(sprintf('%s [%g %g %g] | Realization # %i',...
+          %               '\theta =',th./[1 1 sqrt(prod(p.dydx))],index))
+          t(1)=title(sprintf('Realization # %i',index));
+          
+          axes(ah(2))
+          imagesc(log10(v2s(Sb,p))); axis image
+          % title(sprintf('%s [%g %g %g] | Realization # %i',...
+          %               '\theta =',th./[1 1 sqrt(prod(p.dydx))],index))
+          t(2)=title(sprintf('Realization # %i',index));
       end
-    end
-    % Collect the average, watch the growth later
-    Sbb=Sbb+Sb;
-  end
-  % Mean ratio over the realizations
-  Sbb=Sbb/xver;
-  % Mean of the mean ratio over the wavenumbers
-  m=mean(Sbb./Sbar);
-  % Standard deviation of the mean ratio over the wavenumbers
-  s=std(Sbb./Sbar);
-
-  if pplot
-    figure(1)
-    % Then compare with the thing coming out of BLUROSY
-    axes(ah(6))
-    imagesc(log10(v2s(Sbb,p))); axis image
-    t(6)=title(sprintf('Average over %i realizations',xver));
-
-    axes(ah(5))
-    imagesc((v2s(Sbb./Sbar,p))); axis image
-    t(5)=title(sprintf('(average / expectation), m %4.2f, s %4.2f',...
-                        m,s));
-    try
-        set(ah(5),'clim',m+[-1 1]*2*s)
-    end
-    
-    % Clean that sh*t up
-    [k,dci,dcn,kx,ky]=knums(p);
-    set(ah([1 4]),'xtick',unique([1 dci(2) p.NyNx(2)]),...
-                   'ytick',unique([1 dci(1) p.NyNx(1)]));
-
-    set(ah([2 3 5 6]),'xtick',unique([1 dci(2) p.NyNx(2)]),...
-       'ytick',unique([1 dci(1) p.NyNx(1)]),...
-       'xticklabel',[-1 0 1],...
-       'yticklabel',[-1 0 1]);
-
-    longticks(ah)
-    set(ah([3 6]),'YAxisLocation','right')
-    
-    % serre(H,1,'across')
-    serre(H',1,'down')
-
-    movev(t,-p.NyNx(1)/20)
-    
-    figdisp([],sprintf('demo_2_%3.3i_%3.3i_%2.2i',p.NyNx,xver),[],2)
+      % Collect the average, watch the growth later
+      Sbb=Sbb+Sb;
+  
+      % Mean ratio over the realizations
+      Sbb=Sbb/xver;
+      % Mean of the mean ratio over the wavenumbers
+      m(index)=mean(Sbb./Sbar);
+      % Standard deviation of the mean ratio over the wavenumbers
+      s(index)=std(Sbb./Sbar);
+  
+      % Then compare with the thing coming out of BLUROSY
+      axes(ah(6))
+      imagesc(log10(v2s(Sbb,p))); axis image
+      t(6)=title(sprintf('Average over %i realizations',xver));
+      
+      axes(ah(5))
+      imagesc((v2s(Sbb./Sbar,p))); axis image
+      t(5)=title(sprintf('(average / expectation), m %4.2f, s %4.2f',...
+                         m,s));
+      try
+          set(ah(5),'clim',m+[-1 1]*2*s)
+      end
+      
+      % Clean that sh*t up
+      [k,dci,dcn,kx,ky]=knums(p);
+      set(ah([1 4]),'xtick',unique([1 dci(2) p.NyNx(2)]),...
+         'ytick',unique([1 dci(1) p.NyNx(1)]));
+      set(ah([2 3 5 6]),'xtick',unique([1 dci(2) p.NyNx(2)]),...
+         'ytick',unique([1 dci(1) p.NyNx(1)]),...
+         'xticklabel',[-1 0 1],...
+         'yticklabel',[-1 0 1]);
+      longticks(ah)
+      set(ah([3 6]),'YAxisLocation','right')
+      % serre(H,1,'across')
+      serre(H',1,'down')
+      movev(t,-p.NyNx(1)/20)
+      figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i-%3.3i',p.NyNx,index,xver),[],2)
   end
 
-  if pplot
-      % This should be a straight line folks since the ratio is 1/2 chi^2_2
-      df=2;
-      figure(2)
-      clf
-      % See EGGERS8
-      subplot(211)
-      hist(2*Sb./Sbar,1.5*log2(round(prod(p.NyNx))+1))
+  % Second figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  figure(2)
+  clf
+  df=2;
+  % See EGGERS8
+  subplot(211)
+  hist(2*Sb./Sbar,1.5*log2(round(prod(p.NyNx))+1))
+  
+  subplot(212)
+  % This should be a straight line folks since the ratio is 1/2 chi^2_2
+  h=qqplot(2*Sb./Sbar,makedist('gamma','a',df/2,'b',2)); axis equal;
+  hx=get(h,'Xdata'); hx=hx{1};
+  hy=get(h,'ydata'); hy=hy{1};
+  qq0=plot([0 4*df],[0 4*df],'k'); hold on
+  axis image
+  plot(hx,hy,'LineS','none','Marker','o','MarkerF','r',...
+       'MarkerE','r','MarkerS',2);
+  longticks(gca); grid on
+  xlim([0 4*df]); 
+  ylim([0 4*df]); 
+  %plot(2*Sbb./Sbar,1-exp(-2*Sbb./Sbar),'+'); axis tight normal
+  %plot(2*Sbb./Sbar,chi2pdf(2*Sbb./Sbar,df),'+'); axis tight normal
 
-      subplot(212)
-      h=qqplot(2*Sb./Sbar,makedist('gamma','a',df/2,'b',2)); axis equal;
-      hx=get(h,'Xdata'); hx=hx{1};
-      hy=get(h,'ydata'); hy=hy{1};
-      qq0=plot([0 4*df],[0 4*df],'k'); hold on
-      axis image
-
-      plot(hx,hy,'LineS','none','Marker','o','MarkerF','r',...
-	   'MarkerE','r','MarkerS',2);
-      longticks(gca); grid on
-      xlim([0 4*df]); 
-      ylim([0 4*df]); 
-      %plot(2*Sbb./Sbar,1-exp(-2*Sbb./Sbar),'+'); axis tight normal
-      %plot(2*Sbb./Sbar,chi2pdf(2*Sbb./Sbar,df),'+'); axis tight normal
-  end
-    
-
-  % Let's put out the stats at the very end
-  Sbar=m;
-  k=s;
-  % These are annotations for which we hijack the output names
-  c2=[p.NyNx p.dydx th];
-  Fejk=NaN;
+  H=errorbar(1:100,m,-2*s,2*s); set(getkids(H,1),'Linewidth',2)
+  set(getkids(H,2),'Color',grey); longticks(gca,2)
+  axis tight; grid on; xlabel('Sample size'); 
+  ylabel('Ratio of average to expected periodogram')
+  set(gca,'xtick',[1 10:10:100]); shrink(gca,1,1.1)
+  ylim([min(m-s*2)*1.1 max(m+2*s)*1.1])
+  title(sprintf('%i x %i | %s = [%g %g %g]',p.NyNx,p.dydx,'\theta',...
+                th./[1 1 sqrt(prod(p.dydx))]))
+  figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i',p.NyNx,xver),[],2)
 
 elseif strcmp(S,'demo3')
     % Some combinations - SIMULOSL
@@ -470,7 +452,7 @@ elseif strcmp(S,'demo3')
     th=1e6*[1 0.0000025 0.001];
 
     % So this is what MATERNOSP actually does also, we just want the output of BLUROS
-        % We're going to calculate the refinement convolution of two Dirichlet kernels
+    % We're going to calculate the refinement convolution of two Dirichlet kernels
     [Sbar,k,c2]=bluros(maternos(knums(p,1),th),p);
     % Now inspect c2
     imagesc(log10(c2)); axis image
