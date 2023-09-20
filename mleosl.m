@@ -5,7 +5,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 % Maximum-likelihood estimation for univariate Gaussian
 % multidimensional fields with isotropic Matern covariance
 % See Olhede & Simons (2013), doi: 10.1093/gji/ggt056.x
-% See Guillaumin & al (2023), doi: 
+% See Guillaumin et al. (2022), doi: 10.1111/rssb.12539
 %
 % INPUT:
 %
