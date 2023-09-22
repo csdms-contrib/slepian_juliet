@@ -177,7 +177,7 @@ if ~isstr(Hx)
   % Watch the 2pi in SIMULOSL
   Hk(:,1)=tospec(Tx(:).*Hx(:,1),params)/(2*pi);
 
-  % Account for the size here?? Novelty 4/17/2023
+  % Account for the size here? Like in SIMULOSL and checked in BLUROSY
   % See BLUROSY and how to normalize there, maybe take values of Tx?
   Hk(:,1)=Hk(:,1)/sqrt(sum(Tx(:).^2))*sqrt(prod(params.NyNx));
   
