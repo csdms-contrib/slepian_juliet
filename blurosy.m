@@ -191,9 +191,9 @@ elseif strcmp(th,'demo2')
     end
     switch tsto
       case {2,3}
-        % Generate mask only, never mind what the data will be
+        % Generate "mask" only, never mind what the data will be
         [~,~,I]=maskit(rand(p.NyNx),p);
-        % But remember the taper is the anti-mask, i.e. what you want
+        % Keep the mask as a taper or the taper as mask, for illustration only
         p.taper=~I;
     end
     
