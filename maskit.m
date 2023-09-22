@@ -6,7 +6,7 @@ function varargout=maskit(v,p,scl,w)
 % v       A vector that is the unwrapping of a matrix
 % p       A single parameter structure with AT LEAST this:
 %           NyNx  number of samples in the y and x directions
-%           mask  an index matrix with a mask, OR:
+%           taper an index matrix with a mask, OR:
 %                 a region name that will be scaled to fit
 % scl     A scale between 0 and 1 with the occupying center
 %         fraction of the domain enclosed by the input curve; due
@@ -29,15 +29,15 @@ function varargout=maskit(v,p,scl,w)
 % maskit('demo1','england') % Etc for more geographical variability
 % [~,~,I]=maskit('demo1'); % To get a quick mask to look at
 %
-% Last modified by fjsimons-at-alum.mit.edu, 04/18/2023
+% Last modified by fjsimons-at-alum.mit.edu, 09/21/2023
 
 % The default is the demo, for once
 defval('v','demo1')
 
 if ~isstr(v)
     % Get the mask by name
-    if isstr(p.mask)
-        XY=eval(p.mask);
+    if isstr(p.taper)
+        XY=eval(p.taper);
 
         % Default scale is 80% of the area
         defval('scl',0.8)
@@ -54,7 +54,7 @@ if ~isstr(v)
     else
         % You already have it
         cr=NaN;
-        I=p.mask;
+        I=p.taper;
     end
 
     % Apply the mask to v, w and merge into vw as desired
@@ -76,26 +76,25 @@ elseif strcmp(v,'demo1')
     defval('p','france')
     defp=p; clear p
     % Now proceed with a fresh copy
-    p.mask=defp;
+    p.taper=defp;
     p.quart=0; p.blurs=Inf; p.kiso=NaN; clc; 
     [Hx,th,p]=simulosl([],p,1);
     [Hm,cr,I]=maskit(Hx,p);
     subplot(121); plotit(Hx,p,cr,th)
     subplot(122); plotit(Hm,p,cr,[])
-    % figdisp(sprintf('maskit_%s',p.mask),[],[],2)
+    % figdisp(sprintf('maskit_%s',p.taper),[],[],2)
     v=Hm; [w,vw]=deal(NaN);
 elseif strcmp(v,'demo2')
     % Capture the second input
     defval('p','france')
     defp=p; clear p
     % Now proceed with a fresh copy
-    p.mask=defp;
+    p.taper=defp;
     % Simulate using invariant embedding, no taper
     p.quart=0; p.blurs=Inf; p.kiso=NaN; clc;
     % Something manageable without overdoing it
     p.NyNx=[188 233];
 
-    
     N=3;
     for index=1:N
         % Simulate first field with defaults from simulosl
@@ -111,10 +110,13 @@ elseif strcmp(v,'demo2')
         subplot(223); plotit(Gx,p,cr,th2)
         ah(4)=subplot(224); plotit(HG,p,cr,[])
         movev(ah(4),0.25)
-        % figdisp(sprintf('maskit4_%s',p.mask),[],[],2)
+        % figdisp(sprintf('maskit4_%s',p.taper),[],[],2)
         v=Hm; w=Gm; vw=HG;
         % Now recover the parameters of HG but only in the region I
         p.taper=I;
+
+        keyboard
+        % Not ready yet
         
         % No masking?
         % p.taper=1;
@@ -130,7 +132,6 @@ elseif strcmp(v,'demo2')
             [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,[],p,[],[],[],[]);
         end
     end
-keyboard
 end
 
 % Variable output
