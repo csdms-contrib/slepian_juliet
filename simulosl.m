@@ -54,7 +54,8 @@ function varargout=simulosl(th0,params,xver,varargin)
 % k        Wavenumber(s) suitable for the data sets returned [rad/m]
 % Hk       A complex matrix of Fourier-domain observations, namely
 %          final surface topography [m]
-% Sb       The spectral matrix that you've used in this process
+% Sb       The theoretical spectral matrix used in this process (all but SGP),
+%          OR: the actual periodogram that you make from these data (using SGP)
 % Lb       The Cholesky decomposition of the spectral matrix which you
 %          might use to evaluate the fit later on, in which case you
 %          don't need any of the previous output
@@ -81,7 +82,7 @@ function varargout=simulosl(th0,params,xver,varargin)
 % MLEOSL, LOADING, SIMULOS, EGGERS1, EGGERS2, EGGERS4, etc
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
-% Last modified by fjsimons-at-alum.mit.edu, 04/17/2023
+% Last modified by fjsimons-at-alum.mit.edu, 09/22/2023
 
 % Make a demo8 with Baig's example
 
@@ -129,7 +130,7 @@ if ~isstr(th0)
     % disp(sprintf('Z1: mean %+6.3f ; stdev %6.3f',...
     %    mean(Z1(:)),std(Z1(:))))
     
-    % We need the (blurred) power spectrum
+    % We need the (blurred) power spectrum - the theoretical quantity
     Sb=maternosp(th0,params,xver);
     
     % Should make sure that this is real! Why wouldn't it be?
@@ -182,13 +183,12 @@ if ~isstr(th0)
     % Spatial-domain result
     Hx=Hx(:);
 
+    % Apply the explicit taper
     if length(params.taper)~=1
-        % Select the taper out of there
-        Hx=maskit(Hx,params);
-        Hx(isnan(Hx))=0;
+        Hx=Hx.*params.taper(:);
     end
 
-    % Spectral-domain result, don't really need it except for BLUROS('demo2')
+    % Spectral-domain result, don't really need it except for BLUROSY('demo2')
     Hk=tospec(Hx,params)/(2*pi);
     if length(params.taper)>1
         % Adjust for the taper size
@@ -198,6 +198,7 @@ if ~isstr(th0)
     % I suppose we could get an instance from Hk, if not an average
     % Let's make Sb the periodogram to look at later? And forget about Lb.
     Lb=deal(NaN);
+
     % Make the periodogram
     Sb=Hk.*conj(Hk);
     hermcheck(reshape(Sb,params.NyNx));
