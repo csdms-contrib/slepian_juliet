@@ -26,11 +26,11 @@ function varargout=maskit(v,p,scl,w)
 %
 % [~,~,I]=maskit('demo1'); % To get a quick mask to look at
 % maskit('demo1') % A geographical region masking a single field
-% maskit('demo1','england') % 'amazon', 'orinico', for geographical variability
+% maskit('demo1','england') % 'amazon', 'orinoco', for geographical variability
 % maskit('demo2') % A geographical region merging two fields
-% maskit('demo2','england') % 'amazon', 'orinico', for geographical variability
+% maskit('demo2','england') % 'amazon', 'orinoco', for geographical variability
 %
-% Last modified by fjsimons-at-alum.mit.edu, 09/21/2023
+% Last modified by fjsimons-at-alum.mit.edu, 09/22/2023
 
 % The default is the demo, for once
 defval('v','demo1')
@@ -96,15 +96,12 @@ elseif strcmp(v,'demo2')
     % Something manageable without overdoing it
     p.NyNx=[188 233]+randi(20,[1 2]);
 
-    warning('Not ready yet')
-    doit=0;
-
-    N=1;
+    N=3;
     for index=1:N
         % Simulate first field with defaults from simulosl
         [Hx,th,p]=simulosl([],p,1);
         % Simulate second field by making a small change
-        th2=th; th2(2)=2.5; th2(3)=30000;
+        th2=th; th2(2)=2.5; th2(3)=40000;
         [Gx,th2,p]=simulosl(th2,p,1);
 
         % Now do the masking and the merging
@@ -115,26 +112,31 @@ elseif strcmp(v,'demo2')
         ah(3)=subplot(223); plotit(Gx,p,cr,th2)
         ah(4)=subplot(224); plotit(HG,p,cr,[])
         movev(ah(4),0.25)
+        % So HG is the mixed field
         v=Hm; w=Gm; vw=HG;
 
-        % Now recover the parameters of HG but only in the region I
+        % Without the boundary the eye is much less clear!
+        % imagesc(v2s(HG,p)); axis image
+
+        warning('Not ready yet')
+        try
+        % As appropriate you'll force the use of BLUROSY in MATERNOSP in LOGLIOS
+        p.blurs=-1;
+
+        % Now recover the parameters of HG but only in the region I or ~I
+        % Perform the optimization on the insert
         p.taper=I;
-        if doit==1
-            % No masking?
-            % p.mask=1;
-            % As appropriate you'll force the use of BLUROSY in MATERNOSP in LOGLIOS
-            p.blurs=-1;
-            % Perform the optimization on the insert
-            try
-                [thhat(index,:),~,~,scl(index,:)]=mleosl(HG,[],p,[],[],[],[]);
-            end
-            % Perform the optimization on the ~insert
-            p.taper=~I;
-            try
-                [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,[],p,[],[],[],[]);
-            end
+        [thhat(index,:),~,~,scl(index,:)]=mleosl(HG,[],p,[],[],[],[]);
+
+        % Take a look inside LOGLIOS that the order of magnitude is good. Try for a close initial guess
+
+        % Now recover the parameters of the complement
+        p.taper=~I;
+        [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,[],p,[],[],[],[]);
         end
     end
+
+    % And now look at the statistics of the recovery
 end
 
 % Variable output
