@@ -24,7 +24,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %          kiso   wavenumber beyond which we are not considering the likelihood
 %          quart 1 quadruple, then QUARTER the spatial size
 %                0 size as is, watch for periodic correlation behavior
-%         taper  0 there is no taper near of far
+%          taper 0 there is no taper near of far
 %                1 it's a unit taper, implicitly
 %                OR an appropriately sized taper with proper values 
 %                   (1 is yes and 0 is no and everything in between)
@@ -88,7 +88,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 09/20/2023
+% Last modified by fjsimons-at-alum.mit.edu, 09/22/2023
 
 if ~isstr(Hx)
   defval('algo','unc')
