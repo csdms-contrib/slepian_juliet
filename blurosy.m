@@ -170,154 +170,158 @@ elseif strcmp(th,'demo2')
     
     % Some combinations - SIMULOSL
     p.NyNx=[params(1) params(2)];
-    p.dydx=1e3*[1 1]; 
+    p.dydx=1e3*[1 1];
+    % Some Matern paramters
     th=1e6*[1 0.0000025 0.001]; 
 
-  % What kind of a test are we running? Boxcar, or France/Ukraine?
-  switch tsto
-    case 1
-      % Compare the average periodogram with the blurred spectral density
-      p.taper=1;
-      p.mask=1;
-    case 2
-      % Here's another one
-      p.mask='france';
-      % Generate mask only
-      [~,~,I]=maskit(rand(p.NyNx),p);
-      p.taper=~I;
-    case 3
-      % Here's another one
-      p.mask='ukraine';
-      % Generate mask only
-      [~,~,I]=maskit(rand(p.NyNx),p);
-      p.taper=~I;
-  end
+    % Compare the average periodogram with the blurred spectral density
 
-  % So you're going to simulate using SGP and compare with BLUROSY
-  p.blurs=-1;
-  % Just do the xver explicitly here
-  Sbar=blurosy(th,p,1,method);
-  p.blurs=Inf;
-
-  % First figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  figure(1)
-  clf
-  [ah,ha,H]=krijetem(subnum(2,3));
-        
-  % The spatial domain taper
-  axes(ah(4))
-  if length(p.taper)==1; p.taper=ones(p.NyNx); end
-  imagesc(p.taper); axis image
-  t(4)=title('mask');
-
-  % The expectation of the periodogram
-  axes(ah(3))
-  imagesc(log10(v2s(Sbar,p))); axis image
-  t(3)=title(sprintf('%s [%g %g %g] | expectation',...
-                     '\theta =',th./[1 1 sqrt(prod(p.dydx))]))
-  
-  % muck it up to purposely break it
-  %th(3)=th(3)*1.5
+    % What kind of a test are we running? Boxcar, or France/Ukraine?
+    switch tsto
+      case 1
+        % Boxcar is 0 or 1 or ones
+        p.taper=1;
+        % The mask parameter is irrelevant, though it might be the anti-taper
+      case 2
+        % Here's another one
+        p.mask='france';
+      case 3
+        % Here's another one
+        p.mask='ukraine';
+    end
+    switch tsto
+      case {2,3}
+        % Generate mask only, never mind what the data will be
+        [~,~,I]=maskit(rand(p.NyNx),p);
+        % But remember the taper is the anti-mask, i.e. what you want
+        p.taper=~I;
+    end
     
-  Sbb=0;
-  % The third input in the demo was the number of iterations, fake-called 'xver'
-  for index=1:xver
-      % Simulate sequentially and collect the average periodogram
-      [Hx,th0,p,k,Hk,Sb,Lb,gane,miy]=simulosl(th,p);
-      % One random one from the sequence will be shown
-      randix=randi(index);
-      if index==randix;
-          axes(ah(1))
-          imagefnan([1 1],p.NyNx([2 1]),v2s(Hx,p),[],halverange(Hx,75)); axis image ij
-          t(1)=title(sprintf('Realization # %i',index));
-          
-          axes(ah(2))
-          imagesc(log10(v2s(Sb,p))); axis image
-          t(2)=title(sprintf('Realization # %i',index));
-      end
-      % Collect the average, watch the growth later
-      Sbb=Sbb+Sb;
-      % Mean of the evolving ratio over the wavenumbers
-      m(index)=mean(Sbb/index./Sbar);
-      % Mean of the evolving standard deviation of the mean ratio over the wavenumbers
-      s(index)=std(Sbb/index./Sbar);
-  end 
-  % Mean ratio over the realizations
-  Sbb=Sbb/xver;
+    % Calculate expected periodogram, i.e. the appropriately blurred likelihood
+    % Use the exact method via BLUROSY, force p.blurs=-1
+    p.blurs=-1;
+    % Just do the xver=1 explicitly here
+    Sbar=blurosy(th,p,1,method);
+    % Then for what comes next, to simulate data using SGP, force p.blurs=Inf
+    p.blurs=Inf;
 
-  % Then compare with the thing coming out of BLUROSY
-  axes(ah(6))
-  imagesc(log10(v2s(Sbb,p))); axis image
-  t(6)=title(sprintf('aver over %i realizations',xver));
-      
-  axes(ah(5))
-  imagesc((v2s(Sbb./Sbar,p))); axis image
-  t(5)=title(sprintf('(aver / expec), m %4.2f, s %4.2f',...
-                     m(end),s(end)));
-  try
-      set(ah(5),'clim',m(end)+[-1 1]*2*s(end))
-  end
-  
-  % Clean that sh*t up
-  [k,dci,dcn,kx,ky]=knums(p);
-  set(ah([1 4]),'xtick',unique([1 dci(2) p.NyNx(2)]),...
-     'ytick',unique([1 dci(1) p.NyNx(1)]));
-  set(ah([2 3 5 6]),'xtick',unique([1 dci(2) p.NyNx(2)]),...
-     'ytick',unique([1 dci(1) p.NyNx(1)]),...
-     'xticklabel',[-1 0 1],...
-     'yticklabel',[-1 0 1]);
-  longticks(ah)
-  set(ah([3 6]),'YAxisLocation','right')
-  % serre(H,1,'across')
-  serre(H',0.5,'down')
-  movev(t,-p.NyNx(1)/20)
-  figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i',p.NyNx,xver),[],2)
+    % First figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    figure(1)
+    clf
+    [ah,ha,H]=krijetem(subnum(2,3));
+    
+    % The spatial domain taper
+    axes(ah(4))
+    if length(p.taper)==1; p.taper=ones(p.NyNx); end
+    imagesc(p.taper); axis image
+    t(4)=title('taper');
 
-  % Second figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  figure(2)
-  clf
-  df=2;
-  % See EGGERS6/8 for cleanup
-  subplot(211)
-  hist(2*Sb./Sbar,1.5*log2(round(prod(p.NyNx))+1))
-  shrink(gca,2,1)
-  
-  subplot(212)
-  % This should be a straight line folks since the ratio is 1/2 chi^2_2
-  h=qqplot(2*Sb./Sbar,makedist('gamma','a',df/2,'b',2)); axis equal;
-  hx=get(h,'Xdata'); hx=hx{1};
-  hy=get(h,'ydata'); hy=hy{1};
-  qq0=plot([0 4*df],[0 4*df],'k'); hold on
-  axis image
-  plot(hx,hy,'LineS','none','Marker','o','MarkerF','r',...
-       'MarkerE','r','MarkerS',2);
-  longticks(gca); grid on
-  xlim([0 4*df]); 
-  ylim([0 4*df]); 
-  %plot(2*Sbb./Sbar,1-exp(-2*Sbb./Sbar),'+'); axis tight normal
-  %plot(2*Sbb./Sbar,chi2pdf(2*Sbb./Sbar,df),'+'); axis tight normal
-  figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i_chi',p.NyNx,xver),[],2)
+    % The expectation of the periodogram
+    axes(ah(3))
+    imagesc(log10(v2s(Sbar,p))); axis image
+    t(3)=title(sprintf('%s [%g %g %g] | expectation',...
+                       '\theta =',th./[1 1 sqrt(prod(p.dydx))]))
+    
+    % We be collecting the average periodogram to compare with the expected periodogram
+    Sbb=0;
+    % The third input in the demo was the number of iterations, fake-called 'xver'
+    for index=1:xver
+        % Simulate sequentially and collect the average periodogram
+        [Hx,th0,p,k,Hk,Sb,Lb,gane,miy]=simulosl(th,p);
+        % One random one from the sequence will be shown
+        randix=randi(index);
+        if index==randix;
+            axes(ah(1))
+            imagefnan([1 1],p.NyNx([2 1]),v2s(Hx,p),[],halverange(Hx,75)); axis image ij
+            t(1)=title(sprintf('Realization # %i',index));
+            
+            axes(ah(2))
+            imagesc(log10(v2s(Sb,p))); axis image
+            t(2)=title(sprintf('Realization # %i',index));
+        end
+        % Collect the average, watch the growth later
+        Sbb=Sbb+Sb;
+        % Mean of the evolving ratio over the wavenumbers
+        m(index)=mean(Sbb/index./Sbar);
+        % Mean of the evolving standard deviation of the mean ratio over the wavenumbers
+        s(index)=std(Sbb/index./Sbar);
+    end 
+    % Mean ratio over the realizations
+    Sbb=Sbb/xver;
 
-  % Second figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  figure(3)
-  clf
-  H=errorbar(1:xver,m,-2*s,2*s);
-  try
-      set(getkids(H,1),'LineWidth',2)
-      set(getkids(H,2),'Color',grey); 
-  catch
-      H.LineWidth=2;
-      H.Color=grey;
-  end
-  longticks(gca,2)
-  axis tight; grid on; xlabel('Sample size'); 
-  ylabel('Ratio of average to expected periodogram')
-  % set(gca,'xtick',[1 10:10:100]);
-  shrink(gca,1,1.1)
-  ylim([min(m-s*2)*1.1 max(m+2*s)*1.1])
-  title(sprintf('%i x %i | %s = [%g %g %g]',p.NyNx,'\theta',...
-                th./[1 1 sqrt(prod(p.dydx))]))
-  figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i-%3.3i',p.NyNx,1,xver),[],2)
+    % Then compare with the thing coming out of BLUROSY
+    axes(ah(6))
+    imagesc(log10(v2s(Sbb,p))); axis image
+    t(6)=title(sprintf('aver over %i realizations',xver));
+    
+    axes(ah(5))
+    imagesc((v2s(Sbb./Sbar,p))); axis image
+    t(5)=title(sprintf('(aver / expec), m %4.2f, s %4.2f',...
+                       m(end),s(end)));
+    try
+        set(ah(5),'clim',m(end)+[-1 1]*2*s(end))
+    end
+    
+    % Clean that sh*t up
+    [k,dci,dcn,kx,ky]=knums(p);
+    set(ah([1 4]),'xtick',unique([1 dci(2) p.NyNx(2)]),...
+       'ytick',unique([1 dci(1) p.NyNx(1)]));
+    set(ah([2 3 5 6]),'xtick',unique([1 dci(2) p.NyNx(2)]),...
+       'ytick',unique([1 dci(1) p.NyNx(1)]),...
+       'xticklabel',[-1 0 1],...
+       'yticklabel',[-1 0 1]);
+    longticks(ah)
+    set(ah([3 6]),'YAxisLocation','right')
+    % serre(H,1,'across')
+    serre(H',0.5,'down')
+    movev(t,-p.NyNx(1)/20)
+    figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i',p.NyNx,xver),[],2)
+
+    % Second figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    figure(2)
+    clf
+    df=2;
+    % See EGGERS6/8 for cleanup
+    subplot(211)
+    hist(2*Sb./Sbar,1.5*log2(round(prod(p.NyNx))+1))
+    shrink(gca,2,1)
+    
+    subplot(212)
+    % This should be a straight line folks since the ratio is 1/2 chi^2_2
+    h=qqplot(2*Sb./Sbar,makedist('gamma','a',df/2,'b',2)); axis equal;
+    hx=get(h,'Xdata'); hx=hx{1};
+    hy=get(h,'ydata'); hy=hy{1};
+    qq0=plot([0 4*df],[0 4*df],'k'); hold on
+    axis image
+    plot(hx,hy,'LineS','none','Marker','o','MarkerF','r',...
+         'MarkerE','r','MarkerS',2);
+    longticks(gca); grid on
+    xlim([0 4*df]); 
+    ylim([0 4*df]); 
+    %plot(2*Sbb./Sbar,1-exp(-2*Sbb./Sbar),'+'); axis tight normal
+    %plot(2*Sbb./Sbar,chi2pdf(2*Sbb./Sbar,df),'+'); axis tight normal
+    figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i_chi',p.NyNx,xver),[],2)
+
+    % Second figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    figure(3)
+    clf
+    H=errorbar(1:xver,m,-2*s,2*s);
+    try
+        set(getkids(H,1),'LineWidth',2)
+        set(getkids(H,2),'Color',grey); 
+    catch
+        H.LineWidth=1;
+        H.Color=grey;
+    end
+    longticks(gca,2)
+    axis tight; grid on; xlabel('Sample size'); 
+    ylabel('Ratio of average to expected periodogram')
+    % set(gca,'xtick',[1 10:10:100]);
+    shrink(gca,1,1.1)
+    ylim([min(m-s*2)*1.1 max(m+2*s)*1.1])
+    title(sprintf('%i x %i | %s = [%g %g %g]',p.NyNx,'\theta',...
+                  th./[1 1 sqrt(prod(p.dydx))]))
+    figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i-%3.3i',p.NyNx,1,xver),[],2)
 elseif strcmp(th,'demo3')
     % Simulate some random data with default p.blurs=Inf and p.taper=0
     [H,th,p]=simulosl;
