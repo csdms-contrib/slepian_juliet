@@ -222,14 +222,15 @@ elseif strcmp(th,'demo2')
     t(3)=title(sprintf('%s [%g %g %g] | expectation',...
                        '\theta =',th./[1 1 sqrt(prod(p.dydx))]))
     
+    % One random one from the sequence will be shown
+    randix=randi(xver);
+    
     % We be collecting the average periodogram to compare with the expected periodogram
     Sbb=0;
     % The third input in the demo was the number of iterations, fake-called 'xver'
     for index=1:xver
         % Simulate sequentially and collect the average periodogram
         [Hx,th0,p,k,Hk,Sb,Lb,gane,miy]=simulosl(th,p);
-        % One random one from the sequence will be shown
-        randix=randi(index);
         if index==randix;
             axes(ah(1))
             imagefnan([1 1],p.NyNx([2 1]),v2s(Hx,p),[],halverange(Hx,75)); axis image ij
