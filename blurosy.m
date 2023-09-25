@@ -161,8 +161,8 @@ elseif strcmp(th,'demo2')
 
     % Size of the patch
     defval('params',[33 33])
-    % Number of iterations    
-    defval('xver',100)
+    % Number of iterations
+    defval('xver',100);
     % Method of computation
     defval('method','efs')
     % Type of taper, e.g. boxcar, France, Ukraine
@@ -194,13 +194,13 @@ elseif strcmp(th,'demo2')
         % Generate "mask" only, never mind what the data will be
         [~,~,I]=maskit(rand(p.NyNx),p);
         % Keep the mask as a taper or the taper as mask, for illustration only
-        p.taper=~I;
+        p.taper=I;
     end
     
     % Calculate expected periodogram, i.e. the appropriately blurred likelihood
     % Use the exact method via BLUROSY, force p.blurs=-1
     p.blurs=-1;
-    % Just do the xver=1 explicitly here
+    % Just do the real xver=1 explicitly here
     Sbar=blurosy(th,p,1,method);
     % Then for what comes next, to simulate data using SGP, force p.blurs=Inf
     p.blurs=Inf;
@@ -238,6 +238,8 @@ elseif strcmp(th,'demo2')
             axes(ah(2))
             imagesc(log10(v2s(Sb,p))); axis image
             t(2)=title(sprintf('Realization # %i',index));
+            % This is the special one that we shall plot later on
+            Xk=Sb./Sbar; varibal='X';
         end
         % Collect the average, watch the growth later
         Sbb=Sbb+Sb;
@@ -281,28 +283,75 @@ elseif strcmp(th,'demo2')
     figure(2)
     clf
     df=2;
-    % See EGGERS6/8 for cleanup
+    % Craft some labels
+    xll=[0 3*2*df];
+    xlls=[xll(1):df:xll(2)];
+    xstr2=sprintf('quadratic residual 2%s',varibal);
+
     subplot(211)
-    hist(2*Sb./Sbar,1.5*log2(round(prod(p.NyNx))+1))
-    shrink(gca,2,1)
+    % Literally follow MLECHIPLOS, to a point, spin off function later on
+    [bdens,c]=hist(2*Xk,5*round(log(prod(p.NyNx))+1));
+    % Plot the histogram as a bar graph
+    bdens=bdens/indeks(diff(c),1)/prod(p.NyNx);
+    bb=bar(c,bdens,1);
+    % Each of the below should be df/2
+    t(1)=title(sprintf('m(%s) =  %5.3f   v(%s) =  %5.3f',...
+	 varibal,nanmean(Xk),...
+	 varibal,nanvar(Xk)));
+    set(bb,'FaceC',grey)
+    hold on
+    % Plot the ideal chi-squared distribution
+    refs=linspace(0,max(2*Xk),100);
+    hold on
+    plot(refs,chi2pdf(refs,df),'Linew',1,'Color','k')
+    hold off
     
+    maxi=0.25;
+    ylls=[0:0.1:maxi*(4/df)];
+    ylim([0 maxi*(4/df)])
+    
+    xlim(xll)
+    xl(1)=xlabel(xstr2); 
+    yl(1)=ylabel('probability density');
+    axis square
+
     subplot(212)
     % This should be a straight line folks since the ratio is 1/2 chi^2_2
-    h=qqplot(2*Sb./Sbar,makedist('gamma','a',df/2,'b',2)); axis equal;
-    hx=get(h,'Xdata'); hx=hx{1};
-    hy=get(h,'ydata'); hy=hy{1};
-    qq0=plot([0 4*df],[0 4*df],'k'); hold on
-    axis image
-    plot(hx,hy,'LineS','none','Marker','o','MarkerF','r',...
-         'MarkerE','r','MarkerS',2);
+    h=qqplot(2*Xk,makedist('gamma','a',df/2,'b',2)); axis equal;
+
+    axis image; box on
+    set(h(1),'MarkerEdge','k')  
+    set(h(3),'LineStyle','-','Color',grey)
+    % Plot the one-to-one line
+    hold on
+    xh=get(h,'Xdata'); xh=xh{1};
+    yh=get(h,'ydata'); yh=yh{1};
+    qq0=plot([0 xll(2)],[0 xll(2)],'k'); hold on
+    plot(xh,yh,'LineStyle','none','Marker','o','MarkerFaceColor','r',...
+         'MarkerEdgeColor','r','MarkerSize',2);
+    delete(get(gca,'ylabel'));
+    delete(get(gca,'title'));
     longticks(gca); grid on
-    xlim([0 4*df]); 
-    ylim([0 4*df]); 
-    %plot(2*Sbb./Sbar,1-exp(-2*Sbb./Sbar),'+'); axis tight normal
-    %plot(2*Sbb./Sbar,chi2pdf(2*Sbb./Sbar,df),'+'); axis tight normal
+    xlim(xll); ylim(xll)
+    xl(2)=xlabel(sprintf('predicted 2%s',varibal));
+    yl(2)=ylabel(sprintf('observed 2%s',varibal));
+    set(gca,'xtick',xlls,'ytick',xlls)
+
+    % Test for departure of chi-squaredness via the "magic" parameter which
+    % This is the same as what comes out of LOGLIOSL etc
+    magx=nanmean([Xk-df/2].^2);
+    neem='\xi'; neem='s_X^2';
+    % Do the test whether you accept this as a good fit, or not
+    vr=8/length(k(~~k));
+    [a,b,c]=normtest(magx,1,vr,0.05);
+    % disp(sprintf('NORMTEST %i %5.3f %i',a,b,round(c)))
+    if a==0; stp='accept'; else stp='reject'; end
+    t(2)=title(sprintf('%s =  %5.3f   8/K = %5.3f   %s   p = %5.2f',...
+                       neem,magx,vr,stp,b));
+
     figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i_chi',p.NyNx,xver),[],2)
 
-    % Second figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Thirs figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     figure(3)
     clf
     H=errorbar(1:xver,m,-2*s,2*s);
@@ -316,7 +365,7 @@ elseif strcmp(th,'demo2')
     longticks(gca,2)
     axis tight; grid on; xlabel('Sample size'); 
     ylabel('Ratio of average to expected periodogram')
-    % set(gca,'xtick',[1 10:10:100]);
+    set(gca,'xtick',[1 10:10:xver])
     shrink(gca,1,1.1)
     ylim([min(m-s*2)*1.1 max(m+2*s)*1.1])
     title(sprintf('%i x %i | %s = [%g %g %g]',p.NyNx,'\theta',...
