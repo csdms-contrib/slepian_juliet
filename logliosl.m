@@ -75,6 +75,10 @@ th([1 2 3])=abs(th([1 2 3]));
 % We need the (blurred) power spectrum and its ratio to the observations
 [S,kk]=maternosp(th,params,xver);
 
+% Quick look?
+%imagesc(v2s(hformos(S,Hk,[],xver),params)); axis image
+keyboard
+
 % Exclude the zero wavenumbers
 Hk=Hk(~~k);
 S = S(~~kk); 
