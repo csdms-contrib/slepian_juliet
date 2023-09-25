@@ -41,7 +41,7 @@ function varargout=mlechiplos(witsj,Hk,thhat,scl,params,ah,pertur,th0,covX,E,v)
 %
 % MLECHIPSDOSL, MLEOSL, EGGERS6
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/22/2018
+% Last modified by fjsimons-at-alum.mit.edu, 09/25/2023
 
 defval('pertur',0)
 defval('th0',[])
@@ -207,8 +207,8 @@ catch
 end
 
 axis image; box on
-set(h(1),'MarkerE','k')  
-set(h(3),'LineS','-','Color',grey)
+set(h(1),'MarkerEdge','k')  
+set(h(3),'LineStyle','-','Color',grey)
 % Extend the line to the full axis
 hold on
 xh=get(h(3),'xdata');
