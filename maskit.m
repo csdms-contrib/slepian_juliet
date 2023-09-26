@@ -117,25 +117,25 @@ elseif strcmp(v,'demo2')
 
         % Without the boundary the eye is much less clear!
         % imagesc(v2s(HG,p)); axis image
-
-        warning('Not ready yet')
         try
-        % As appropriate you'll force the use of BLUROSY in MATERNOSP in LOGLIOS
-        p.blurs=-1;
-
-        % Now recover the parameters of HG but only in the region I or ~I
-        % Perform the optimization on the insert
-        p.taper=I;
-        [thhat(index,:),~,~,scl(index,:)]=mleosl(HG,[],p,[],[],[],[]);
-
-        % Take a look inside LOGLIOS that the order of magnitude is good. Try for a close initial guess
-
-        % Now recover the parameters of the complement
-        p.taper=~I;
-        [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,[],p,[],[],[],[]);
+            % As appropriate you'll force the use of BLUROSY in MATERNOSP in LOGLIOS
+            p.blurs=-1;
+            
+            % Now recover the parameters of HG but only in the region I or ~I
+            % Perform the optimization on the insert
+            p.taper=I;
+            % Make a close initial guess - the default is too far off
+            thini=th2+(-1).^randi(2,[1 3]).*th2/1000;
+            [thhat(index,:),~,~,scl(index,:)]=mleosl(HG,thini,p,[],[],[],[]);
+            
+            % Take a look inside LOGLIOS that the order of magnitude is good. Try for a close initial guess
+            
+            % Now recover the parameters of the complement
+            p.taper=~I;
+            thini=th+(-1).^randi(2,[1 3]).*th/1000;
+            [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,thini,p,[],[],[],[]);
         end
     end
-
     % And now look at the statistics of the recovery
 end
 
