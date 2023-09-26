@@ -109,8 +109,8 @@ if ~isstr(Hx)
   % You cannot call MLEOSL with params.blurs=Inf, since that's for
   % SIMULOSL only, we can go for safe reset or else straight error
   if isinf(blurs)
-      warning('The blurs parameter Inf is reserved for SIMULOSL; resetting')
-      p.blurs=4;
+      %warning('The blurs parameter Inf is reserved for SIMULOSL; resetting'); p.blurs=4;
+      error('The blurs parameter Inf is reserved for SIMULOSL; pick something');
   end
   
   % These bounds are physically motivated...
