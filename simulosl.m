@@ -191,7 +191,7 @@ if ~isstr(th0)
     % Spectral-domain result, don't really need it except for BLUROSY('demo2')
     Hk=tospec(Hx,params)/(2*pi);
     if length(params.taper)>1
-        % Adjust for the taper size
+        % Adjust for the taper size - same call as in MLEOSL
         Hk=Hk/sqrt(sum(params.taper(:).^2))*sqrt(prod(params.NyNx));
     end
 
