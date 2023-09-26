@@ -70,15 +70,16 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % EXAMPLE:
 %
-% p.quart=0; p.blurs=Inf; p.kiso=NaN; clc; [Hx,th,p]=simulosl([],p,1); mleosl(Hx,[],p,[],[],[],1);
+% p.quart=0; p.blurs=Inf; p.kiso=NaN; clc; [Hx,th,p]=simulosl([],p,1);
+% p.blurs=-1; mleosl(Hx,[],p,[],[],[],1);
 %
 % You can stick in partial structures, e.g. only specifying params.kiso
 %
-% Perform a series of N simulations centered on th0
-% mleosl('demo1',N,th0,params)
+% Perform a series of N simulations centered on th0 with different p's
+% mleosl('demo1',N,th0,p)
 %
 % Statistical study of a series of simulations using MLEPLOS
-% mleosl('demo2','20-Jun-2018')
+% mleosl('demo2','26-Sep-2023')
 %
 % Covariance study of a series of simulations using COVPLOS
 % mleosl('demo4','20-Jun-2018')
@@ -108,7 +109,8 @@ if ~isstr(Hx)
   % You cannot call MLEOSL with params.blurs=Inf, since that's for
   % SIMULOSL only, we can go for safe reset or else straight error
   if isinf(blurs)
-      error('The blurs parameter Inf is reserved for SIMULOSL')
+      warning('The blurs parameter Inf is reserved for SIMULOSL; resetting')
+      p.blurs=4;
   end
   
   % These bounds are physically motivated...
@@ -128,7 +130,7 @@ if ~isstr(Hx)
 
   % The parameters used in the simulation for demos, or upon which to base "thini"
   % Check Vanmarcke 1st edition for suggestions on initial rho
-  defval('aguess',[var(Hx) 2.0 sqrt(prod(dydx.*NyNx))/5]);
+  defval('aguess',[var(Hx) 2.0 sqrt(prod(dydx.*NyNx))/10]);
   % Scale the parameters by this factor; fix it unless "thini" is supplied
   defval('scl',10.^round(log10(abs(aguess))));
 
@@ -179,7 +181,10 @@ if ~isstr(Hx)
 
   % Account for the size here? Like in SIMULOSL and checked in BLUROSY
   % See BLUROSY and how to normalize there, maybe take values of Tx?
-  Hk(:,1)=Hk(:,1)/sqrt(sum(Tx(:).^2))*sqrt(prod(params.NyNx));
+  if size(Tx)~=1
+      % This to adjust for the size of the taper if it is explicit
+      Hk(:,1)=Hk(:,1)/sqrt(sum(Tx(:).^2))*sqrt(prod(params.NyNx));
+  end
   
   NN=200;
   % And now get going with the likelihood using Hk
@@ -474,6 +479,7 @@ elseif strcmp(Hx,'demo1')
     % as the basis for the perturbed initial values. Remember hes is scaled.
     t0=clock;
     % Put a try catch here to catch the rare negative variance??
+
     [thhat,covFHh,lpars,scl,thini,p,Hk,k]=mleosl(Hx,[],p,algo,[],th0,xver);
     ts=etime(clock,t0);
 
