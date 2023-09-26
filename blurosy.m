@@ -29,8 +29,8 @@ function varargout=blurosy(th,params,xver,method,tsto)
 %                   (1 is yes and 0 is no and everything in between)
 % xver    1 Extra verification via BLURCHECK and alternative computations
 %         0 No checking at all
-% method  'ef' exact, efficient and fast
-%         'efs' exact, efficient and faster, exploiting symmetry [default]
+% method  'ef' exact, efficient and fast [default]
+%         'efs' exact, efficient and exploiting symmetry
 % tsto    An extra parameter slot to pass onto demo2    
 %
 % OUTPUT:
@@ -61,7 +61,7 @@ function varargout=blurosy(th,params,xver,method,tsto)
 % BLUROSY('demo3') % should produce no output
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 09/22/2023
+% Last modified by fjsimons-at-alum.mit.edu, 09/25/2023
 
 if ~isstr(th)
     if params.blurs>=0 & ~isinf(params.blurs)
@@ -73,7 +73,7 @@ if ~isstr(th)
 
     % Defaults
     defval('xver',1)
-    defval('method','efs')
+    defval('method','ef')
 
     % Target dimensions, the original ones
     NyNx=params.NyNx;
@@ -119,11 +119,13 @@ if ~isstr(th)
         Hh=fftshift(2*real(q4-repmat(fft(Cyy(:,1)),1,NyNx(2)))...
 	            -repmat(2*real(fft(Cyy(1,1:end))),NyNx(1),1)...
 	            +Cyy(1,1));
-        % If you ever wanted tyy/Cyy to come out you'll need to unquarter it
-        tyy=[fliplr(tyy(:,2:end)) tyy]; tyy=[flipud(tyy(2:end,:)) ; tyy];
-        tyy=[zeros(size(tyy,1)+1,1) [zeros(1,size(tyy,2)) ; tyy]];
-        Cyy=[fliplr(Cyy(:,2:end)) Cyy]; Cyy=[flipud(Cyy(2:end,:)) ; Cyy];
-        Cyy=[zeros(size(Cyy,1)+1,1) [zeros(1,size(Cyy,2)) ; Cyy]];
+        if nargout>2
+            % If you ever wanted tyy/Cyy to come out you'll need to unquarter it
+            tyy=[fliplr(tyy(:,2:end)) tyy]; tyy=[flipud(tyy(2:end,:)) ; tyy];
+            tyy=[zeros(size(tyy,1)+1,1) [zeros(1,size(tyy,2)) ; tyy]];
+            Cyy=[fliplr(Cyy(:,2:end)) Cyy]; Cyy=[flipud(Cyy(2:end,:)) ; Cyy];
+            Cyy=[zeros(size(Cyy,1)+1,1) [zeros(1,size(Cyy,2)) ; Cyy]];
+        end
     end
 
     % Normalize and vectorize
@@ -131,6 +133,7 @@ if ~isstr(th)
 
     % Check Hermiticity of the results
     if xver==1
+        % Should check positivity also!
         blurcheck(Sbar,params)
         hermcheck(tyy)
         hermcheck(Cyy)
@@ -234,11 +237,11 @@ elseif strcmp(th,'demo2')
         if index==randix;
             axes(ah(1))
             imagefnan([1 1],p.NyNx([2 1]),v2s(Hx,p),[],halverange(Hx,75)); axis image ij
-            t(1)=title(sprintf('Realization # %i',index));
+            t(1)=title(sprintf('Realization # %i',randix));
             
             axes(ah(2))
             imagesc(log10(v2s(Sb,p))); axis image
-            t(2)=title(sprintf('Realization # %i',index));
+            t(2)=title(sprintf('Realization # %i',randix));
             % This is the special one that we shall plot later on
             Xk=Sb./Sbar; varibal='X';
         end
@@ -255,10 +258,10 @@ elseif strcmp(th,'demo2')
     % Then compare with the thing coming out of BLUROSY
     axes(ah(6))
     imagesc(log10(v2s(Sbb,p))); axis image
-    t(6)=title(sprintf('aver over %i realizations',xver));
+    t(6)=title(sprintf('average | %i realizations',xver));
     
     axes(ah(5))
-    imagesc((v2s(Sbb./Sbar,p))); axis image
+    imagesc(v2s(Sbb./Sbar,p)); axis image
     t(5)=title(sprintf('(aver / expec), m %4.2f, s %4.2f',...
                        m(end),s(end)));
     try
@@ -283,13 +286,22 @@ elseif strcmp(th,'demo2')
     % Second figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     figure(2)
     clf
+    clf
+    [ah,ha,H]=krijetem(subnum(2,3));
     df=2;
     % Craft some labels
     xll=[0 3*2*df];
     xlls=[xll(1):df:xll(2)];
+    xstr=sprintf('quadratic residual %s',varibal);
     xstr2=sprintf('quadratic residual 2%s',varibal);
+    cax=[0 3*df];
+    ly=p.NyNx(1);
+    lx=p.NyNx(2);
+    ylis=[0.5 ly/2 ly+0.5];
+    xlis=[0.5 lx/2 lx+0.5];
+    cborien='vert';
 
-    subplot(211)
+    axes(ah(1))
     % Literally follow MLECHIPLOS, to a point, spin off function later on
     [bdens,c]=hist(2*Xk,5*round(log(prod(p.NyNx))+1));
     % Plot the histogram as a bar graph
@@ -304,35 +316,40 @@ elseif strcmp(th,'demo2')
     % Plot the ideal chi-squared distribution
     refs=linspace(0,max(2*Xk),100);
     hold on
-    plot(refs,chi2pdf(refs,df),'Linew',1,'Color','k')
+    plot(refs,chi2pdf(refs,df),'Linew',0.5,'Color','k')
     hold off
-    
+    longticks(ah(1))
     maxi=0.25;
     ylls=[0:0.1:maxi*(4/df)];
     ylim([0 maxi*(4/df)])
     
     xlim(xll)
+    set(ah(1),'xtick',xlls)
     xl(1)=xlabel(xstr2); 
     yl(1)=ylabel('probability density');
     axis square
+    movev(t(1),maxi*(4/df)/20)
 
-    subplot(212)
+    axes(ah(2))
     % This should be a straight line folks since the ratio is 1/2 chi^2_2
     h=qqplot(2*Xk,makedist('gamma','a',df/2,'b',2)); axis equal;
 
     axis image; box on
+    longticks(ah(2))
     set(h(1),'MarkerEdge','k')  
     set(h(3),'LineStyle','-','Color',grey)
     % Plot the one-to-one line
     hold on
     xh=get(h,'Xdata'); xh=xh{1};
     yh=get(h,'ydata'); yh=yh{1};
-    qq0=plot([0 xll(2)],[0 xll(2)],'k'); hold on
-    plot(xh,yh,'LineStyle','none','Marker','o','MarkerFaceColor','r',...
-         'MarkerEdgeColor','r','MarkerSize',2);
-    delete(get(gca,'ylabel'));
-    delete(get(gca,'title'));
-    longticks(gca); grid on
+    qq0=plot([0 xll(2)],[0 xll(2)],'k');
+    delete(h(1))
+    % Replot for more control
+    plot(xh,yh,'LineStyle','none','Marker','+','MarkerFaceColor','k',...
+         'MarkerEdgeColor','k','MarkerSize',2);
+    top(h(3),ah(2))
+    delete(get(ah(2),'ylabel'));
+    delete(get(ah(2),'title'));
     xlim(xll); ylim(xll)
     xl(2)=xlabel(sprintf('predicted 2%s',varibal));
     yl(2)=ylabel(sprintf('observed 2%s',varibal));
@@ -349,10 +366,34 @@ elseif strcmp(th,'demo2')
     if a==0; stp='accept'; else stp='reject'; end
     t(2)=title(sprintf('%s =  %5.3f   8/K = %5.3f   %s   p = %5.2f',...
                        neem,magx,vr,stp,b));
+    movev(t(2),xll(2)/40)
+    
+    axes(ah(3))
+    imagefnan([xlis(1) xlis(end)],[xlis(end) xlis(1)],...
+              v2s(Xk,p),'gray',cax,[],1); axis image square
+    set(ah(3),'xtick',xlis,'XtickLabel',[-lx/2 0 lx/2],...
+	  'ytick',xlis,'YtickLabel',[-ly/2 0 ly/2])
+    longticks(ah(3))
+    xl(3)=xlabel('wavenumber index'); 
+    yl(3)=ylabel('wavenumber index'); 
+    delete(ah([4:6]))
+    % Cosmetics from EGGERS6
+    axes(ah(3))
+    [cb,xcb]=addcb(cborien,cax,cax,'gray',df,1);
+    axes(cb)
+    moveh(cb,.002*lx)
+    set(xcb,'string',xstr)
+    set(cb,'YAxisLocation','right')
+    set(cb,'position',...
+       [getpos(cb,1) getpos(ah(3),2) getpos(cb,3) getpos(ah(3),4)])
+    shrink(cb,0.97,1.01)
+    
+    set(ah(1:3),'FontSize',8)
+    set(t,'FontSize',8-1)
 
     figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i_chi',p.NyNx,xver),[],2)
 
-    % Thirs figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Third figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     figure(3)
     clf
     H=errorbar(1:xver,m,-2*s,2*s);
@@ -417,7 +458,7 @@ if prod(size(params.taper))>1
     % $MFILES/retired/QR?.m/map_*.m/whittle_*/expected_* etc
     Tx=double(params.taper);
 
-    % If you are here with efs the taper is explicit AND not
+    % If you are here with 'efs' the taper is explicit AND not
     % symmetric, so must do something else
     if all([length(ydim) length(xdim)]==NyNx)
         % Produce the autocorrelation sequence eq. (12)
