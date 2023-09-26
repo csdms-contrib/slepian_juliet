@@ -95,6 +95,7 @@ elseif strcmp(v,'demo2')
     p.quart=0; p.blurs=Inf; p.kiso=NaN; clc;
     % Something manageable without overdoing it
     p.NyNx=[188 233]+randi(20,[1 2]);
+    p.NyNx=[256 256]/2;
 
     N=3;
     for index=1:N
@@ -137,6 +138,8 @@ elseif strcmp(v,'demo2')
         end
     end
     % And now look at the statistics of the recovery
+    [thhat.*scl thhat2.*scl2]
+    keyboard
 end
 
 % Variable output
