@@ -183,7 +183,7 @@ if ~isstr(S)
     if round(blurs)==blurs &&  ...
           [sum(abs(kx2(sx:blurs:end)-kx))+sum(abs(ky2(sy:blurs:end)-ky))]<eps
       % disp(sprintf('\nSUBSAMPLE:')) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-      disp(sprintf('Subsampling %ix%i to %ix%i',length(ky2),length(kx2),length(kx),length(ky)))
+      % disp(sprintf('Subsampling %ix%i to %ix%i',length(ky2),length(kx2),length(kx),length(ky)))
       HhS=HhC(sx:blurs:end,sy:blurs:end);
       % Isn't subsampling always to be preferred over interpolation?
       Hh=HhS;
