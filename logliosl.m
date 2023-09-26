@@ -142,4 +142,4 @@ if nargout>=5
 end
 
 % Print the trajectory, seems like one element at a time gets changed
-disp(sprintf('Current theta: %8.3g %8.3g %8.3g | likelihood: %6.3f',th,L))
+%disp(sprintf('Current theta: %8.3g %8.3g %8.3g | likelihood: %8.5f',th,L))
