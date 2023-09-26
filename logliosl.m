@@ -75,9 +75,9 @@ th([1 2 3])=abs(th([1 2 3]));
 % We need the (blurred) power spectrum and its ratio to the observations
 [S,kk]=maternosp(th,params,xver);
 
-% Quick look?
-%imagesc(v2s(hformos(S,Hk,[],xver),params)); axis image
-keyboard
+% Quick look? Save before wavenumber culling
+sa=v2s(hformos(S,Hk,[],xver),params);
+%imagesc(sa); axis image
 
 % Exclude the zero wavenumbers
 Hk=Hk(~~k);
@@ -108,6 +108,7 @@ elseif xver==1
   % Eq. (A52) in doi: 10.1093/gji/ggt056
   L=-nanmean(Lk);
 end
+% Watch the diagnostic, when it's far off S could be negative
 
 % Attempt to reset if for some reason the whole thing failed
 if isnan(L)
@@ -141,4 +142,4 @@ if nargout>=5
 end
 
 % Print the trajectory, seems like one element at a time gets changed
-%disp(sprintf('Current theta: %8.3g %8.3g %8.3g %8.3g %8.3g %8.3g',th))
+disp(sprintf('Current theta: %8.3g %8.3g %8.3g | likelihood: %6.3f',th,L))
