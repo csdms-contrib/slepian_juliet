@@ -63,7 +63,7 @@ if ~isstr(v)
         [w,vw]=deal(NaN);
     elseif nargout>3
         w(~I(:))=NaN;
-        wv=NaN;
+        vw=NaN;
         if nargout>4
             vw=nan(size(v));
             vw(I(:)) =w(I(:));
@@ -99,9 +99,9 @@ elseif strcmp(v,'demo2')
     N=3;
     for index=1:N
         % Simulate first field with defaults from simulosl
-        [Hx,th,p]=simulosl([],p,1);
+        [Hx,th1,p]=simulosl([],p,1);
         % Simulate second field by making a small change
-        th2=th; th2(2)=2.5; th2(3)=30000;
+        th2=th1; th2(2)=2.5; th2(3)=30000;
         [Gx,th2,p]=simulosl(th2,p,1);
 
         % Now do the masking and the merging
@@ -121,12 +121,17 @@ elseif strcmp(v,'demo2')
             % As appropriate you'll force the use of BLUROSY in MATERNOSP in LOGLIOS
             p.blurs=-1;
             
+            % Recover the parameters of the full fields without any masking
+            p.taper=0;
+            [thhat4(index,:),~,~,scl4(index,:)]=mleosl(Hx,[],p,[],[],[],xver);
+            [thhat5(index,:),~,~,scl5(index,:)]=mleosl(Gx,[],p,[],[],[],xver);
+
             % Now recover the parameters of HG but only in the region I or ~I
             % Perform the optimization on the insert
             p.taper=I;
             % Make a close initial guess - the default is too far off
             thini=th2+(-1).^randi(2,[1 3]).*th2/1000; xver=0;
-            [thhat(index,:),~,~,scl(index,:)]=mleosl(HG,thini,p,[],[],[],xver);
+            [thhat1(index,:),~,~,scl1(index,:)]=mleosl(HG,thini,p,[],[],[],xver);
             
             % Take a look inside LOGLIOS that the order of magnitude is good.
             
@@ -137,7 +142,6 @@ elseif strcmp(v,'demo2')
 
             % Now recover the parameters of HG without knowing of the partiotion
             p.taper=0;
-            % Make a close initial guess - the default is too far off
             [thhat3(index,:),~,~,scl3(index,:)]=mleosl(HG,[],p,[],[],[],xver);
         end
     end
