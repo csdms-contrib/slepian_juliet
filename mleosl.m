@@ -89,7 +89,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 09/22/2023
+% Last modified by fjsimons-at-alum.mit.edu, 10/01/2023
 
 if ~isstr(Hx)
   defval('algo','unc')
@@ -130,7 +130,7 @@ if ~isstr(Hx)
 
   % The parameters used in the simulation for demos, or upon which to base "thini"
   % Check Vanmarcke 1st edition for suggestions on initial rho
-  defval('aguess',[var(Hx) 2.0 sqrt(prod(dydx.*NyNx))/10]);
+  defval('aguess',[var(Hx) 2.0 sqrt(prod(dydx.*NyNx))/pi/2/5]);
   % Scale the parameters by this factor; fix it unless "thini" is supplied
   defval('scl',10.^round(log10(abs(aguess))));
 
