@@ -8,17 +8,17 @@ function varargout=maskit(v,p,scl,w)
 %           NyNx  number of samples in the y and x directions
 %           mask an index matrix with a mask, OR:
 %                 a region name that will be scaled to fit
-% scl     A scale between 0 and 1 with the occupying center
-%         fraction of the domain enclosed by the input curve; due
-%         to strict inequality at maximum always leaves one pixel
-%         rim; and not being used if an actual mask is input
+% scl     A scale between 0 and 1 with the occupying center fraction
+%         of the domain enclosed by the input curve; due to strict
+%         inequality at maximum always leaves one pixel rim; and
+%         not being used if an actual mask is input instead of a name
 % w       A second vector that is the unwrapping of a second matrix
 %
 % OUTPUT:
 %
 % v       The masked output matrix, unrolled into a vector
 % cr      The colum,row index coordinates of the masking curve
-% I       The mask, unrolled into a vector, note, this is an "anti-taper"
+% I       The mask, unrolled into a vector, note, this is an "anti-mask"
 % w       The second masked output matrix, unrolled into a vector
 % vw      The merged field, second field w sucked into first field v
 %
@@ -30,7 +30,7 @@ function varargout=maskit(v,p,scl,w)
 % maskit('demo2') % A geographical region merging two fields
 % maskit('demo2','england') % 'amazon', 'orinoco', for geographical variability
 %
-% Last modified by fjsimons-at-alum.mit.edu, 09/22/2023
+% Last modified by fjsimons-at-alum.mit.edu, 10/01/2023
 
 % The default is the demo, for once
 defval('v','demo1')
@@ -95,14 +95,13 @@ elseif strcmp(v,'demo2')
     p.quart=0; p.blurs=Inf; p.kiso=NaN; clc;
     % Something manageable without overdoing it
     p.NyNx=[188 233]+randi(20,[1 2]);
-    p.NyNx=[256 256]/2;
 
     N=3;
     for index=1:N
         % Simulate first field with defaults from simulosl
         [Hx,th,p]=simulosl([],p,1);
         % Simulate second field by making a small change
-        th2=th; th2(2)=2.5; th2(3)=40000;
+        th2=th; th2(2)=2.5; th2(3)=30000;
         [Gx,th2,p]=simulosl(th2,p,1);
 
         % Now do the masking and the merging
@@ -126,15 +125,20 @@ elseif strcmp(v,'demo2')
             % Perform the optimization on the insert
             p.taper=I;
             % Make a close initial guess - the default is too far off
-            thini=th2+(-1).^randi(2,[1 3]).*th2/1000;
-            [thhat(index,:),~,~,scl(index,:)]=mleosl(HG,thini,p,[],[],[],[]);
+            thini=th2+(-1).^randi(2,[1 3]).*th2/1000; xver=0;
+            [thhat(index,:),~,~,scl(index,:)]=mleosl(HG,thini,p,[],[],[],xver);
             
-            % Take a look inside LOGLIOS that the order of magnitude is good. Try for a close initial guess
+            % Take a look inside LOGLIOS that the order of magnitude is good.
             
             % Now recover the parameters of the complement
             p.taper=~I;
             thini=th+(-1).^randi(2,[1 3]).*th/1000;
-            [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,thini,p,[],[],[],[]);
+            [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,thini,p,[],[],[],xver);
+
+            % Now recover the parameters of HG without knowing of the partiotion
+            p.taper=0;
+            % Make a close initial guess - the default is too far off
+            [thhat3(index,:),~,~,scl3(index,:)]=mleosl(HG,[],p,[],[],[],xver);
         end
     end
     % And now look at the statistics of the recovery
