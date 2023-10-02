@@ -31,4 +31,5 @@ else
   A=real(A);
   disp(sprintf('%s Imaginary/real parts ratio is %5.0e%s',...
 	       upper(ds(2).name),cpxity,'%'))
+keyboard
 end
