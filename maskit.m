@@ -128,7 +128,7 @@ elseif strcmp(v,'demo2')
         % As appropriate you'll force the use of BLUROSY in MATERNOSP in LOGLIOS
         p.blurs=-1;
         % Do all the tests or not
-        xver=0;
+        xver=1;
 
         % Recover the parameters of the full original fields without any masking
         p.taper=0;
