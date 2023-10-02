@@ -61,7 +61,7 @@ function varargout=blurosy(th,params,xver,method,tsto)
 % BLUROSY('demo3') % should produce no output
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 09/25/2023
+% Last modified by fjsimons-at-alum.mit.edu, 10/01/2023
 
 if ~isstr(th)
     if params.blurs>=0 & ~isinf(params.blurs)
@@ -131,9 +131,12 @@ if ~isstr(th)
     % Normalize and vectorize
     Sbar=Hh(:)*prod(dydx)/(2*pi)^2;
 
+
+    % Should check positivity always!
+    if any(Sbar<0); keyboard; end
+
     % Check Hermiticity of the results
     if xver==1
-        % Should check positivity also!
         blurcheck(Sbar,params)
         hermcheck(tyy)
         hermcheck(Cyy)
@@ -197,7 +200,7 @@ elseif strcmp(th,'demo2')
         % Generate "mask" only, never mind what the data will be
         [~,~,I]=maskit(rand(p.NyNx),p);
         % Keep the mask as a taper or the taper as mask, for illustration only
-        p.taper=I;
+        p.taper=~I;
     end
     
     % Calculate expected periodogram, i.e. the appropriately blurred likelihood
@@ -482,7 +485,15 @@ if prod(size(params.taper))>1
     t=t/sum(sum(Tx.^2));
 
     % Here too should use FFT where we can, see compute_kernels
-    % internally and below, I would image that's just the same thing
+    % internally and below, I would imagine that's just the same thing
+    % inside Arthur periodogram
+    % f = 1/(N*M)*abs(fft2(g,2*N,2*M)).^2;
+    %             kernel1 = ifft2(f);
+    %             kernel1 = kernel1(1:N,1:M);
+    %             g = fliplr(g);
+    %             f = 1/(N*M)*abs(fft2(g,2*N,2*M)).^2;
+    %             kernel2 = ifft2(f);
+    %             kernel2 = kernel2(1:N,1:M);
     if xver==1 && all(size(t)==NyNx)
         t3=xcorr2(Tx); t3=t3/sum(sum(Tx.^2));
         if all(size(t)==NyNx)
