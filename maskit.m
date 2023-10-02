@@ -62,15 +62,17 @@ if ~isstr(v)
     if nargin<4
         [w,vw]=deal(NaN);
     elseif nargout>3
+        % Apply the mask to the second field
         w(~I(:))=NaN;
         vw=NaN;
         if nargout>4
+            % Construct a new field with the SECOND field inside the mask and the FIRST outside
             vw=nan(size(v));
             vw(I(:)) =w(I(:));
             vw(~I(:))=v(~I(:));
         end
     end
-    % This is the order, dudes
+    % Apply the mask to the first field
     v(~I(:))=NaN;
 elseif strcmp(v,'demo1')
     % Capture the second input
@@ -98,6 +100,8 @@ elseif strcmp(v,'demo2')
 
     N=3;
     for index=1:N
+        clc; disp(sprintf('\n Simulating all fields \n'))
+
         % Simulate first field with defaults from simulosl
         [Hx,th1,p]=simulosl([],p,1);
         % Simulate second field by making a small change
@@ -108,7 +112,7 @@ elseif strcmp(v,'demo2')
         [Hm,cr,I,Gm,HG]=maskit(Hx,p,[],Gx);
         % No merging? [Hm,cr,I,Gm,HG]=maskit(Hx,p,[],Hx);
         clf
-        ah(1)=subplot(221); plotit(Hx,p,cr,th)
+        ah(1)=subplot(221); plotit(Hx,p,cr,th1)
         ah(3)=subplot(223); plotit(Gx,p,cr,th2)
         ah(4)=subplot(224); plotit(HG,p,cr,[])
         movev(ah(4),0.25)
@@ -117,37 +121,48 @@ elseif strcmp(v,'demo2')
 
         % Without the boundary the eye is much less clear!
         % imagesc(v2s(HG,p)); axis image
-        try
-            % As appropriate you'll force the use of BLUROSY in MATERNOSP in LOGLIOS
-            p.blurs=-1;
-            
-            % Recover the parameters of the full fields without any masking
-            p.taper=0;
-            [thhat4(index,:),~,~,scl4(index,:)]=mleosl(Hx,[],p,[],[],[],xver);
-            [thhat5(index,:),~,~,scl5(index,:)]=mleosl(Gx,[],p,[],[],[],xver);
 
-            % Now recover the parameters of HG but only in the region I or ~I
-            % Perform the optimization on the insert
-            p.taper=I;
-            % Make a close initial guess - the default is too far off
-            thini=th2+(-1).^randi(2,[1 3]).*th2/1000; xver=0;
-            [thhat1(index,:),~,~,scl1(index,:)]=mleosl(HG,thini,p,[],[],[],xver);
-            
-            % Take a look inside LOGLIOS that the order of magnitude is good.
-            
-            % Now recover the parameters of the complement
-            p.taper=~I;
-            thini=th+(-1).^randi(2,[1 3]).*th/1000;
-            [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,thini,p,[],[],[],xver);
+        % As appropriate you'll force the use of BLUROSY in MATERNOSP in LOGLIOS
+        p.blurs=-1;
+        % Do all the tests or not
+        xver=0;
 
-            % Now recover the parameters of HG without knowing of the partiotion
-            p.taper=0;
-            [thhat3(index,:),~,~,scl3(index,:)]=mleosl(HG,[],p,[],[],[],xver);
-        end
+        % Recover the parameters of the full original fields without any masking
+        p.taper=0;
+        pause(5); clc; disp(sprintf('\n Estimating first whole field \n'))
+        [thhat4(index,:),~,~,scl4(index,:)]=mleosl(Hx,[],p,[],[],[],xver);
+        pause(5); clc ; disp(sprintf('\n Estimating second whole field \n'))
+        [thhat5(index,:),~,~,scl5(index,:)]=mleosl(Gx,[],p,[],[],[],xver);
+
+        % Now recover the parameters of the mixed field but only in the region I or ~I
+        % Perform the optimization on the insert which should look like the second field
+        p.taper=I;
+        % Make a close initial guess?
+        % thini=th2+(-1).^randi(2,[1 3]).*th2/1000;
+        pause(5); clc; disp(sprintf('\n Estimating first partial field \n'))
+        [thhat1(index,:),~,~,scl1(index,:)]=mleosl(HG,[],p,[],[],[],xver);
+        
+        % Take a look inside LOGLIOS that the order of magnitude is good.
+        
+        % Now recover the parameters of the complement which should look like the first field
+        p.taper=~I;
+        % Make a close initial guess?
+        % thini=th1+(-1).^randi(2,[1 3]).*th1/1000;
+        pause(5); clc; disp(sprintf('\n Estimating second partial field \n'))
+        [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,[],p,[],[],[],xver);
+
+        % Now recover the parameters of HG without knowing of the partition
+        p.taper=0;
+        pause(5); clc; disp(sprintf('\n Estimating whole mixed field \n'))
+        [thhat3(index,:),~,~,scl3(index,:)]=mleosl(HG,[],p,[],[],[],xver);
     end
     % And now look at the statistics of the recovery
-    [thhat.*scl thhat2.*scl2]
-    keyboard
+    disp(sprintf('\nFirst partial | Second partial\n'))
+    disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat1.*scl1 thhat2.*scl2]'))
+    disp(sprintf('\nFirst whole | Second whole\n'))
+    disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat4.*scl4 thhat5.*scl5]'))
+    disp(sprintf('\nMixed whole\n'))
+    disp(sprintf('%8.0f %5.2f %6.0f\n',[thhat3.*scl3]'))
 end
 
 % Variable output
