@@ -76,6 +76,7 @@ function varargout=simulosl(th0,params,xver,varargin)
 % simulosl('demo5',th0,p) % A really poor space-domain covariance estimator
 % simulosl('demo6',th0,p) % A better space-domain covariance estimator
 % simulosl('demo7',th0,p) % Illustrates p.blurs=-1 versus p.blurs=Inf
+% simulosl('demo8'x) % Illustrates p.blurs=-1 versus p.blurs=Inf
 %
 % SEE ALSO:
 %
@@ -796,6 +797,14 @@ elseif strcmp(th0,'demo7')
   set(gca,'ytick',[1:p.NyNx(1):3*p.NyNx(1)]-0.5); longticks(gca)
   set(gca,'xtick',[1:p.NyNx(2):3*p.NyNx(2)]-0.5); grid on
   title(sprintf('blurs %i',p.blurs)); axis image
+elseif strcmp(th0,'demo8')
+    % The thing with Olivia Sept 26
+    % simulosl Inf
+    % mleosl -1
+    % resimulate three times with both -1 and Inf
+    % look at difference
+    % plot first/second row/colum on top of last
+    % notice different periodicities
 end
 
 % Plotting routine %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
