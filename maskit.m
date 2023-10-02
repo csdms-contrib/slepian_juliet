@@ -108,9 +108,12 @@ elseif strcmp(v,'demo2')
         th2=th1; th2(2)=2.5; th2(3)=30000;
         [Gx,th2,p]=simulosl(th2,p,1);
 
+        % How much should the masked area occupy?
+        scl=[];
         % Now do the masking and the merging
-        [Hm,cr,I,Gm,HG]=maskit(Hx,p,[],Gx);
-        % No merging? [Hm,cr,I,Gm,HG]=maskit(Hx,p,[],Hx);
+        [Hm,cr,I,Gm,HG]=maskit(Hx,p,scl,Gx);
+
+        % Make a visual for good measure
         clf
         ah(1)=subplot(221); plotit(Hx,p,cr,th1)
         ah(3)=subplot(223); plotit(Gx,p,cr,th2)
