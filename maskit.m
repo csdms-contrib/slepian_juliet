@@ -97,8 +97,10 @@ elseif strcmp(v,'demo2')
     p.quart=0; p.blurs=Inf; p.kiso=NaN; clc;
     % Something manageable without overdoing it
     p.NyNx=[188 233]+randi(20,[1 2]);
-
-    N=3;
+    % Something larger without overdoing it, check weirdness
+    p.NyNx=[512 512];
+    
+    N=1;
     for index=1:N
         clc; disp(sprintf('\n Simulating all fields \n'))
 
@@ -178,7 +180,7 @@ imagefnan([1 1],p.NyNx([2 1]),v2s(v,p),[],halverange(v,80,NaN)); axis ij image
 hold on; twoplot(cr,'Color','k'); hold off; longticks; grid on
 xticks([1 round(p.NyNx(2)/2) p.NyNx(2)]); yticks([1 round(p.NyNx(1)/2) p.NyNx(1)])
 if ~isempty(th)
-    t=title(sprintf('%i x %i | %s = [%g %g %g]',p.NyNx(1),p.NyNx(2),'\theta',...
+    t=title(sprintf('%i x %i | %s = [%g %g %gx]',p.NyNx(1),p.NyNx(2),'\theta',...
                     th./[1 1 sqrt(prod(p.dydx))]));
     movev(t,-p.NyNx(1)/20)
 end
