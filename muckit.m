@@ -47,7 +47,7 @@ if ~isstr(v)
       I=p.mask;
     end
     % Apply the mask to the first field
-    v(~I(:))=NaN;
+    v(~I(:))=0;
 elseif strcmp(v,'demo1')
     % Capture the second input
     defval('p','random')
