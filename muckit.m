@@ -76,13 +76,16 @@ elseif strcmp(v,'demo2')
     p.quart=0; p.blurs=Inf; p.kiso=NaN; clc;
     % Something manageable without overdoing it
     p.NyNx=[188 233]+randi(20,[1 2]);
+    % Something larger without overdoing it, check weirdness
+    p.NyNx=[512 512];
 
     N=3;
     for index=1:N
         clc; disp(sprintf('\n Simulating the field \n'))
 
-        % Simulate the field with defaults from simulosl
-        [Hx,th1,p]=simulosl([],p,1);
+        % Simulate the field with defaults from SIMULOSL
+	% and collect the expected periodogram...
+        [Hx,th1,p,[],[],Sb]=simulosl([],p,1);
 
         % How much should the surviving area occupy?
         scl=[];
@@ -110,6 +113,9 @@ elseif strcmp(v,'demo2')
         thini=th1+(-1).^randi(2,[1 3]).*th1/1000;
         pause(5); clc; disp(sprintf('\n Estimating first whole field \n'))
         [thhat1(index,:),~,~,scl1(index,:)]=mleosl(Hx,thini,p,[],[],[],xver);
+	% Explicitly check the likelihood?
+	logliosl(knums(p),thini./scl1(index,:),scl1(index,:),p,tospec(Hx(:),p)/(2*pi));
+	% --> inside protect by looking at momx?? That's where it goes wrong
 
         % Now recover the parameters of the speckled field
         p.taper=I;
@@ -117,8 +123,9 @@ elseif strcmp(v,'demo2')
         thini=th1+(-1).^randi(2,[1 3]).*th1/1000;
         pause(5); clc; disp(sprintf('\n Estimating first speckled field \n'))
         [thhat2(index,:),~,~,scl2(index,:)]=mleosl(Hm,thini,p,[],[],[],xver);
-        
-        % Take a look inside LOGLIOS that the order of magnitude is good.
+	% Explicitly check the likelihood?
+	logliosl(knums(p),thini./scl1(index,:),scl1(index,:),p,...
+		 tospec(p.taper(:).*Hx(:),p)/(2*pi)/sqrt(sum(p.taper(:).^2))*sqrt(prod(p.NyNx)),1);
     end
     % And now look at the statistics of the recovery
     disp(sprintf('\nWhole | Speckled\n'))
