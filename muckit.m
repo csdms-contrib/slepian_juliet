@@ -121,7 +121,7 @@ elseif strcmp(v,'demo2')
         % Take a look inside LOGLIOS that the order of magnitude is good.
     end
     % And now look at the statistics of the recovery
-    disp(sprintf('\Whole | Speckled\n'))
+    disp(sprintf('\nWhole | Speckled\n'))
     disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat1.*scl1 thhat2.*scl2]'))
     
     % Then plot these things using MLEPLOS
