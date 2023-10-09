@@ -33,7 +33,7 @@ if ~isstr(v)
     % Get the muck by name? Let's play "mikado"?
     if isstr(p.mask)
         % Scale indicates survivorship (in symmetry with MASKIT)
-        defval('scl',0.8)
+        defval('scl',0.9)
 	if strcmp(p.mask,'random')
 	  I=zeros(p.NyNx);
 	  % Now knock out the missing data
@@ -125,7 +125,7 @@ elseif strcmp(v,'demo2')
     disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat1.*scl1 thhat2.*scl2]'))
     
     % Then plot these things using MLEPLOS
-    mleplos(thhat1,th1,[],[],[],[],[],p)
+    mleplos(thhat1,th1,[],[],[],[],[],p,[],[])
 end
 
 % Variable output
