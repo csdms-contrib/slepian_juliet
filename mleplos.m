@@ -35,17 +35,14 @@ function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpi
 %
 % This only gets used in MLEOS/MLEROS/MLEROS0/MLEOSL thus far, their 'demo2'
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/25/2018
+% Last modified by fjsimons-at-alum.mit.edu, 03/08/2022
 
-defval('xver',0)
+defval('xver',1)
 
 % Number of times the standard deviation for scale truncation
 nstats=[-3:3]; fax=3;
 sclth0=10.^round(log10(abs(th0)));
 movit=0.01;
-labs={'D','f^2','\sigma^2','\nu','\rho',};
-labs0={'D_0','f^2_0','\sigma^2_0','\nu_0','\rho_0'};
-unts={'Nm' [] [] [] []};
 yls=[-0.0 0.75];
 % Determines the rounding on the y axis 
 rondo=1e2;
@@ -64,6 +61,7 @@ elseif np==5
 elseif np==3
   labs={'\sigma^2','\nu','\rho',};
   labs0={'\sigma^2_0','\nu_0','\rho_0'};
+  flabs={'variance \sigma^2','smoothness \nu','range \rho',};
   unts={[] [] []};
 end
 
@@ -98,13 +96,18 @@ for ind=1:np
   else
     stdavhs=NaN;
   end
+  % Collect them all
+  stdavhss(ind)=stdavhs;
+
   if ~isempty(covXpix)
     % Error estimate based on one particular randomly picked numerical Hessian
     stdXpix=real(sqrt(covXpix(ind,ind)));
   else
     stdXpix=NaN;
   end
-
+  % Collect them all
+  stdXpixs(ind)=stdXpix;
+  
   % HISTOGRAMS
   axes(ah(ind))
   % The "kernel density estimate"
@@ -119,6 +122,7 @@ for ind=1:np
   if xver==1
     disp(sprintf('%s pdf normalization check by summation %g',...
                  upper(mfilename),sum(bdens)*indeks(diff(c),1)))
+    disp(' ')
   end
   
   % Now plot it using a scale factor to remove the units from the y axis
@@ -231,7 +235,7 @@ movev(ah(length(ah)/2+1:end),mv)
 axes(ah(1))
 yl=ylabel('posterior probability density');
 longticks(ah)
-% Normal distribution based on stdX
+% Normal distribution based on stdF0
 set(psF0,'linew',0.5,'color','k','LineS','--')
 % Based on the median numerical Hessian matrix
 set(psavhs,'linew',1.5,'color','k')
@@ -258,13 +262,6 @@ end
 disp(sprintf('%s',...
              'Truth and Fisher-based covariance standard deviation'))
 disp(sprintf(answs,answ{:}))
-% Here is the MEAN ESTIMATE and its OBSERVED-COVARIANCE-based standard deviation
-[answ,answs]=osansw(mean(thhats),cov(thhats),E,v);
-disp(sprintf('\n%s',...
-             'Mean estimate and ensemble-covariance standard deviation'))
-disp(sprintf(answs,answ{:}))
-% By the way, use THAT as a title
-tt=supertit(ah(np+1:2*np),sprintf(answs,answ{:}));
 
 % Here is the RANDOMLY PICKED estimate and its NUMERICAL-HESSIAN based standard deviation
 [answ,answs]=osansw(thpix,covXpix,E,v);
@@ -272,37 +269,73 @@ disp(sprintf('\n%s',...
              'Example estimate and numerical-Hessian covariance standard deviation'))
 disp(sprintf(answs,answ{:}))
 
+% Here is the MEAN ESTIMATE and its OBSERVED-COVARIANCE-based standard
+% deviation - exactly like mobss and sobss==diag(sqrt(cov(thhats)))
+[answ,answs]=osansw(mean(thhats),cov(thhats),E,v);
+disp(sprintf('\n%s',...
+             'Mean estimate and ensemble-covariance standard deviation'))
+disp(sprintf(answs,answ{:}))
+% By the way, use THAT as a subtitle
+tt=supertit(ah(np+1:2*np),sprintf(answs,answ{:}));
+
 if np>3; movev(tt,-4); else; movev(tt,-3.5); end
 
 % Make basic x-y plots of the parameters
 % SHOULD CALL THIS MLETHPLOS
 if xver==1
-  figure
   clf
-  pstats=[-2 2]; pcomb=nchoosek(1:np,2);
+  pcomb=nchoosek(1:np,2);
+  pstats=[-2 2]; tstats=[-3 3]; vstats=[-2 0 2];
   [ah,ha]=krijetem(subnum(1,3));
+  
+  % Scale everything
+  mobss=mobss./sclth0;
+  stdavhss=stdavhss./sclth0;
+  sobss=sobss./sclth0;
+  thhats=thhats./repmat(sclth0,size(thhats,1),1);
+  th0=th0./sclth0;
+  
   for ind=1:np
     axes(ah(ind))
-    plot(thhats(:,pcomb(ind,1)),thhats(:,pcomb(ind,2)),'o'); hold on
-    m(ind)=plot(mobss(pcomb(ind,1)),mobss(pcomb(ind,2)),'o','MarkerFaceC','b');
-    % Observed means and observed standard deviations
-    o(ind)=plot(mobss(pcomb(ind,1))+pstats*sobss(pcomb(ind,1)),...
-		[mobss(pcomb(ind,2)) mobss(pcomb(ind,2))],'LineW',2);
+    % Find the pairwise combinations
+    p1=pcomb(ind,1); p2=pcomb(ind,2);
+
     % Observed means and theoretical standard deviations
-    ot(ind)=plot(mobss(pcomb(ind,1))+pstats*stdXs(pcomb(ind,1)),...
-		 [mobss(pcomb(ind,2)) mobss(pcomb(ind,2))],'g--');
+    t1(ind)=plot(mobss(p1)+pstats*stdavhss(p1),...
+		 [mobss(p2) mobss(p2)]); hold on
+    t2(ind)=plot([mobss(p1) mobss(p1)],...
+		 mobss(p2)+pstats*stdavhss(p2));
+    set([t1 t2],'Color',grey)
+    % The parameter estimates
+    p(ind)=plot(thhats(:,p1),thhats(:,p2),'o'); 
+
     % Observed means and observed standard deviations
-    t(ind)=plot([mobss(pcomb(ind,1)) mobss(pcomb(ind,1))],...
-		mobss(pcomb(ind,2))+pstats*sobss(pcomb(ind,2)),'LineW',2);
-    % Observed means and theoretical standard deviations
-    tt(ind)=plot([mobss(pcomb(ind,1)) mobss(pcomb(ind,1))],...
-		 mobss(pcomb(ind,2))+pstats*stdXs(pcomb(ind,2)),'g--');
+    m(ind)=plot(mobss(p1),mobss(p2),'v');
+    o1(ind)=plot(mobss(p1)+pstats*sobss(p1),...
+		[mobss(p2) mobss(p2)],'LineWidth',2);
+    o2(ind)=plot([mobss(p1) mobss(p1)],...
+		mobss(p2)+pstats*sobss(p2),'LineWidth',2);
     hold off
     % Truths
-    set(ah(ind),'xtick',th0(pcomb(ind,1)),'ytick',th0(pcomb(ind,2))); grid on
+    set(ah(ind),'xtick',round(100*[th0(p1)+vstats*sobss(p1)])/100,...
+                'ytick',round(100*[th0(p2)+vstats*sobss(p2)])/100)
+    axis square;  grid on
+    xlim(th0(p1)+tstats*sobss(p1))
+    ylim(th0(p2)+tstats*sobss(p2))
+    % Color mix
+    cmix=[0 0 0]; cmix([p1 p2])=1/2;
+    set([p(ind) m(ind)],'MarkerFaceColor',cmix,'MarkerEdgeColor',cmix,'MarkerSize',2)
+    % Cosmetix
+    delete([o1(ind) o2(ind)])
+    xlabel(flabs{p1})
+    ylabel(flabs{p2})
   end
-  seemax([ah(1) ah(2)],1)
-  seemax([ah(2) ah(3)],2)
+  longticks(ah)
+  %seemax([ah(1) ah(2)],1)
+  %seemax([ah(2) ah(3)],2)
+  titi=ostitle(ah,params,name); movev(titi,-2)
+  tt=supertit(ah(1:np),sprintf(answs,answ{:})); movev(tt,-7)
+
 end
 
 % Output
