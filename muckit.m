@@ -94,7 +94,7 @@ elseif strcmp(v,'demo2')
         ah(1)=subplot(121); plotit(Hx,p,[],th1)
 	xlabel('Original field')
         ah(2)=subplot(122); plotit(Hm,p,[],th1); 
-	xlabel(sprintf('%i%% speckled field',round(1-scl)*100))
+	xlabel(sprintf('%i%% speckled field',round((1-scl)*100)))
 
         % So HG is the mixed field
         v=Hm;
@@ -106,23 +106,26 @@ elseif strcmp(v,'demo2')
 
         % Recover the parameters of the full original field without any masking
         p.taper=0;
+        % Make a close initial guess?
+        thini=th1+(-1).^randi(2,[1 3]).*th1/1000;
         pause(5); clc; disp(sprintf('\n Estimating first whole field \n'))
-        [thhat1(index,:),~,~,scl1(index,:)]=mleosl(Hx,[],p,[],[],[],xver);
+        [thhat1(index,:),~,~,scl1(index,:)]=mleosl(Hx,thini,p,[],[],[],xver);
 
         % Now recover the parameters of the speckled field
         p.taper=I;
         % Make a close initial guess?
-        % thini=th2+(-1).^randi(2,[1 3]).*th2/1000;
+        thini=th1+(-1).^randi(2,[1 3]).*th1/1000;
         pause(5); clc; disp(sprintf('\n Estimating first speckled field \n'))
-        [thhat2(index,:),~,~,scl2(index,:)]=mleosl(Hm,[],p,[],[],[],xver);
+        [thhat2(index,:),~,~,scl2(index,:)]=mleosl(Hm,thini,p,[],[],[],xver);
         
         % Take a look inside LOGLIOS that the order of magnitude is good.
     end
     % And now look at the statistics of the recovery
     disp(sprintf('\Whole | Speckled\n'))
     disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat1.*scl1 thhat2.*scl2]'))
-
-keyboard
+    
+    % Then plot these things using MLEPLOS
+    mleplos(thhat1,th0,[],[],[],[],[],p)
 end
 
 % Variable output
