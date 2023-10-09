@@ -172,6 +172,9 @@ elseif strcmp(v,'demo2')
     disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat4.*scl4 thhat5.*scl5]'))
     disp(sprintf('\nMixed whole\n'))
     disp(sprintf('%8.0f %5.2f %6.0f\n',[thhat3.*scl3]'))
+
+    % Then plot these things using MLEPLOS
+    mleplos(thhat1,th1,[],[],[],[],[],p,[],[])
 end
 
 % Variable output
