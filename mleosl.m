@@ -172,7 +172,7 @@ if ~isstr(Hx)
   knz=(~~k);
 
   % Always demean the data sets
-  Hx(:,1)=Hx(:,1)-mean(Hx(:,1));
+  Hx(:,1)=Hx(:,1)-nanmean(Hx(:,1));
   % FJS think about deplaning as well
 
   % Turn the tapered observation vector to the spectral domain
