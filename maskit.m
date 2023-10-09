@@ -1,6 +1,8 @@
 function varargout=maskit(v,p,scl,w)
 % [v,cr,I,w,vw]=MASKIT(v,p,scl,w)
 %
+% Makes arbitrarily regionally confined indicatrix tapers. 
+%
 % INPUT:
 %
 % v       A vector that is the unwrapping of a matrix
@@ -30,7 +32,7 @@ function varargout=maskit(v,p,scl,w)
 % maskit('demo2') % A geographical region merging two fields
 % maskit('demo2','england') % 'amazon', 'orinoco', for geographical variability
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/01/2023
+% Last modified by fjsimons-at-alum.mit.edu, 10/09/2023
 
 % The default is the demo, for once
 defval('v','demo1')
@@ -144,17 +146,19 @@ elseif strcmp(v,'demo2')
         p.taper=I;
         % Make a close initial guess?
         % thini=th2+(-1).^randi(2,[1 3]).*th2/1000;
+	thini=[];
         pause(5); clc; disp(sprintf('\n Estimating first partial field \n'))
-        [thhat1(index,:),~,~,scl1(index,:)]=mleosl(HG,[],p,[],[],[],xver);
+        [thhat1(index,:),~,~,scl1(index,:)]=mleosl(HG,thini,p,[],[],[],xver);
         
         % Take a look inside LOGLIOS that the order of magnitude is good.
         
         % Now recover the parameters of the complement which should look like the first field
         p.taper=~I;
         % Make a close initial guess?
-        % thini=th1+(-1).^randi(2,[1 3]).*th1/1000;
+        % thini=th1+(-1).^randi(2,[1 3]).*th1/1000; 
+	thini=[];
         pause(5); clc; disp(sprintf('\n Estimating second partial field \n'))
-        [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,[],p,[],[],[],xver);
+        [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,thini,p,[],[],[],xver);
 
         % Now recover the parameters of HG without knowing of the partition
         p.taper=0;
