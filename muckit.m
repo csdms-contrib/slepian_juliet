@@ -1,6 +1,8 @@
 function varargout=muckit(v,p,scl)
 % [v,cr,I]=MUCKIT(v,p,scl)
 %
+% Makes randomly mucked up speckled indicatrix tapers.
+%
 % INPUT:
 %
 % v       A vector that is the unwrapping of a matrix
@@ -8,19 +10,21 @@ function varargout=muckit(v,p,scl)
 %           NyNx  number of samples in the y and x directions
 %           mask  an index matrix with 1 for yes and 0 for no, OR
 %                 a muck type name, e.g. 'random' [default]
-% scl     A scale between 0 and 1 with the non-missing data fraction
+% scl     A scale [0 to 1] expressing the non-missing data fraction
 %
 % OUTPUT:
 %
 % v       The masked output matrix, unrolled into a vector
 % cr      The colum,row index coordinates of the bounding curve
 % I       The mask, unrolled into a vector, note, this is an "anti-mask"
+% scl     A scale [0 to 1] expressing the non-missing data fraction%
 %
 % EXAMPLE:
 %
 % [~,~,I]=muckit('demo1','random',0.8); % To get a quick muck to look at
+% muckit('demo2'); % To do a serious of mock muck inversions
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/01/2023
+% Last modified by fjsimons-at-alum.mit.edu, 10/09/2023
 
 % The default is the demo, for once
 defval('v','demo1')
@@ -73,7 +77,7 @@ elseif strcmp(v,'demo2')
     % Something manageable without overdoing it
     p.NyNx=[188 233]+randi(20,[1 2]);
 
-    N=1;
+    N=3;
     for index=1:N
         clc; disp(sprintf('\n Simulating the field \n'))
 
@@ -83,12 +87,14 @@ elseif strcmp(v,'demo2')
         % How much should the surviving area occupy?
         scl=[];
         % Now do the masking and the merging
-        [Hm,cr,I]=muckit(Hx,p,scl);
+        [Hm,cr,I,scl]=muckit(Hx,p,scl);
 
         % Make a visual for good measure
         clf
         ah(1)=subplot(121); plotit(Hx,p,[],th1)
-        ah(2)=subplot(122); plotit(Hm,p,[],th1)
+	xlabel('Original field')
+        ah(2)=subplot(122); plotit(Hm,p,[],th1); 
+	xlabel(sprintf('%i%% speckled field',round(1-scl)*100))
 
         % So HG is the mixed field
         v=Hm;
@@ -115,10 +121,12 @@ elseif strcmp(v,'demo2')
     % And now look at the statistics of the recovery
     disp(sprintf('\Whole | Speckled\n'))
     disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat1.*scl1 thhat2.*scl2]'))
+
+keyboard
 end
 
 % Variable output
-varns={v,cr,I};
+varns={v,cr,I,scl};
 varargout=varns(1:nargout);
 
 function plotit(v,p,cr,th)
