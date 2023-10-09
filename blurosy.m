@@ -61,7 +61,7 @@ function varargout=blurosy(th,params,xver,method,tsto)
 % BLUROSY('demo3') % should produce no output
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 10/01/2023
+% Last modified by fjsimons-at-alum.mit.edu, 10/09/2023
 
 if ~isstr(th)
     if params.blurs>=0 & ~isinf(params.blurs)
@@ -235,7 +235,8 @@ elseif strcmp(th,'demo2')
     Sbb=0;
     % The third input in the demo was the number of iterations, fake-called 'xver'
     for index=1:xver
-        % Simulate sequentially and collect the average periodogram
+        % Simulate sequentially, collect the expected periodogram, and
+        % make the average periodogram
         [Hx,th0,p,k,Hk,Sb,Lb,gane,miy]=simulosl(th,p);
         if index==randix;
             axes(ah(1))
@@ -476,7 +477,8 @@ if prod(size(params.taper))>1
         end
     else
         % This also obviates the extra test below, really this should be the
-        % top way, but leave the explicit way for illustration
+        % top way, but leave the explicit way for illustration - this is
+        % the long step
         t=xcorr2(Tx);
 	% Add a row of zeros here
 	t=[zeros(size(t,1)+1,1) [zeros(1,size(t,2)) ; t]];
@@ -484,16 +486,16 @@ if prod(size(params.taper))>1
     % Now normalize the cross-correlations at the end
     t=t/sum(sum(Tx.^2));
 
-    % Here too should use FFT where we can, see compute_kernels
+    warning('Still can optimize')
+    % Here too should use FFT where we can, see COMPUTE_KERNELS
     % internally and below, I would imagine that's just the same thing
-    % inside Arthur periodogram
-    % f = 1/(N*M)*abs(fft2(g,2*N,2*M)).^2;
-    %             kernel1 = ifft2(f);
-    %             kernel1 = kernel1(1:N,1:M);
-    %             g = fliplr(g);
-    %             f = 1/(N*M)*abs(fft2(g,2*N,2*M)).^2;
-    %             kernel2 = ifft2(f);
-    %             kernel2 = kernel2(1:N,1:M);
+    % inside Arthur's PERIODOGRAM object
+    % kernel1 = ifft2(abs(fft2(Tx,2*p.NyNx(1),2*NyNx(2))).^2/prod(p.NyNx));
+    % kernel1 = kernel1(1:p.NyNx(1),1:p.NyNx(2));
+    % kernel2 = ifft2(abs(fft2(fliplr(Tx),2*p.NyNx(1),2*p.NyNx(2))).^2/prod(p.NyNx));
+    % kernel2 = kernel2(1:p.NyNx(1),1:p.NyNx(2));
+    % Then feed that into COMPUTE_EXPECTATION_FROM_KERNELS
+
     if xver==1 && all(size(t)==NyNx)
         t3=xcorr2(Tx); t3=t3/sum(sum(Tx.^2));
         if all(size(t)==NyNx)
