@@ -88,7 +88,7 @@ function varargout=simulosl(th0,params,xver,varargin)
 % Make a demo8 with Baig's example
 
 % Here is the true parameter vector and the only variable that gets used 
-defval('th0',[1e6 2.5 2e4]);
+defval('th0',[1e6 1.5 3e4]);
 
 % If not a demo...
 if ~isstr(th0)
