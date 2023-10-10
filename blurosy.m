@@ -164,9 +164,9 @@ elseif strcmp(th,'demo2')
     % density. We welcome variability around it, as this is in line with
     % the uncorrelated-wavenumber approximation of the debiased Whittle
     % approach, but we do fear systematic offsets.
+    defval('params',[188 233]+randi(20,[1 2]))
+    params=[201 241];
 
-    % Size of the patch
-    defval('params',[33 33])
     % Number of iterations
     defval('xver',100);
     % Method of computation
@@ -226,7 +226,7 @@ elseif strcmp(th,'demo2')
     axes(ah(3))
     imagesc(log10(v2s(Sbar,p))); axis image
     t(3)=title(sprintf('%s [%g %g %g] | expectation',...
-                       '\theta =',th./[1 1 sqrt(prod(p.dydx))]))
+                       '\theta =',th./[1 1 sqrt(prod(p.dydx))]));
     
     % One random one from the sequence will be shown
     randix=randi(xver);
@@ -238,6 +238,8 @@ elseif strcmp(th,'demo2')
         % Simulate sequentially, collect the expected periodogram, and
         % make the average periodogram
         [Hx,th0,p,k,Hk,Sb,Lb,gane,miy]=simulosl(th,p);
+        % Are none of them bad?
+        if max(Sb./Sbar)>20;keyboard ;end
         if index==randix;
             axes(ah(1))
             imagefnan([1 1],p.NyNx([2 1]),v2s(Hx,p),[],halverange(Hx,75)); axis image ij
@@ -486,7 +488,7 @@ if prod(size(params.taper))>1
     % Now normalize the cross-correlations at the end
     t=t/sum(sum(Tx.^2));
 
-    disp(sprintf('\nStill can optimize\n'))
+    % disp(sprintf('\nStill can optimize\n'))
     % Here too should use FFT where we can, see COMPUTE_KERNELS
     % internally and below, I would imagine that's just the same thing
     % inside Arthur's PERIODOGRAM object
