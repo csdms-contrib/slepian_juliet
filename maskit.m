@@ -30,7 +30,7 @@ function varargout=maskit(v,p,scl,w)
 % maskit('demo2') % A geographical region merging two fields
 % maskit('demo2','england') % 'amazon', 'orinoco', for geographical variability
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/01/2023
+% Last modified by fjsimons-at-alum.mit.edu, 10/09/2023
 
 % The default is the demo, for once
 defval('v','demo1')
@@ -98,18 +98,27 @@ elseif strcmp(v,'demo2')
     % Something manageable without overdoing it
     p.NyNx=[188 233]+randi(20,[1 2]);
     % Something larger without overdoing it, check weirdness
-    p.NyNx=[205 252];
+    % Here is one that has failed in the past
+    p.NyNx=[201 241];
 
     N=300;
     for index=1:N
         clc; disp(sprintf('\n Simulating all fields \n'))
 
-        % Simulate first field with defaults from simulosl
-        [Hx,th1,p]=simulosl([],p,1);
+        % Simulate first field
+        th1=[0.001 1.5 20000];
+        [Hx,th1,p,k,Hk,Sb1]=simulosl(th1,p,1);
         % Simulate second field by making a small change
         th2=th1; th2(2)=2.5; th2(3)=30000;
-        [Gx,th2,p]=simulosl(th2,p,1);
+        [Gx,th2,p,k,Hk,Sb2]=simulosl(th2,p,1);
 
+        % Very explicit comparison like BLUROSY
+        p.blurs=-1; Sbar1=blurosy(th1,p,1); 
+        p.blurs=-1; Sbar2=blurosy(th2,p,1);
+        % Are any of them bad?
+        if max(Sb1./Sbar1)>20;keyboard ;end
+        if max(Sb2./Sbar2)>20;keyboard ;end
+        
         % How much should the masked area occupy?
         scl=[];
         % Now do the masking and the merging
@@ -134,36 +143,35 @@ elseif strcmp(v,'demo2')
         % Do all the tests or not
         xver=0;
 
-        try
-            % Recover the parameters of the full original fields without any masking
-            p.taper=0;
-            pause(5); clc; disp(sprintf('\n Estimating first whole field \n'))
-            [thhat4(index,:),~,~,scl4(index,:)]=mleosl(Hx,[],p,[],[],[],xver);
-            pause(5); clc ; disp(sprintf('\n Estimating second whole field \n'))
-            [thhat5(index,:),~,~,scl5(index,:)]=mleosl(Gx,[],p,[],[],[],xver);
+        % Make a close initial guess?
+        % Make a close initial guess?
+        thini1=th1+(-1).^randi(2,[1 3]).*th1/1000;
+        thini2=th2+(-1).^randi(2,[1 3]).*th2/1000;
 
-            % Now recover the parameters of the mixed field but only in the region I or ~I
-            % Perform the optimization on the insert which should look like the second field
-            p.taper=I;
-            % Make a close initial guess?
-            % thini=th2+(-1).^randi(2,[1 3]).*th2/1000;
-            pause(5); clc; disp(sprintf('\n Estimating first partial field \n'))
-            [thhat1(index,:),~,~,scl1(index,:)]=mleosl(HG,[],p,[],[],[],xver);
-            
-            % Take a look inside LOGLIOS that the order of magnitude is good.
-            
-            % Now recover the parameters of the complement which should look like the first field
-            p.taper=~I;
-            % Make a close initial guess?
-            % thini=th1+(-1).^randi(2,[1 3]).*th1/1000;
-            pause(5); clc; disp(sprintf('\n Estimating second partial field \n'))
-            [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,[],p,[],[],[],xver);
+        % Recover the parameters of the full original fields without any masking
+        p.taper=0;
+        pause(5); clc; disp(sprintf('\n Estimating first whole field \n'))
+        [thhat4(index,:),~,~,scl4(index,:)]=mleosl(Hx,thini1,p,[],[],[],xver);
+        pause(5); clc ; disp(sprintf('\n Estimating second whole field \n'))
+        [thhat5(index,:),~,~,scl5(index,:)]=mleosl(Gx,thini2,p,[],[],[],xver);
 
-            % Now recover the parameters of HG without knowing of the partition
-            p.taper=0;
-            pause(5); clc; disp(sprintf('\n Estimating whole mixed field \n'))
-            [thhat3(index,:),~,~,scl3(index,:)]=mleosl(HG,[],p,[],[],[],xver);
-        end
+        % Now recover the parameters of the mixed field but only in the region I or ~I
+        % Perform the optimization on the insert which should look like the second field
+        p.taper=I;
+        pause(5); clc; disp(sprintf('\n Estimating first partial field \n'))
+        [thhat1(index,:),~,~,scl1(index,:)]=mleosl(HG,thini2,p,[],[],[],xver);
+        
+        % Take a look inside LOGLIOS that the order of magnitude is good.
+        
+        % Now recover the parameters of the complement which should look like the first field
+        p.taper=~I;
+        pause(5); clc; disp(sprintf('\n Estimating second partial field \n'))
+        [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,thini1,p,[],[],[],xver);
+
+        % Now recover the parameters of HG without knowing of the partition
+        %p.taper=0;
+        %pause(5); clc; disp(sprintf('\n Estimating whole mixed field \n'))
+        %[thhat3(index,:),~,~,scl3(index,:)]=mleosl(HG,[],p,[],[],[],xver);
     end
     % And now look at the statistics of the recovery
     disp(sprintf('\nFirst partial | Second partial\n'))
@@ -171,8 +179,12 @@ elseif strcmp(v,'demo2')
     disp(sprintf('\nFirst whole | Second whole\n'))
     disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat4.*scl4 thhat5.*scl5]'))
     disp(sprintf('\nMixed whole\n'))
-    disp(sprintf('%8.0f %5.2f %6.0f\n',[thhat3.*scl3]'))
+    %disp(sprintf('%8.0f %5.2f %6.0f\n',[thhat3.*scl3]'))
     keyboard
+
+    % Then plot these things using MLEPLOS
+    mleplos(thhat1,th1,[],[],[],[],[],p,[],[])
+    mleplos(thhat2,th2,[],[],[],[],[],p,[],[])
 elseif strcmp(v,'demo3')
     % Saved by hand and plot at the end
     maskitdemo2_10012023
