@@ -530,7 +530,7 @@ else
             % Then the doubling inside this block needs to be undone
             t2=t2(NyNx(1)+1:end,NyNx(2)+1:end);
         end
-        diferm(t,t2,10);
+        diferm(t,t2,9);
     end
 end
 
