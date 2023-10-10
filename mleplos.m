@@ -35,7 +35,7 @@ function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpi
 %
 % This only gets used in MLEOS/MLEROS/MLEROS0/MLEOSL thus far, their 'demo2'
 %
-% Last modified by fjsimons-at-alum.mit.edu, 03/08/2022
+% Last modified by fjsimons-at-alum.mit.edu, 03/10/2022
 
 defval('xver',1)
 
@@ -65,6 +65,7 @@ elseif np==3
   unts={[] [] []};
 end
 
+figure(1)
 clf
 [ah,ha]=krijetem(subnum(2,np));
 
@@ -73,11 +74,11 @@ disp(sprintf('\n'))
 % For each of the parameters
 for ind=1:np
   % The empirical means and standard deviations of the estimates
-  mobs=mean(thhats(:,ind));
-  sobs=std(thhats(:,ind));
+  mobs=nanmean(thhats(:,ind));
+  sobs=nanstd(thhats(:,ind));
   % Collect them all
-  mobss(ind)=mean(thhats(:,ind));
-  sobss(ind)=std(thhats(:,ind));
+  mobss(ind)=nanmean(thhats(:,ind));
+  sobss(ind)=nanstd(thhats(:,ind));
 
   % The means and standard deviations for any one estimate
   th0i=th0(ind);
@@ -103,7 +104,7 @@ for ind=1:np
     % Error estimate based on one particular randomly picked numerical Hessian
     stdXpix=real(sqrt(covXpix(ind,ind)));
   else
-    stdXpix=NaN;
+      stdXpix=NaN;
   end
   % Collect them all
   stdXpixs(ind)=stdXpix;
@@ -128,6 +129,7 @@ for ind=1:np
   % Now plot it using a scale factor to remove the units from the y axis
   thhis(ind)=bar(c,sobs*bdens,1);
   set(ah(ind),'ylim',yls)
+  % The markings
   stats=mobs+nstats*sobs;
   % What is the percentage captured within the range?
   nrx=20; nry=15;
@@ -151,20 +153,21 @@ for ind=1:np
   % Based on one of them picked at random, numerical Hessian at estimate
   psXpix(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdXpix));
   % Based on the actually observed covariance of these data
+  % In previous versions had used th0i/mobs here also, that didn't summarize it well
   pobs(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,sobs));
 
   % Some annotations
   % Experiment size, he giveth, then taketh away
   tu(ind)=text(stats(end)-range(stats)/nrx,indeks(ylim,2)-range(ylim)/nry,...
-	      sprintf('N = %i',size(thhats,1))); set(tu(ind),'horizon','r')
-  fbb=fillbox(ext2lrtb(tu(ind),[],0.8),'w'); delete(tu(ind)); set(fbb,'EdgeC','w')
+	      sprintf('N = %i',size(thhats(~isnan(sum(thhats,2))),1))); set(tu(ind),'horizon','r')
+  fbb=fillbox(ext2lrtb(tu(ind),[],0.8),'w'); delete(tu(ind)); set(fbb,'EdgeColor','w')
   tu(ind)=text(stats(end)-range(stats)/nrx,indeks(ylim,2)-range(ylim)/nry,...
-	      sprintf('N = %i',size(thhats,1))); set(tu(ind),'horizon','r')
+	      sprintf('N = %i',size(thhats(~isnan(sum(thhats,2))),1))); set(tu(ind),'horizon','r')
 
   % The percentage covered in the histogram that is being shown
   tt(ind)=text(stats(1)+range(stats)/nrx,indeks(ylim,2)-2*range(ylim)/nry,...
 	      sprintf('s/%s = %5.2f','\sigma',sobs/stdavhs)); 
-  fb=fillbox(ext2lrtb(tt(ind),[],0.8),'w'); delete(tt(ind)); set(fb,'EdgeC','w')
+  fb=fillbox(ext2lrtb(tt(ind),[],0.8),'w'); delete(tt(ind)); set(fb,'EdgeColor','w')
   tt(ind)=text(stats(1)+range(stats)/nrx,indeks(ylim,2)-2*range(ylim)/nry,...
 	      sprintf('s/%s = %5.2f','\sigma',sobs/stdavhs));
 
@@ -187,6 +190,9 @@ for ind=1:np
   delete(get(ah(ind+np),'Ylabel'));
   delete(get(ah(ind+np),'Title'));
   delete(get(ah(ind+np),'XLabel'));
+
+  keyboard
+  
   set(ah(ind+np),'YLim',stats([1 end]),'YTickLabel',stats,...		       
 		'YTickLabel',round(rondo*stats/sclth0(ind))/rondo);
   hold on
@@ -215,13 +221,13 @@ for ind=1:np
 end     
 
 % Cosmetics
-set(thhis(1:np),'FaceC',grey,'EdgeC',grey)
+set(thhis(1:np),'FaceColor',grey,'EdgeColor',grey)
 if np==6
   mv=0.125; mh=0.01; aps1=[0.8 1]; aps2=[1 1];
-  set(thhis(4:6),'FaceC',grey(9),'EdgeC',grey(9))
+  set(thhis(4:6),'FaceColor',grey(9),'EdgeColor',grey(9))
 elseif np==5
   mv=0.125; mh=0.01; aps1=[0.8 1]; aps2=[1 1];
-  set(thhis(3:5),'FaceC',grey(9),'EdgeC',grey(9))
+  set(thhis(3:5),'FaceColor',grey(9),'EdgeColor',grey(9))
 elseif np==3
   mv=0.1; mh=-0.075; aps1=[1.3 1]; aps2=[1.4 1.4];
 end
@@ -248,7 +254,7 @@ set(pobs,'linew',1.5,'color',grey(3.5))
 set(yl,'FontSize',12)
 nolabels(ah(2:np),2)
 %disp(sprintf('\n'))
-fig2print(gcf,'landscape')
+%fig2print(gcf,'landscape')
 
 % Stick the params here somewhere so we can continue to judge
 movev(ah,-.1)
@@ -258,31 +264,35 @@ if isstruct(params)
 end
 
 % Here is the TRUTH and the COVF0 standard deviation
-[answ,answs]=osansw(th0,covF0,E,v);
-disp(sprintf('%s',...
-             'Truth and Fisher-based covariance standard deviation'))
-disp(sprintf(answs,answ{:}))
+try 
+    [answ,answs]=osansw(th0,covF0,E,v);
+    disp(sprintf('%s',...
+                 'Truth and Fisher-based covariance standard deviation'))
+    disp(sprintf(answs,answ{:}))
+    
+    % Here is the RANDOMLY PICKED estimate and its NUMERICAL-HESSIAN based standard deviation
+    [answ,answs]=osansw(thpix,covXpix,E,v);
+    disp(sprintf('\n%s',...
+                 'Example estimate and numerical-Hessian covariance standard deviation'))
+    disp(sprintf(answs,answ{:}))
 
-% Here is the RANDOMLY PICKED estimate and its NUMERICAL-HESSIAN based standard deviation
-[answ,answs]=osansw(thpix,covXpix,E,v);
-disp(sprintf('\n%s',...
-             'Example estimate and numerical-Hessian covariance standard deviation'))
-disp(sprintf(answs,answ{:}))
+    % Here is the MEAN ESTIMATE and its OBSERVED-COVARIANCE-based standard
+    % deviation - exactly like mobss and sobss==diag(sqrt(cov(thhats)))
+    [answ,answs]=osansw(mean(thhats),cov(thhats),E,v);
+    disp(sprintf('\n%s',...
+                 'Mean estimate and ensemble-covariance standard deviation'))
+    disp(sprintf(answs,answ{:}))
 
-% Here is the MEAN ESTIMATE and its OBSERVED-COVARIANCE-based standard
-% deviation - exactly like mobss and sobss==diag(sqrt(cov(thhats)))
-[answ,answs]=osansw(mean(thhats),cov(thhats),E,v);
-disp(sprintf('\n%s',...
-             'Mean estimate and ensemble-covariance standard deviation'))
-disp(sprintf(answs,answ{:}))
-% By the way, use THAT as a subtitle
-tt=supertit(ah(np+1:2*np),sprintf(answs,answ{:}));
+    % By the way, use THAT as a subtitle
+    tt=supertit(ah(np+1:2*np),sprintf(answs,answ{:}));
+end
 
 if np>3; movev(tt,-4); else; movev(tt,-3.5); end
 
 % Make basic x-y plots of the parameters
 % SHOULD CALL THIS MLETHPLOS
 if xver==1
+    figure(2)
   clf
   pcomb=nchoosek(1:np,2);
   pstats=[-2 2]; tstats=[-3 3]; vstats=[-2 0 2];
@@ -334,8 +344,9 @@ if xver==1
   %seemax([ah(1) ah(2)],1)
   %seemax([ah(2) ah(3)],2)
   titi=ostitle(ah,params,name); movev(titi,-2)
-  tt=supertit(ah(1:np),sprintf(answs,answ{:})); movev(tt,-7)
-
+  try
+      tt=supertit(ah(1:np),sprintf(answs,answ{:})); movev(tt,-7)
+  end
 end
 
 % Output
