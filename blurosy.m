@@ -486,7 +486,7 @@ if prod(size(params.taper))>1
     % Now normalize the cross-correlations at the end
     t=t/sum(sum(Tx.^2));
 
-    warning('Still can optimize')
+    disp(sprintf('\nStill can optimize\n'))
     % Here too should use FFT where we can, see COMPUTE_KERNELS
     % internally and below, I would imagine that's just the same thing
     % inside Arthur's PERIODOGRAM object
@@ -530,7 +530,7 @@ else
             % Then the doubling inside this block needs to be undone
             t2=t2(NyNx(1)+1:end,NyNx(2)+1:end);
         end
-        diferm(t,t2);
+        diferm(t,t2,10);
     end
 end
 
