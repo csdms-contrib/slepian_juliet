@@ -1,8 +1,6 @@
 function varargout=maskit(v,p,scl,w)
 % [v,cr,I,w,vw]=MASKIT(v,p,scl,w)
 %
-% Makes arbitrarily regionally confined indicatrix tapers. 
-%
 % INPUT:
 %
 % v       A vector that is the unwrapping of a matrix
@@ -32,7 +30,7 @@ function varargout=maskit(v,p,scl,w)
 % maskit('demo2') % A geographical region merging two fields
 % maskit('demo2','england') % 'amazon', 'orinoco', for geographical variability
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/09/2023
+% Last modified by fjsimons-at-alum.mit.edu, 10/01/2023
 
 % The default is the demo, for once
 defval('v','demo1')
@@ -100,9 +98,9 @@ elseif strcmp(v,'demo2')
     % Something manageable without overdoing it
     p.NyNx=[188 233]+randi(20,[1 2]);
     % Something larger without overdoing it, check weirdness
-    p.NyNx=[512 512];
-    
-    N=1;
+    p.NyNx=[205 252];
+
+    N=300;
     for index=1:N
         clc; disp(sprintf('\n Simulating all fields \n'))
 
@@ -116,6 +114,8 @@ elseif strcmp(v,'demo2')
         scl=[];
         % Now do the masking and the merging
         [Hm,cr,I,Gm,HG]=maskit(Hx,p,scl,Gx);
+
+        save ICFrance p HG I cr th1 th2
 
         % Make a visual for good measure
         clf
@@ -134,36 +134,36 @@ elseif strcmp(v,'demo2')
         % Do all the tests or not
         xver=0;
 
-        % Recover the parameters of the full original fields without any masking
-        p.taper=0;
-        pause(5); clc; disp(sprintf('\n Estimating first whole field \n'))
-        [thhat4(index,:),~,~,scl4(index,:)]=mleosl(Hx,[],p,[],[],[],xver);
-        pause(5); clc ; disp(sprintf('\n Estimating second whole field \n'))
-        [thhat5(index,:),~,~,scl5(index,:)]=mleosl(Gx,[],p,[],[],[],xver);
+        try
+            % Recover the parameters of the full original fields without any masking
+            p.taper=0;
+            pause(5); clc; disp(sprintf('\n Estimating first whole field \n'))
+            [thhat4(index,:),~,~,scl4(index,:)]=mleosl(Hx,[],p,[],[],[],xver);
+            pause(5); clc ; disp(sprintf('\n Estimating second whole field \n'))
+            [thhat5(index,:),~,~,scl5(index,:)]=mleosl(Gx,[],p,[],[],[],xver);
 
-        % Now recover the parameters of the mixed field but only in the region I or ~I
-        % Perform the optimization on the insert which should look like the second field
-        p.taper=I;
-        % Make a close initial guess?
-        % thini=th2+(-1).^randi(2,[1 3]).*th2/1000;
-	thini=[];
-        pause(5); clc; disp(sprintf('\n Estimating first partial field \n'))
-        [thhat1(index,:),~,~,scl1(index,:)]=mleosl(HG,thini,p,[],[],[],xver);
-        
-        % Take a look inside LOGLIOS that the order of magnitude is good.
-        
-        % Now recover the parameters of the complement which should look like the first field
-        p.taper=~I;
-        % Make a close initial guess?
-        % thini=th1+(-1).^randi(2,[1 3]).*th1/1000; 
-	thini=[];
-        pause(5); clc; disp(sprintf('\n Estimating second partial field \n'))
-        [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,thini,p,[],[],[],xver);
+            % Now recover the parameters of the mixed field but only in the region I or ~I
+            % Perform the optimization on the insert which should look like the second field
+            p.taper=I;
+            % Make a close initial guess?
+            % thini=th2+(-1).^randi(2,[1 3]).*th2/1000;
+            pause(5); clc; disp(sprintf('\n Estimating first partial field \n'))
+            [thhat1(index,:),~,~,scl1(index,:)]=mleosl(HG,[],p,[],[],[],xver);
+            
+            % Take a look inside LOGLIOS that the order of magnitude is good.
+            
+            % Now recover the parameters of the complement which should look like the first field
+            p.taper=~I;
+            % Make a close initial guess?
+            % thini=th1+(-1).^randi(2,[1 3]).*th1/1000;
+            pause(5); clc; disp(sprintf('\n Estimating second partial field \n'))
+            [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,[],p,[],[],[],xver);
 
-        % Now recover the parameters of HG without knowing of the partition
-        p.taper=0;
-        pause(5); clc; disp(sprintf('\n Estimating whole mixed field \n'))
-        [thhat3(index,:),~,~,scl3(index,:)]=mleosl(HG,[],p,[],[],[],xver);
+            % Now recover the parameters of HG without knowing of the partition
+            p.taper=0;
+            pause(5); clc; disp(sprintf('\n Estimating whole mixed field \n'))
+            [thhat3(index,:),~,~,scl3(index,:)]=mleosl(HG,[],p,[],[],[],xver);
+        end
     end
     % And now look at the statistics of the recovery
     disp(sprintf('\nFirst partial | Second partial\n'))
@@ -172,9 +172,40 @@ elseif strcmp(v,'demo2')
     disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat4.*scl4 thhat5.*scl5]'))
     disp(sprintf('\nMixed whole\n'))
     disp(sprintf('%8.0f %5.2f %6.0f\n',[thhat3.*scl3]'))
-
-    % Then plot these things using MLEPLOS
-    mleplos(thhat1,th1,[],[],[],[],[],p,[],[])
+    keyboard
+elseif strcmp(v,'demo3')
+    % Saved by hand and plot at the end
+    maskitdemo2_10012023
+    th1=[1e+06  2.5  20000];
+    th2=[1e+06  2.5  30000];
+    p.NyNx=[205 252];
+    p.dydx=[10000 10000];
+    p.blurs=Inf; p.kiso=NaN;
+    % The first partial contains the second field
+    mleplos(trimit(FirstPartialSecondPartial(:,1:3),97),th2,[],[],[],[],[],p,'MASKIT-10012023-I')
+    figure(1)
+    figdisp('maskitdemo2_10012023_Ia',[],[],2)    
+    figure(2)
+    figdisp('maskitdemo2_10012023_Ib',[],[],2)
+    % The second partial contains the first field
+    mleplos(trimit(FirstPartialSecondPartial(:,4:6),97),th1,[],[],[],[],[],p,'MASKIT-10012023-II')
+    figure(1)
+    figdisp('maskitdemo2_10012023_IIa',[],[],2)   
+    figure(2)
+    figdisp('maskitdemo2_10012023_IIb',[],[],2)
+    
+    % The first whole
+    mleplos(trimit(FirstWholeSecondWhole(:,1:3),97),th1,[],[],[],[],[],p,'MASKIT-10012023-0')
+    figure(1)
+    figdisp('maskitdemo2_10012023_0a',[],[],2)    
+    figure(2)
+    figdisp('maskitdemo2_10012023_0b',[],[],2)
+    % The second partial contains the first field
+    mleplos(trimit(FirstWholeSecondWhole(:,4:6),97),th2,[],[],[],[],[],p,'MASKIT-10012023-00')
+    figure(1)
+    figdisp('maskitdemo2_10012023_00a',[],[],2)   
+    figure(2)
+    figdisp('maskitdemo2_10012023_00b',[],[],2)
 end
 
 % Variable output
