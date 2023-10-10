@@ -13,7 +13,7 @@ function A=realize(A,tolp)
 %
 % A      The matrix in question
 %
-% Last modified by fjsimons-at-alum.mit.edu, 04/30/2016
+% Last modified by fjsimons-at-alum.mit.edu, 10/10/2016
 
 defval('tolp',0.001);
 
@@ -27,9 +27,9 @@ cpxity=100*nanmean(abs(imag(A(:))))./nanmean(abs(real(A(:))));
 if cpxity<tolp
   A=real(A);
 else
+  keyboard
   % Still do it, but report on it!
   A=real(A);
   disp(sprintf('%s Imaginary/real parts ratio is %5.0e%s',...
 	       upper(ds(2).name),cpxity,'%'))
-keyboard
 end
