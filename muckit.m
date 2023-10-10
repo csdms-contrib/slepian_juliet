@@ -85,7 +85,7 @@ elseif strcmp(v,'demo2')
 
         % Simulate the field with defaults from SIMULOSL
 	% and collect the expected periodogram...
-        [Hx,th1,p,[],[],Sb]=simulosl([],p,1);
+        [Hx,th1,p,~,~,Sb]=simulosl([],p,1);
 
         % How much should the surviving area occupy?
         scl=[];
