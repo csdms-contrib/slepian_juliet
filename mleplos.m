@@ -325,8 +325,10 @@ if xver==1
 		mobss(p2)+pstats*sobss(p2),'LineWidth',2);
     hold off
     % Truths
-    set(ah(ind),'xtick',round(100*[th0(p1)+vstats*sobss(p1)])/100,...
-                'ytick',round(100*[th0(p2)+vstats*sobss(p2)])/100)
+    try
+      set(ah(ind),'xtick',round(100*[th0(p1)+vstats*sobss(p1)])/100,...
+		  'ytick',round(100*[th0(p2)+vstats*sobss(p2)])/100)
+    end
     axis square;  grid on
     xlim(th0(p1)+tstats*sobss(p1))
     ylim(th0(p2)+tstats*sobss(p2))
