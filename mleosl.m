@@ -89,7 +89,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/01/2023
+% Last modified by fjsimons-at-alum.mit.edu, 10/13/2023
 
 if ~isstr(Hx)
   defval('algo','unc')
@@ -399,6 +399,7 @@ if ~isstr(Hx)
   end
 
   % Here we compute the moment parameters and recheck the likelihood
+  disp('Last check on likelihood at the best estimate')
   [L,~,Hagain,momx,vr]=logliosl(k,thhat,scl,params,Hk,xver);
   diferm(L,logli)
   diferm(Hagain,H)
