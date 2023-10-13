@@ -73,13 +73,14 @@ elseif strcmp(v,'demo2')
     % Now proceed with a fresh copy
     p.mask=defp;
     % Simulate using invariant embedding, no taper
-    p.quart=0; p.blurs=Inf; p.kiso=NaN; clc;
+    p.quart=0; p.blurs=Inf; p.kiso=NaN; clc
+p.blurs=-1
     % Something manageable without overdoing it
     p.NyNx=[188 233]+randi(20,[1 2]);
     % Something larger without overdoing it, check weirdness
     p.NyNx=[512 512]/8;
 
-    N=3;
+    N=9;
     for index=1:N
         clc; disp(sprintf('\n Simulating the field \n'))
 
@@ -111,7 +112,7 @@ elseif strcmp(v,'demo2')
         p.taper=0;
         % Make a close initial guess?
         thini=th1+(-1).^randi(2,[1 3]).*th1/1000;
-        pause(5); clc; disp(sprintf('\n Estimating first whole field \n'))
+        pause(1); clc; disp(sprintf('\n Estimating first whole field \n'))
         [thhat1(index,:),~,~,scl1(index,:)]=mleosl(Hx,thini,p,[],[],[],xver);
 	% Explicitly check the likelihood?
 	disp(sprintf('\nLast check on likelihood at the initial guess\n'))
@@ -124,7 +125,7 @@ elseif strcmp(v,'demo2')
         p.taper=I;
         % Make a close initial guess?
         thini=th1+(-1).^randi(2,[1 3]).*th1/1000;
-        pause(5); clc; disp(sprintf('\n Estimating first speckled field \n'))
+        pause(1); clc; disp(sprintf('\n Estimating first speckled field \n'))
         [thhat2(index,:),~,~,scl2(index,:)]=mleosl(Hm,thini,p,[],[],[],xver);
 	% Explicitly check the likelihood?
 	disp(sprintf('\nLast check on likelihood at the initial guess\n'))
@@ -138,9 +139,10 @@ elseif strcmp(v,'demo2')
     disp(sprintf('\nWhole | Speckled\n'))
     disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat1.*scl1 thhat2.*scl2]'))
     
-    keyboard
     % Then plot these things using MLEPLOS
-    mleplos(thhat1,th1,[],[],[],[],[],p,'MUCKIT-demo2')
+    mleplos(thhat1.*scl1,th1,[],[],[],[],[],p,'MUCKIT-demo2 original')
+keyboard
+    mleplos(thhat2.*scl2,th1,[],[],[],[],[],p,'MUCKIT-demo2 speckle')
 end
 
 % Variable output
