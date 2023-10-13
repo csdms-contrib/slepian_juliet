@@ -27,7 +27,6 @@ cpxity=100*nanmean(abs(imag(A(:))))./nanmean(abs(real(A(:))));
 if cpxity<tolp
   A=real(A);
 else
-  keyboard
   % Still do it, but report on it!
   A=real(A);
   disp(sprintf('%s Imaginary/real parts ratio is %5.0e%s',...
