@@ -138,6 +138,7 @@ elseif strcmp(v,'demo2')
     disp(sprintf('\nWhole | Speckled\n'))
     disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat1.*scl1 thhat2.*scl2]'))
     
+    keyboard
     % Then plot these things using MLEPLOS
     mleplos(thhat1,th1,[],[],[],[],[],p,'MUCKIT-demo2')
 end
