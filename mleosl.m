@@ -399,7 +399,7 @@ if ~isstr(Hx)
   end
 
   % Here we compute the moment parameters and recheck the likelihood
-  disp('Last check on likelihood at the best estimate')
+  disp(sprintf('\nLast check on likelihood at the best estimate\n'))
   [L,~,Hagain,momx,vr]=logliosl(k,thhat,scl,params,Hk,xver);
   diferm(L,logli)
   diferm(Hagain,H)
