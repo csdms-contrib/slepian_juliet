@@ -77,7 +77,7 @@ elseif strcmp(v,'demo2')
     % Something manageable without overdoing it
     p.NyNx=[188 233]+randi(20,[1 2]);
     % Something larger without overdoing it, check weirdness
-    p.NyNx=[512 512];
+    p.NyNx=[512 512]/4;
 
     N=3;
     for index=1:N
