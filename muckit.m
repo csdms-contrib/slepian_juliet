@@ -24,7 +24,7 @@ function varargout=muckit(v,p,scl)
 % [~,~,I]=muckit('demo1','random',0.8); % To get a quick muck to look at
 % muckit('demo2'); % To do a serious of mock muck inversions
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/09/2023
+% Last modified by fjsimons-at-alum.mit.edu, 10/13/2023
 
 % The default is the demo, for once
 defval('v','demo1')
@@ -132,7 +132,7 @@ elseif strcmp(v,'demo2')
     disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat1.*scl1 thhat2.*scl2]'))
     
     % Then plot these things using MLEPLOS
-    mleplos(thhat1,th1,[],[],[],[],[],p,[],[])
+    mleplos(thhat1,th1,[],[],[],[],[],p,'MUCKIT-demo2')
 end
 
 % Variable output
