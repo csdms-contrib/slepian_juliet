@@ -191,8 +191,6 @@ for ind=1:np
   delete(get(ah(ind+np),'Title'));
   delete(get(ah(ind+np),'XLabel'));
 
-  keyboard
-  
   set(ah(ind+np),'YLim',stats([1 end]),'YTickLabel',stats,...		       
 		'YTickLabel',round(rondo*stats/sclth0(ind))/rondo);
   hold on
