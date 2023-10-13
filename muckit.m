@@ -77,7 +77,7 @@ elseif strcmp(v,'demo2')
     % Something manageable without overdoing it
     p.NyNx=[188 233]+randi(20,[1 2]);
     % Something larger without overdoing it, check weirdness
-    p.NyNx=[512 512]/4;
+    p.NyNx=[512 512]/8;
 
     N=3;
     for index=1:N
@@ -114,7 +114,10 @@ elseif strcmp(v,'demo2')
         pause(5); clc; disp(sprintf('\n Estimating first whole field \n'))
         [thhat1(index,:),~,~,scl1(index,:)]=mleosl(Hx,thini,p,[],[],[],xver);
 	% Explicitly check the likelihood?
+	disp(sprintf('\nLast check on likelihood at the initial guess\n'))
 	logliosl(knums(p),thini./scl1(index,:),scl1(index,:),p,tospec(Hx(:),p)/(2*pi));
+	disp(sprintf('\nLast check on likelihood at the truth\n'))
+	logliosl(knums(p),th1./scl1(index,:),scl1(index,:),p,tospec(Hx(:),p)/(2*pi));
 	% --> inside protect by looking at momx?? That's where it goes wrong
 
         % Now recover the parameters of the speckled field
@@ -124,7 +127,11 @@ elseif strcmp(v,'demo2')
         pause(5); clc; disp(sprintf('\n Estimating first speckled field \n'))
         [thhat2(index,:),~,~,scl2(index,:)]=mleosl(Hm,thini,p,[],[],[],xver);
 	% Explicitly check the likelihood?
+	disp(sprintf('\nLast check on likelihood at the initial guess\n'))
 	logliosl(knums(p),thini./scl1(index,:),scl1(index,:),p,...
+		 tospec(p.taper(:).*Hx(:),p)/(2*pi)/sqrt(sum(p.taper(:).^2))*sqrt(prod(p.NyNx)),1);
+	disp(sprintf('\nLast check on likelihood at the truth\n'))
+	logliosl(knums(p),th2./scl1(index,:),scl1(index,:),p,...
 		 tospec(p.taper(:).*Hx(:),p)/(2*pi)/sqrt(sum(p.taper(:).^2))*sqrt(prod(p.NyNx)),1);
     end
     % And now look at the statistics of the recovery
