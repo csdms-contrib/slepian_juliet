@@ -74,13 +74,12 @@ elseif strcmp(v,'demo2')
     p.mask=defp;
     % Simulate using invariant embedding, no taper
     p.quart=0; p.blurs=Inf; p.kiso=NaN; clc
-p.blurs=-1
     % Something manageable without overdoing it
     p.NyNx=[188 233]+randi(20,[1 2]);
     % Something larger without overdoing it, check weirdness
     p.NyNx=[512 512]/8;
 
-    N=9;
+    N=3;
     for index=1:N
         clc; disp(sprintf('\n Simulating the field \n'))
 
