@@ -82,9 +82,11 @@ end
 % We need the (blurred) power spectrum and its ratio to the observations
 [S,kk]=maternosp(th,params,xver);
 
-% Quick look? Save before wavenumber culling
-sa=v2s(hformos(S,Hk,[],xver),params);
-%imagesc(sa); axis image
+if xver==1
+    % Quick look? Save before wavenumber culling
+    sa=v2s(hformos(S,Hk,[],xver),params);
+    %imagesc(sa); axis image
+end
 
 % Exclude the zero wavenumbers
 Hk=Hk(~~k);
