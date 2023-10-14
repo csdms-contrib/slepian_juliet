@@ -67,10 +67,14 @@ defval('scl',ones(size(th)))
 % Scale up the parameter vector for the proper likelihood and score
 th=th.*scl;
 
-% Here I build the protection that the three Matern parameters should be
-% positive. I mirror them up! Thereby messing with the iteration path, but
-% hey. It means we can use FMINUNC also.
-th([1 2 3])=abs(th([1 2 3]));
+if any(th<0)
+    %keyboard
+    % Here I build the protection that the three Matern parameters should be
+    % positive. I mirror them up! Thereby messing with the iteration path, but
+    % hey. It means we can use FMINUNC also.
+    % th([1 2 3])=abs(th([1 2 3]));
+    return
+end
 
 % We need the (blurred) power spectrum and its ratio to the observations
 [S,kk]=maternosp(th,params,xver);
