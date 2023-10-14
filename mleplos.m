@@ -238,6 +238,8 @@ shrink(ah(np+1:end),aps2(1),aps2(2))
 movev(ah(length(ah)/2+1:end),mv)
 axes(ah(1))
 yl=ylabel('posterior probability density');
+axes(ah(4))
+yl(2)=ylabel('sample values');
 longticks(ah)
 % Normal distribution based on stdF0
 set(psF0,'linew',0.5,'color','k','LineS','--')
@@ -249,7 +251,7 @@ set(psXpix,'linew',0.5,'color','k')
 set(pobs,'linew',1.5,'color',grey(3.5))
 
 % Delete the one you know barely works
-delet(psF0)
+delete(psF0)
 
 % Do this so the reduction looks slightly better
 set(yl,'FontSize',12)
