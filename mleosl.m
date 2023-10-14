@@ -89,7 +89,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/13/2023
+% Last modified by fjsimons-at-alum.mit.edu, 10/14/2023
 
 if ~isstr(Hx)
   defval('algo','unc')
@@ -124,7 +124,7 @@ if ~isstr(Hx)
   else
     bounds=[];
   end
-  
+
   % Being extra careful or not?
   defval('xver',1)
 
@@ -296,10 +296,10 @@ if ~isstr(Hx)
     error(sprintf('%s Negative variance',upper(mfilename)))
   end
   if thhat(2)<0
-    thhat(2)=-thhat(2);
+    error(sprintf('%s Negative smoothness',upper(mfilename)))
   end
   if thhat(3)<0
-    thhat(3)=-thhat(3);
+    error(sprintf('%s Negative range',upper(mfilename)))
   end
 
   % Degrees of freedom for full-wavenumber domain (redundant for real data)
@@ -399,7 +399,6 @@ if ~isstr(Hx)
   end
 
   % Here we compute the moment parameters and recheck the likelihood
-  disp(sprintf('\nLast check on likelihood at the best estimate\n'))
   [L,~,Hagain,momx,vr]=logliosl(k,thhat,scl,params,Hk,xver);
   diferm(L,logli)
   diferm(Hagain,H)
