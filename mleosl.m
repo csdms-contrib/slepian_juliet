@@ -485,7 +485,7 @@ elseif strcmp(Hx,'demo1')
 
     % Initialize the THZRO file... note that the bounds may change
     % between simulations, and only one gets recorded here
-    if index==1 && labindex==1
+    if ~any(isnan(thhat)) && index==1 && labindex==1
       oswzerob(fids(1),th0,p,lpars,fmts)
     end
 
