@@ -35,7 +35,7 @@ function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpi
 %
 % This only gets used in MLEOS/MLEROS/MLEROS0/MLEOSL thus far, their 'demo2'
 %
-% Last modified by fjsimons-at-alum.mit.edu, 03/10/2022
+% Last modified by fjsimons-at-alum.mit.edu, 10/14/2023
 
 defval('xver',1)
 
@@ -247,6 +247,9 @@ set(psavhs,'linew',1.5,'color','k')
 set(psXpix,'linew',0.5,'color','k')
 % Based on the actually observed covariance of these data
 set(pobs,'linew',1.5,'color',grey(3.5))
+
+% Delete the one you know barely works
+delet(psF0)
 
 % Do this so the reduction looks slightly better
 set(yl,'FontSize',12)
