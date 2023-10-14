@@ -39,7 +39,7 @@ function varargout=blurosy(th,params,xver,method,tsto)
 %         as identified by the input 'params' (wrap with V2S)
 % k       The wavenumber matrix (the norm of the wave vectors), unwrapped
 % tyy     The autocorrelation of the spatial taper... which you 
-%         may never need it explicitly, used in SIMULOSL and LOGLIOSL
+%         may never need explicitly, used in SIMULOSL and LOGLIOSL
 % Cyy     The modified Matern correlation, may never need it explicitly
 %
 % SEE ALSO:
@@ -61,7 +61,7 @@ function varargout=blurosy(th,params,xver,method,tsto)
 % BLUROSY('demo3') % should produce no output
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 10/09/2023
+% Last modified by fjsimons-at-alum.mit.edu, 10/14/2023
 
 if ~isstr(th)
     if params.blurs>=0 & ~isinf(params.blurs)
