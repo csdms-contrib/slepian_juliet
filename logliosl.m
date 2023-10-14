@@ -51,7 +51,7 @@ function [L,g,H,momx,vr,Lk]=logliosl(k,th,scl,params,Hk,xver)
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by fjsimons-at-alum.mit.edu, 03/08/2022
+% Last modified by fjsimons-at-alum.mit.edu, 10/14/2023
 
 % Make sure that this does render LKOSL obsolete
 
@@ -68,11 +68,14 @@ defval('scl',ones(size(th)))
 th=th.*scl;
 
 if any(th<0)
-    %keyboard
-    % Here I build the protection that the three Matern parameters should be
-    % positive. I mirror them up! Thereby messing with the iteration path, but
-    % hey. It means we can use FMINUNC also.
-    % th([1 2 3])=abs(th([1 2 3]));
+    % I had previously build the protection that the three Matern parameters
+    % should be positive by mirroring using % th([1 2 3])=abs(th([1 2 3]));
+    % Thereby messing with the iteration path while sticking to FMINUNC instead
+    % of FMINCON with positivity constraints. This often sent the smoothness
+    % into really high values, and that did more harm than good. So that all
+    % went out the door on 14 Oct 2023 and now we return, which errors "Output
+    % argument "L" (and maybe others) not assigned during call to "LOGLIOSL",
+    % but that's caught in MLEOSL and so we can move on gracefully.
     return
 end
 
