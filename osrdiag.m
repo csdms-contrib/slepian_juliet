@@ -31,7 +31,7 @@ function [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covX]=osrdiag(fname,ddir,
 %
 % OSOPEN, OSLOAD, OSWDIAG
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/25/2018
+% Last modified by fjsimons-at-alum.mit.edu, 10/14/2023
 
 defval('ddir','/u/fjsimons/PROGRAMS/MFILES/olhede4')
 defval('fname','mleosl_diagn_21-Jun-2018')
@@ -69,6 +69,7 @@ covX=nan(ndim,npp);
 % Rarely, in SPMD mode does the file get written too quickly and does a
 % confusion between labs happen - look into the file and fix easily
 % Read the contents
+
 fid=fopen(fullfile(ddir,fname),'r');
 for index=1:ndim
   try
