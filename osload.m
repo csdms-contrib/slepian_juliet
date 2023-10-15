@@ -33,7 +33,7 @@ function [th0,thhats,params,covX,covavhs,thpix,E,v,obscov,sclcovX,momx,covXpix,c
 %
 % OSOPEN, OSRDIAG, TRIMIT, MLEOS etc
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/25/2018
+% Last modified by fjsimons-at-alum.mit.edu, 10/14/2023
 
 % Who called? Work this into the filenames
 [~,nn]=star69;
@@ -116,8 +116,8 @@ thhats=trimit(thhats,perc,1);
 % A random pick from the set of maximum-likelihood estimates
 pix=randi(size(thhats,1)); thpix=thhats(pix,1:3);
 % Tell us what the three picked values were!
-%disp(sprintf('\n%s solution %i %g %i picked as an example\n',...
-%             upper(mfilename),thpix))
+disp(sprintf('\n%s solution %i %g %i picked as an example\n',...
+             upper(mfilename),thpix))
 
 % A random pick from the set of numerical-Hessian derived covariances
 covXpix=inv(trilosi(hes(pix,:))./matscl)/df;
