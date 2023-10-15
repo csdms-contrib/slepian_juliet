@@ -132,7 +132,7 @@ if nargout>=2
 end
 
 if nargout>=3
-  % FJS needs ksel fix
+    % FJS needs ksel fix
   % Get the appropriately scaled Hessian values here
   H=hessiosl(k,th,params,Hk,xver);
 end
@@ -150,5 +150,7 @@ if nargout>=5
   vr=8/sum(~isnan(Xk(ksel)));
 end
 
-% Print the trajectory, seems like one element at a time gets changed
-disp(sprintf('Current theta: %8.3g %8.3g %8.3g | likelihood: %8.5f',th,L))
+if xver==1
+    % Print the trajectory, seems like one element at a time gets changed
+    disp(sprintf('Current theta: %8.3g %8.3g %8.3g | likelihood: %8.5f',th,L))
+end
