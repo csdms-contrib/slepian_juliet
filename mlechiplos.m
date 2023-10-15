@@ -209,7 +209,7 @@ end
 axis image; box on
 set(h(1),'MarkerEdge','k')  
 set(h(3),'LineStyle','-','Color',grey)
-% Extend the refline to the full axis
+% Extend the line to the full axis
 hold on
 xh=get(h(3),'xdata');
 yh=get(h(3),'ydata');
@@ -240,8 +240,8 @@ t(2)=title(sprintf('%s =  %5.3f   8/K = %5.3f   %s   p = %5.2f',...
 %	           neem,nanvar(magx));
 delete(get(ah(2),'xlabel'));
 xlim(xll); ylim(xll)
-xl(2)=xlabel(sprintf('predicted 2%s',varibal));
-yl(2)=ylabel(sprintf('observed 2%s',varibal));
+xl(2)=xlabel(sprintf('observed 2%s',varibal));
+yl(2)=ylabel(sprintf('predicted 2%s',varibal));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 axes(ah(3))
