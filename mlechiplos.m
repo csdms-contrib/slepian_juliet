@@ -41,7 +41,7 @@ function varargout=mlechiplos(witsj,Hk,thhat,scl,params,ah,pertur,th0,covX,E,v)
 %
 % MLECHIPSDOSL, MLEOSL, EGGERS6
 %
-% Last modified by fjsimons-at-alum.mit.edu, 09/25/2023
+% Last modified by fjsimons-at-alum.mit.edu, 10/14/2023
 
 defval('pertur',0)
 defval('th0',[])
@@ -94,14 +94,16 @@ switch witsj
    Xk=hformos(1,Hk,invSb);
    % This should be the degrees of freedom of the chi-squared of 2*Xk
    df=4;
- case 4
-  % Multiply to obtain a variable which should follow the rules 
-  Zk=[Hk(:)./Lb(:)];
-  Xk0=hformos(1,Zk,[1 0 1]);
-  % Same thing
-  Xk=abs(Hk(:)).^2./Sb(:);
-  % This should be the degrees of freedom of the chi-squared of 2*Xk
-  df=2;
+  case 4
+    if ~any(isnan(Lb))
+        % Multiply to obtain a variable which should follow the rules 
+        Zk=[Hk(:)./Lb(:)];
+        Xk0=hformos(1,Zk,[1 0 1]);
+    end
+    % Same thing
+    Xk=abs(Hk(:)).^2./Sb(:);
+    % This should be the degrees of freedom of the chi-squared of 2*Xk
+    df=2;
 end
 
 % And this should be the same thing again, except how it treats k=0
@@ -119,8 +121,8 @@ switch witsj
  case 4
    [Lbar,~,~,momx,~,Xk1]=logliosl(k,thhat,scl,params,Hk,1);
    Xk1=-Xk1-log(Sb(~~k));
-   % The oldest way, using a since retired function
-   % Xkk1=-Lkosl(k,thhat.*scl,params,Hk)-log(Sb);
+   % The oldest way, using a since retired function LKOSL
+   % Xkk1=-lkosl(k,thhat.*scl,params,Hk)-log(Sb);
    % difer(Xkk1(~~k)-Xk1,9,[],NaN)
 end
 
