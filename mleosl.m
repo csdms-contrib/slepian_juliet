@@ -85,7 +85,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 % mleosl('demo4','14-Oct-2023')
 %
 % One simulation and a chi-squared plot using MLECHIPLOS
-% mleosl('demo5',th0,p)
+% mleosl('demo5',th0,p) % This should be as good as BLUROSY('demo2')
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
@@ -676,6 +676,8 @@ elseif strcmp(Hx,'demo5')
   [thhat,covFHh,lpars,scl,thini,p,Hk,k]=mleosl(Hx,thini,p);
   matscl=[scl(:)*scl(:)'];
 
+  if any(isnan(k(:))); return; end
+  
   % Fisher and Fisher-derived covariance at the truth
   [F0,covF0]=fishiosl(k,th0);
   % Fisher and Fisher-derived covariance at the estimate
