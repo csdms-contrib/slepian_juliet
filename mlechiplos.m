@@ -95,13 +95,14 @@ switch witsj
    % This should be the degrees of freedom of the chi-squared of 2*Xk
    df=4;
   case 4
+    % Same thing
+    Xk=abs(Hk(:)).^2./Sb(:);
     if ~any(isnan(Lb))
         % Multiply to obtain a variable which should follow the rules 
         Zk=[Hk(:)./Lb(:)];
         Xk0=hformos(1,Zk,[1 0 1]);
+        diferm(Xk,Xk0)
     end
-    % Same thing
-    Xk=abs(Hk(:)).^2./Sb(:);
     % This should be the degrees of freedom of the chi-squared of 2*Xk
     df=2;
 end
