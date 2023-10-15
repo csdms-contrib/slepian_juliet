@@ -107,13 +107,8 @@ if ~isstr(Hx)
   struct2var(params)
 
   % You cannot call MLEOSL with params.blurs=Inf, since that's for
-  % SIMULOSL only, we reset for the inversion only
-  if isinf(blurs)
-      params.blurs=-1;
-      blurs=-1;
-      disp(sprintf('The blurs parameter Inf is reserved for SIMULOSL; resetting to %i',blurs))
-  end
-  
+  % SIMULOSL only, we reset for the inversion only inside LOGLIOSL
+
   % These bounds are physically motivated...
   if strcmp(algo,'con')
     % Parameters for FMINCON in case that's what's being used, which is recommended
@@ -394,9 +389,9 @@ if ~isstr(Hx)
   disp(sprintf(sprintf('%s : %s\n ',str0,str2),...
 	       ' FishhFish. std',sqrt(diag(covFhF))))
   if xver==1 | xver==0
-    disp(sprintf('%s\n',repmat('_',119,1)))
     disp(sprintf('%8.3gs per %i iterations or %8.3gs per %i function counts',...
                  ts/oput.iterations*100,100,ts/oput.funcCount*1000,1000))
+    disp(sprintf('%s\n',repmat('_',119,1)))
   end
 
   % Here we compute the moment parameters and recheck the likelihood
@@ -475,7 +470,7 @@ elseif strcmp(Hx,'demo1')
 
     % Check the dimensions of space and spectrum are right
     difer(length(Hx)-length(k(:)),[],[],NaN)
-keyboard
+
     % Form the maximum-likelihood estimate, pass on the params, use th0
     % as the basis for the perturbed initial values. Remember hes is scaled.
     t0=clock;
