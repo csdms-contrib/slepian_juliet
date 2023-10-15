@@ -95,13 +95,16 @@ switch witsj
    % This should be the degrees of freedom of the chi-squared of 2*Xk
    df=4;
   case 4
-    % Same thing
-    Xk=abs(Hk(:)).^2./Sb(:);
+    % This only works if params.blurs is not Inf since then SIMULOSL changed
     if ~any(isnan(Lb))
         % Multiply to obtain a variable which should follow the rules 
         Zk=[Hk(:)./Lb(:)];
         Xk0=hformos(1,Zk,[1 0 1]);
+        % Same thing
+        Xk=abs(Hk(:)).^2./Sb(:);
         diferm(Xk,Xk0)
+    else
+        [Xk0,Xk]=deal(NaN);
     end
     % This should be the degrees of freedom of the chi-squared of 2*Xk
     df=2;
@@ -120,18 +123,30 @@ switch witsj
    Xk1=-Lkros0(k,thhat.*scl,params,Hk)-log(detSb);
    Lbar=logliros0(thhat,params,Hk,k,scl);
  case 4
-   [Lbar,~,~,momx,~,Xk1]=logliosl(k,thhat,scl,params,Hk,1);
-   Xk1=-Xk1-log(Sb(~~k));
+   [Lbar,~,~,momx,~,Lk]=logliosl(k,thhat,scl,params,Hk,1);
+    % This only works if params.blurs is not Inf since then SIMULOSL changed
+    if ~any(isnan(Lb))
+        Xk1=-Lk-log(Sb(~~k));
+        % Check we're doing the same thing to tolerance, depending on whether
+        % some prior codes put a NaN at zero wavenumber or got rid of the
+        % zero-wavenumber values altogether; these checks will be removed
+        difer(Xk(~isnan(Xk0))-Xk0(~isnan(Xk0)),9,[],NaN)
+        difer(Xk(~~k)-Xk1,9,[],NaN)
+    else
+        % You cannot recompute it from the output of LOGLIOSL, you must redo it
+        % It might be a reason to save LKOSL after all
+        params.blurs=-1;
+        % [S,kk]=maternosp(th0,params,1);
+        % Same thing
+        S=blurosy(th0,params,1);
+        % Remember Sb that came out of SIMULOSL in this case was the periodogram
+        % and not the expected periodogram, and it was for a new run not for the Hk
+        Xk=abs(Hk).^2./S;
+    end
    % The oldest way, using a since retired function LKOSL
    % Xkk1=-lkosl(k,thhat.*scl,params,Hk)-log(Sb);
    % difer(Xkk1(~~k)-Xk1,9,[],NaN)
 end
-
-% Check we're doing the same thing to tolerance, depending on whether
-% some prior codes put a NaN at zero wavenumber or got rid of the
-% zero-wavenumber values altogether; these checks will be removed
-difer(Xk(~isnan(Xk0))-Xk0(~isnan(Xk0)),9,[],NaN)
-difer(Xk(~~k)-Xk1,9,[],NaN)
 
 switch witsj
  case {1,2,3}
