@@ -1,5 +1,5 @@
-function [th0,thhats,params,covX,covavhs,thpix,E,v,obscov,sclcovX,momx,covthpix,covF0]=osload(datum,perc,n)
-% [th0,thhats,params,covX,covavhs,thpix,E,v,obscov,sclcovX,momx,covthpix,covF0]=OSLOAD(datum,perc,n)
+function [th0,thhats,params,covX,covavhs,thpix,E,v,obscov,sclcovX,momx,covXpix,covF0]=osload(datum,perc,n)
+% [th0,thhats,params,covX,covavhs,thpix,E,v,obscov,sclcovX,momx,covXpix,covF0]=OSLOAD(datum,perc,n)
 %
 % Loads ALL FOUR of the output diagnostic files produced by the suite of
 % programs following Simons & Olhede (2013). Data files are, like,
@@ -17,7 +17,7 @@ function [th0,thhats,params,covX,covavhs,thpix,E,v,obscov,sclcovX,momx,covthpix,
 % th0          The true parameter vector
 % thhats       The maximum-likelihood estimates from the series of saved MLEOSL runs 
 % params       The parameter structure of the SIMULOSL simulations
-% covX         A covariance matrix for the estimate as written by OSWDIAG
+% covX         A covariance matrix estimate of the estimate as written by OSWDIAG
 % covavhs      The covariance matrix based on the MEDIAN numerical Hessian matrix
 % thpix        The example estimate, randomly picked up
 % E            Young's modulus - for conversion to Te only
@@ -25,7 +25,7 @@ function [th0,thhats,params,covX,covavhs,thpix,E,v,obscov,sclcovX,momx,covthpix,
 % obscov       Scaled observed sample covariance (ones on the diagonal)
 % sclcovX      Scaled version of a random pick of covX (ones on the diagonal)
 % momx         Moment parameters of the simulation results
-% covthpix     The covariance matrix based on the numerically derived
+% covXpix      The covariance matrix based on the numerically derived
 %              Hessian matrix at the randomly picked solution  
 % covF0        The covariance matrix based on the Fisher matrix at the truth
 %
@@ -33,7 +33,7 @@ function [th0,thhats,params,covX,covavhs,thpix,E,v,obscov,sclcovX,momx,covthpix,
 %
 % OSOPEN, OSRDIAG, TRIMIT, MLEOS etc
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/17/2017
+% Last modified by fjsimons-at-alum.mit.edu, 06/25/2018
 
 % Who called? Work this into the filenames
 [~,nn]=star69;
@@ -74,6 +74,7 @@ fclose(fid);
 
 % Load the optimization diagnostics, which should duplicate f2 and f3
 [thhat,thini,tseiter,scl,L,gam,hes,optis,momx,covX]=osrdiag(f4,pwd,np); 
+
 try
   % Could be off; know that DIAGN is the file of record
   difer(thhat(:,1:np)-thhats,[],[],NaN)
@@ -115,21 +116,26 @@ thhats=trimit(thhats,perc,1);
 % A random pick from the set of maximum-likelihood estimates
 pix=randi(size(thhats,1)); thpix=thhats(pix,1:3);
 % Tell us what the three picked values were!
-disp(sprintf('\n%s solution %i %g %i picked as an example\n',...
-             upper(mfilename),thpix))
+%disp(sprintf('\n%s solution %i %g %i picked as an example\n',...
+%             upper(mfilename),thpix))
 
 % A random pick from the set of numerical-Hessian derived covariances
-covthpix=inv(trilosi(hes(pix,:))./matscl)/df;
+covXpix=inv(trilosi(hes(pix,:))./matscl)/df;
+
+% This should now be the same, the way the latest files have been written
+pp=trilosi(covX(pix,:));
+diferm(covXpix(:)./matscl(:),pp(:)./matscl(:),3)
 
 % The below should be the same as covF0 since it came out of OSWZEROE, not at zero-k
 [~,covth0]=fishiosl(k,th0,1);
 
 % This needs to be identical except in a few digits compared to the size
-diferm(covth0(:),covF0(:),2)
+diferm(covth0(:)./matscl(:),covF0(:)./matscl(:),3)
 % But the one taking out the wavenumber at zero is the right one
 covF0=covth0;
 
-% Remember the avhs is actually coming from the diagn file; below is untrimmed
+% Remember the avhs is actually the MEDIAN coming from the diagn file and
+% not the AVERAGE coming from the thzero file, and the below is untrimmed
 osdisp(th0,thhats(:,1:np),size(hes,1),avhs,F0,covavhs)
 
 if np>3
@@ -141,7 +147,7 @@ if np>3
 end
 
 % Actually, best to scale so the diagonal has unit variance
-sclcovX=covthpix./[diag(sqrt(covthpix))*diag(sqrt(covthpix))'];
+sclcovX=covXpix./[diag(sqrt(covXpix))*diag(sqrt(covXpix))'];
 
 % How about we return the observed sample covariance matrix instead
 obscov=cov(thhats(:,1:np));
