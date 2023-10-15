@@ -79,13 +79,13 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 % mleosl('demo1',N,th0,p)
 %
 % Statistical study of a series of simulations using MLEPLOS
-% mleosl('demo2','26-Sep-2023')
+% mleosl('demo2','14-Oct-2023')
 %
 % Covariance study of a series of simulations using COVPLOS
-% mleosl('demo4','20-Jun-2018')
+% mleosl('demo4','14-Oct-2023')
 %
 % One simulation and a chi-squared plot using MLECHIPLOS
-% mleosl('demo5',th0,params)
+% mleosl('demo5',th0,p)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
@@ -107,10 +107,11 @@ if ~isstr(Hx)
   struct2var(params)
 
   % You cannot call MLEOSL with params.blurs=Inf, since that's for
-  % SIMULOSL only, we can go for safe reset or else straight error
+  % SIMULOSL only, we reset for the inversion only
   if isinf(blurs)
-      %warning('The blurs parameter Inf is reserved for SIMULOSL; resetting'); p.blurs=4;
-      error('The blurs parameter Inf is reserved for SIMULOSL; pick something');
+      params.blurs=-1;
+      blurs=-1;
+      disp(sprintf('The blurs parameter Inf is reserved for SIMULOSL; resetting to %i',blurs))
   end
   
   % These bounds are physically motivated...
@@ -372,7 +373,7 @@ if ~isstr(Hx)
     disp(sprintf(sprintf(' Cov (Analy Hess.) : %s',str3),trilos(covH)))
     disp(sprintf(sprintf(' Cov (Analy Fish.) : %s',str3),trilos(covF)))
     disp(sprintf(sprintf(' Cov ( FishHFish.) : %s',str3),trilos(covFHF)))
-    disp(sprintf(sprintf(' Cov ( FishHFish.) : %s',str3),trilos(covFhF)))
+    disp(sprintf(sprintf(' Cov ( FishhFish.) : %s',str3),trilos(covFhF)))
     disp(sprintf('%s',repmat('_',119,1)))
   end
 
@@ -391,7 +392,7 @@ if ~isstr(Hx)
   disp(sprintf(sprintf('%s : %s ',str0,str2),...
 	       ' FishHFish. std',sqrt(diag(covFHF))))
   disp(sprintf(sprintf('%s : %s\n ',str0,str2),...
-	       ' FishHFish. std',sqrt(diag(covFhF))))
+	       ' FishhFish. std',sqrt(diag(covFhF))))
   if xver==1 | xver==0
     disp(sprintf('%s\n',repmat('_',119,1)))
     disp(sprintf('%8.3gs per %i iterations or %8.3gs per %i function counts',...
@@ -450,7 +451,7 @@ elseif strcmp(Hx,'demo1')
   % If there is no preference, then that's OK, it gets taken care of
   aguess=xver; clear xver
 
-  % You can't stick in an EIGHT argument so you'll have to default 
+  % You can't stick in an EIGHTH argument so you'll have to default 
   defval('xver',0)
 
   % What you make of all of that if there hasn't been a number specified
@@ -474,12 +475,10 @@ elseif strcmp(Hx,'demo1')
 
     % Check the dimensions of space and spectrum are right
     difer(length(Hx)-length(k(:)),[],[],NaN)
-
+keyboard
     % Form the maximum-likelihood estimate, pass on the params, use th0
     % as the basis for the perturbed initial values. Remember hes is scaled.
     t0=clock;
-    % Put a try catch here to catch the rare negative variance??
-
     [thhat,covFHh,lpars,scl,thini,p,Hk,k]=mleosl(Hx,[],p,algo,[],th0,xver);
     ts=etime(clock,t0);
 
@@ -545,9 +544,14 @@ elseif strcmp(Hx,'demo1')
     % This is the AVERAGE of the numerical Hessians, should be closer to the Fisher
     avhsz=avhsz.*[sclth0(:)*sclth0(:)']/good;
 
-    % Now compute the Fisher and Fisher-derived covariance at the truth
-    [F0,covF0]=fishiosl(k,th0);
-    matscl=[sclth0(:)*sclth0(:)'];
+    % You may have ended on a nonsensical estimate
+    if ~any(isnan(k(:)))
+        % Now compute the Fisher and Fisher-derived covariance at the truth
+        [F0,covF0]=fishiosl(k,th0);
+        matscl=[sclth0(:)*sclth0(:)'];
+    else
+        [F0,covF0,matscl]=deal(nan(3,3));
+    end
 
     % Of course when we don't have the truth we'll build the covariance
     % from the single estimate that we have just obtained. This
@@ -604,7 +608,7 @@ elseif strcmp(Hx,'demo2')
 
   if xver==1
     % Take a look a the distribution of the residual moments
-    % This now is a full part of MLECHIPLOS
+    % This now is a full part of MLECHIPLOS and demo4
     % See RB X, p. 51 about the skewness of a chi-squared - just sayin'.
     % We don't change the number of degrees of freedom! If you have used
     % twice the number, and given half correlated variables, you do not
@@ -726,7 +730,7 @@ elseif strcmp(Hx,'demo5')
   mlechiplos(4,Hk,thhat,scl,p,ah,0,th0,covFHh{3});
   
   disp('FJS here fits also MLECHIPSDOSL')
-  disp('FJS here fits the likelihood contours')
+  disp('FJS here fits the MLELCONTOSL')
 
   % Print the figure!
   disp(' ')
