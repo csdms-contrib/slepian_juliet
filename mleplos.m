@@ -35,7 +35,7 @@ function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpi
 %
 % This only gets used in MLEOS/MLEROS/MLEROS0/MLEOSL thus far, their 'demo2'
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/14/2023
+% Last modified by fjsimons-at-alum.mit.edu, 10/17/2023
 
 defval('xver',1)
 
@@ -293,69 +293,94 @@ end
 if np>3; movev(tt,-4); else; movev(tt,-3.5); end
 
 % Make basic x-y plots of the parameters
-% SHOULD CALL THIS MLETHPLOS
+% FJS SHOULD CALL THIS MLETHPLOS
 if xver==1
     figure(2)
-  clf
-  pcomb=nchoosek(1:np,2);
-  pstats=[-2 2]; tstats=[-3 3]; vstats=[-2 0 2];
-  [ah,ha]=krijetem(subnum(1,3));
-  
-  % Scale everything
-  mobss=mobss./sclth0;
-  stdavhss=stdavhss./sclth0;
-  sobss=sobss./sclth0;
-  thhats=thhats./repmat(sclth0,size(thhats,1),1);
-  th0=th0./sclth0;
-  
-  for ind=1:np
-    axes(ah(ind))
-    % Find the pairwise combinations
-    p1=pcomb(ind,1); p2=pcomb(ind,2);
+    clf
+    pcomb=nchoosek(1:np,2);
+    pstats=[-2 2]; tstats=[-3 3]; vstats=[-2 0 2];
+    [ah,ha]=krijetem(subnum(1,3));
+    
+    % Scale everything
+    mobss=mobss./sclth0;
+    stdavhss=stdavhss./sclth0;
+    sobss=sobss./sclth0;
+    thhats=thhats./repmat(sclth0,size(thhats,1),1);
+    th0=th0./sclth0;
 
-    % Observed means and theoretical standard deviations
-    t1(ind)=plot(mobss(p1)+pstats*stdavhss(p1),...
-		 [mobss(p2) mobss(p2)]); hold on
-    t2(ind)=plot([mobss(p1) mobss(p1)],...
-		 mobss(p2)+pstats*stdavhss(p2));
-    set([t1 t2],'Color',grey)
-    % The parameter estimates
-    p(ind)=plot(thhats(:,p1),thhats(:,p2),'o'); 
+    % Plot error ellipses
+    % https://www.xarg.org/2018/04/how-to-plot-a-covariance-error-ellipse/
+    defval('cl',0.95)
+    % Check this for three variables, 
+    % s=-2*log(1-cl);
+    s=chi2inv(cl,2);
+    
+    mobs=nanmean(thhats(:,ind));
+    t=linspace(0,2*pi);
 
-    % Observed means and observed standard deviations
-    m(ind)=plot(mobss(p1),mobss(p2),'v');
-    o1(ind)=plot(mobss(p1)+pstats*sobss(p1),...
-		[mobss(p2) mobss(p2)],'LineWidth',2);
-    o2(ind)=plot([mobss(p1) mobss(p1)],...
-		mobss(p2)+pstats*sobss(p2),'LineWidth',2);
-    hold off
-    % Truths
-    try
-      set(ah(ind),'xtick',round(100*[th0(p1)+vstats*sobss(p1)])/100,...
-		  'ytick',round(100*[th0(p2)+vstats*sobss(p2)])/100)
+    for ind=1:np
+        axes(ah(ind))
+        % Find the pairwise combinations
+        p1=pcomb(ind,1); p2=pcomb(ind,2);
+
+        % Observed means and theoretical standard deviations
+        t1(ind)=plot(mobss(p1)+pstats*stdavhss(p1),...
+		     [mobss(p2) mobss(p2)]); hold on
+        t2(ind)=plot([mobss(p1) mobss(p1)],...
+		     mobss(p2)+pstats*stdavhss(p2));
+        set([t1 t2],'Color',grey)
+        % The parameter estimates
+        p(ind)=plot(thhats(:,p1),thhats(:,p2),'o'); 
+
+        % Observed means and observed standard deviations
+        m(ind)=plot(mobss(p1),mobss(p2),'v');
+        o1(ind)=plot(mobss(p1)+pstats*sobss(p1),...
+		     [mobss(p2) mobss(p2)],'LineWidth',1);
+        o2(ind)=plot([mobss(p1) mobss(p1)],...
+		     mobss(p2)+pstats*sobss(p2),'LineWidth',1);
+        hold off
+        % Truths
+        try
+            set(ah(ind),'xtick',round(100*[th0(p1)+vstats*sobss(p1)])/100,...
+	       'ytick',round(100*[th0(p2)+vstats*sobss(p2)])/100)
+        end
+        axis square;  grid on
+        xlim(th0(p1)+tstats*sobss(p1))
+        ylim(th0(p2)+tstats*sobss(p2))
+        % Color mix
+        cmix=[0 0 0]; cmix([p1 p2])=1/2;
+        set([p(ind) m(ind)],'MarkerFaceColor',cmix,'MarkerEdgeColor',cmix,'MarkerSize',2)
+        % Cosmetix
+        % Delete the big cross
+        %        delete([o1(ind) o2(ind)])
+        xlabel(flabs{p1})
+        ylabel(flabs{p2})
+        % Plot pairwise error ellipses
+        % https://www.xarg.org/2018/04/how-to-plot-a-covariance-error-ellipse/
+        hold on
+        % Compute the eigenvectors and eigenvalues of the covariance
+        % Think of the Schur complement? How does that relate?
+        [V,D]=eig(cov(thhats(:,[p1 p2])));
+        a=sqrt(s)*V*sqrt(D)*[cos(t); sin(t)];
+        ep(ind)=plot(a(1,:)+mobss(p1),a(2,:)+mobss(p2));
+        hold off
+        longticks(ah)
+        %seemax([ah(1) ah(2)],1)
+        %seemax([ah(2) ah(3)],2)
+        titi=ostitle(ah,params,name); movev(titi,-2)
+        try
+            tt=supertit(ah(1:np),sprintf(answs,answ{:})); movev(tt,-7)
+        end
     end
-    axis square;  grid on
-    xlim(th0(p1)+tstats*sobss(p1))
-    ylim(th0(p2)+tstats*sobss(p2))
-    % Color mix
-    cmix=[0 0 0]; cmix([p1 p2])=1/2;
-    set([p(ind) m(ind)],'MarkerFaceColor',cmix,'MarkerEdgeColor',cmix,'MarkerSize',2)
-    % Cosmetix
-    delete([o1(ind) o2(ind)])
-    xlabel(flabs{p1})
-    ylabel(flabs{p2})
-  end
-  longticks(ah)
-  %seemax([ah(1) ah(2)],1)
-  %seemax([ah(2) ah(3)],2)
-  titi=ostitle(ah,params,name); movev(titi,-2)
-  try
-      tt=supertit(ah(1:np),sprintf(answs,answ{:})); movev(tt,-7)
-  end
-end
+end    
 
 % Output
 varns={ah,ha,yl,xl,tl};
 varargout=varns(1:nargout);
 
 % Subfunction to compute standard deviations
+
+
+
+end
+
