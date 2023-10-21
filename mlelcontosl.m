@@ -384,19 +384,18 @@ elseif strcmp(Hk,'demo1')
             % Stay close at first
             % thini=th0+th0/100;
             thini=[];
-            [th,covFHh,lpars,scl]=mleosl(Hx,thini,params)'
+            [th,covFHh,lpars,scl]=mleosl(Hx,thini,params);
             % Scale up the outcome
             thhat=th.*scl;
             
             % Remind us where the loglihood was
             disp(sprintf('L = %6.2f',lpars{1}))
+            % Produce the likelihood contours figure
+            clf
+            mlelcontosl(Hk,thhat,params,covFHh{3})
+            
+            % Plot the figure! 
+            figna=figdisp([],[],[],2);
         end
-        
-        % Produce the likelihood contours figure
-        clf
-        mlelcontosl(Hk,thhat,params,covFHh{3})
-        
-        % Plot the figure! 
-        figna=figdisp([],[],[],2);
     end
 end
