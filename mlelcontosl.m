@@ -1,5 +1,5 @@
 function varargout=mlelcontosl(Hk,thhat,params,covth,stit,ah)
-% [lcont,ah,spt]=MLELCONTOSL(Hk,thhat,params,covth,stit,ah)
+% [ah,spt]=MLELCONTOSL(Hk,thhat,params,covth,stit,ah)
 %
 % For a Matern solution set (s2,nu,rho) describing a patch of data, this
 % function shows in Matern parameter-space how the log-likelihood varies
@@ -24,7 +24,6 @@ function varargout=mlelcontosl(Hk,thhat,params,covth,stit,ah)
 %
 % OUTPUT
 % 
-% lcont      Likelihood contours
 % ah         Set of axis handles
 % spt        Supertitle handle
 % 
@@ -111,7 +110,7 @@ if ~ischar(Hk)
     thR=[s2R; nuR; rhoR];
 
     % This from MLEPLOS as opposed to Gabe's cycIndex
-    pcomb=nchoosek(1:length(thhat),2)
+    pcomb=nchoosek(1:length(thhat),2);
 
     % Calculate loglihoods on Matern parameter grids. For each pairing of
     % parameters (s2-nu, nu-rho, and rho-s2 - the third parameter being held
@@ -122,13 +121,13 @@ if ~ischar(Hk)
         % Find the pairwise combinations
         xi=pcomb(i,1); yi=pcomb(i,2);
 
-        % Get the rotating indices
-        %[xi,yi]=cycIndex(i,3);
+        % Get the rotating indices - fix later
+        [xi,yi]=cycIndex(i,3);
         
         % Update on which loglihood grid is being constructed
         disp(sprintf('Constructing %s-%s loglihood grid, %s',...
                      thNam{xi},thNam{yi},datestr(now,15)));
-        
+
         % Calculate each contour's loglihood - this used to be in parallel
         for j=1:length(preCon(xi,:))
             % Give a loglihood contour's "estimated theta"
@@ -215,7 +214,7 @@ if ~ischar(Hk)
         xi=pcomb(i,1); yi=pcomb(i,2);
 
         % % Get the rotating indices
-        % [xi,yi]=cycIndex(i,length(thhat));
+        [xi,yi]=cycIndex(i,length(thhat));
         
         % Option to shade the plot background outside the largest contour
         if optShade
@@ -362,7 +361,7 @@ if ~ischar(Hk)
     set(gcf,'color','W','InvertH','off')
 
     % Collect output
-    vars={lcont,ah,spt};
+    vars={ah,spt};
     varargout=vars(1:nargout);
 elseif strcmp(Hk,'demo1')
     clear
@@ -380,17 +379,18 @@ elseif strcmp(Hk,'demo1')
         [Hx,~,params,k,Hk]=simulosl(th0,params); 
         
         % imagesc(v2s(Hx,params)); axis image
-
         try
             % Estimate the parameters via maximum-likelihood
+            % Stay close at first
+            % thini=th0+th0/100;
             thini=[];
-            [th,covFHh,lpars,scl]=mleosl(Hx,thini,params);
+            [th,covFHh,lpars,scl]=mleosl(Hx,thini,params)'
+            % Scale up the outcome
+            thhat=th.*scl;
+            
+            % Remind us where the loglihood was
+            disp(sprintf('L = %6.2f',lpars{1}))
         end
-        % Scale up the outcome
-        thhat=th.*scl;
-        
-        % Remind us where the loglihood was
-        disp(sprintf('L = %6.2f',lpars{1}))
         
         % Produce the likelihood contours figure
         clf
