@@ -35,7 +35,7 @@ function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpi
 %
 % This only gets used in MLEOS/MLEROS/MLEROS0/MLEOSL thus far, their 'demo2'
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/17/2023
+% Last modified by fjsimons-at-alum.mit.edu, 10/20/2023
 
 defval('xver',1)
 
@@ -308,7 +308,7 @@ if xver==1
     thhats=thhats./repmat(sclth0,size(thhats,1),1);
     th0=th0./sclth0;
 
-    % Plot error ellipses
+    % Plot error ellipses without using ERROR_ELLIPSE
     % https://www.xarg.org/2018/04/how-to-plot-a-covariance-error-ellipse/
     defval('cl',0.95)
     % Check this for three variables, 
@@ -328,7 +328,7 @@ if xver==1
 		     [mobss(p2) mobss(p2)]); hold on
         t2(ind)=plot([mobss(p1) mobss(p1)],...
 		     mobss(p2)+pstats*stdavhss(p2));
-        set([t1 t2],'Color',grey)
+        set([t1(ind) t2(ind)],'Color',grey)
         % The parameter estimates
         p(ind)=plot(thhats(:,p1),thhats(:,p2),'o'); 
 
@@ -361,8 +361,11 @@ if xver==1
         % Compute the eigenvectors and eigenvalues of the covariance
         % Think of the Schur complement? How does that relate?
         [V,D]=eig(cov(thhats(:,[p1 p2])));
+        % The below is demonstrably not it for blurs=Inf but acceptable for blurs=-1
+        % [V,D]=eig(covavhs([p1 p2],[p1 p2])./[sclth0([p1 p2])'*sclth0([p1 p2])]);
         a=sqrt(s)*V*sqrt(D)*[cos(t); sin(t)];
         ep(ind)=plot(a(1,:)+mobss(p1),a(2,:)+mobss(p2));
+        axis square
         hold off
         longticks(ah)
         %seemax([ah(1) ah(2)],1)
@@ -379,8 +382,4 @@ varns={ah,ha,yl,xl,tl};
 varargout=varns(1:nargout);
 
 % Subfunction to compute standard deviations
-
-
-
-end
 
