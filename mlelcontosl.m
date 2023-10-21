@@ -109,15 +109,21 @@ if ~ischar(Hk)
     
     % Combine all three vectors for easy reference
     thR=[s2R; nuR; rhoR];
-    
+
+    % This from MLEPLOS as opposed to Gabe's cycIndex
+    pcomb=nchoosek(1:length(thhat),2)
+
     % Calculate loglihoods on Matern parameter grids. For each pairing of
     % parameters (s2-nu, nu-rho, and rho-s2 - the third parameter being held
     % constant at its MLE estimated value), calculate the loglihood that
     % will be contours from the pairs of parameters in "preCon" as well as
     % the loglihood at points on the grid defined by "thR"
     for i=1:length(thhat)
+        % Find the pairwise combinations
+        xi=pcomb(i,1); yi=pcomb(i,2);
+
         % Get the rotating indices
-        [xi,yi]=cycIndex(i,3);
+        %[xi,yi]=cycIndex(i,3);
         
         % Update on which loglihood grid is being constructed
         disp(sprintf('Constructing %s-%s loglihood grid, %s',...
@@ -205,8 +211,11 @@ if ~ischar(Hk)
     for i=1:length(thhat)
         % Activate the proper panel
         axes(ah(i))
-        % Get the rotating indices
-        [xi,yi]=cycIndex(i,length(thhat));
+        % Find the pairwise combinations
+        xi=pcomb(i,1); yi=pcomb(i,2);
+
+        % % Get the rotating indices
+        % [xi,yi]=cycIndex(i,length(thhat));
         
         % Option to shade the plot background outside the largest contour
         if optShade
@@ -363,7 +372,7 @@ elseif strcmp(Hk,'demo1')
     % Random random parameters
     th0=max(round(rand(1,3).*[1 1 4]*10),[1 1 1])./[1e-4 1 1e-4];
     th0(2)=2+rand(1,1)*2;
-    % Examples close tho those we've already done
+    % Examples close to those we've already done
     th0=[1e6 2.5 2e4];
 
     try
@@ -385,7 +394,7 @@ elseif strcmp(Hk,'demo1')
         
         % Produce the likelihood contours figure
         clf
-        mlelcontosl(Hk,thhat,params,covFHh{3});
+        mlelcontosl(Hk,thhat,params,covFHh{3})
         
         % Plot the figure! 
         figna=figdisp([],[],[],2);
