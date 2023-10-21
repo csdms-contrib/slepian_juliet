@@ -166,7 +166,6 @@ if ~ischar(Hk)
         end
     end
 
-    keyboard
     % Loglihood contour figure construction
 
     % Default values for figure aesthetics:  
@@ -191,7 +190,7 @@ if ~ischar(Hk)
             for j=1:length(thhat)
                 % This used to be ROUND2
                 % thTickLa{j,i}=sprintf('%0.2f',round2(thTick(j,i)/scl(j),rTo));
-                thTickLa{j,i}=sprintf('%0.2f',round(thTick(j,i)/scl(j)));
+                thTickLa{j,i}=sprintf('%0.2f',round(thTick(j,i)/scl(j)*100)/100);
             end
             % For tickmarks on odd standard deviations, don't show any values
         else
@@ -360,29 +359,35 @@ elseif strcmp(Hk,'demo1')
     clear
     % Set parameters for creation of a data patch
     fields={'dydx','NyNx','blurs'};
-    defstruct('params',fields,{[20 20]*1e3,128*[1 1],Inf});
+    defstruct('params',fields,{[10 10]*1e3,128*[1 1],-1});
     % Random random parameters
     th0=max(round(rand(1,3).*[1 1 4]*10),[1 1 1])./[1e-4 1 1e-4];
     th0(2)=2+rand(1,1)*2;
-    
-    % Create the data patch, both in spatial and Fourier domain
-    [Hx,~,params,k,Hk]=simulosl(th0,params); 
+    % Examples close tho those we've already done
+    th0=[1e6 2.5 2e4];
 
-    % imagesc(v2s(Hx,params)); axis image
-    
-    % Estimate the parameters via maximum-likelihood
-    thini=[];
-    [th,covFHh,lpars,scl]=mleosl(Hx,thini,params);
-    % Scale up the outcome
-    thhat=th.*scl;
-    
-    % Remind us where the loglihood was
-    disp(sprintf('L = %6.2f',lpars{1}))
+    try
+        % Create the data patch, both in spatial and Fourier domain
+        [Hx,~,params,k,Hk]=simulosl(th0,params); 
+        
+        % imagesc(v2s(Hx,params)); axis image
 
-    % Produce the likelihood contours figure
-    clf
-    mlelcontosl(Hk,thhat,params,covFHh{3});
-    
-    % Plot the figure! 
-    figna=figdisp([],[],[],2);
+        try
+            % Estimate the parameters via maximum-likelihood
+            thini=[];
+            [th,covFHh,lpars,scl]=mleosl(Hx,thini,params);
+        end
+        % Scale up the outcome
+        thhat=th.*scl;
+        
+        % Remind us where the loglihood was
+        disp(sprintf('L = %6.2f',lpars{1}))
+        
+        % Produce the likelihood contours figure
+        clf
+        mlelcontosl(Hk,thhat,params,covFHh{3});
+        
+        % Plot the figure! 
+        figna=figdisp([],[],[],2);
+    end
 end
