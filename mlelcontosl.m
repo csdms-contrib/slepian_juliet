@@ -174,8 +174,6 @@ if ~ischar(Hk)
     % Loglihood contour figure construction
 
     % Default values for figure aesthetics:  
-    % Place to which to round axis tickmark labels
-    rTo=-2;               
     % Standard deviations to have tickmarks
     stds=-stdOut:stdOut; 
 
@@ -193,8 +191,7 @@ if ~ischar(Hk)
         % For tickmarks on even standard deviations, round and scale the value
         if mod(stds(i),2)==0
             for j=1:length(thhat)
-                % This used to be ROUND2
-                % thTickLa{j,i}=sprintf('%0.2f',round2(thTick(j,i)/scl(j),rTo));
+                % Round to two decimal places
                 thTickLa{j,i}=sprintf('%0.2f',round(thTick(j,i)/scl(j)*100)/100);
             end
             % For tickmarks on odd standard deviations, don't show any values
