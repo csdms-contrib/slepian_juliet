@@ -422,7 +422,7 @@ if ~isstr(Hx)
   lpars{8}=momx;
   lpars{9}=vr;
   % Generate output as needed
-  varns={thhat.*scl.*shats,covFHh,lpars,scl,thini.*scl.*shats,params,Hk,k,shats};
+  varns={thhat,covFHh,lpars,scl.*shats,thini,params,Hk,k,shats};
   varargout=varns(1:nargout);
 elseif strcmp(Hx,'demo1')
   more off
