@@ -611,7 +611,7 @@ elseif strcmp(Hx,'demo2')
 
   if xver==1
     % Take a look a the distribution of the residual moments
-    % This now is a full part of MLECHIPLOS and demo4
+    % This now is a full part of MLECHIPLOS and demo5
     % See RB X, p. 51 about the skewness of a chi-squared - just sayin'.
     % We don't change the number of degrees of freedom! If you have used
     % twice the number, and given half correlated variables, you do not
