@@ -114,8 +114,8 @@ if ~isstr(Hx)
     % Parameters for FMINCON in case that's what's being used, which is recommended
     defval('bounds',{[],[],... % Linear inequalities
                      [],[],... % Linear equalities
-                     [var(Hx)/100 0.15  sqrt(prod(dydx))],... % Lower bounds
-                     [var(Hx)*100 8.00  max(2.5e5,min(dydx.*NyNx))],... % Upper bounds
+                     [0.1 0.15 sqrt(prod(dydx))],... % Lower bounds
+                     [100 8.00 max(2.5e5,min(dydx.*NyNx))],... % Upper bounds
                      []}); % Nonlinear (in)equalities
   else
     bounds=[];
@@ -126,7 +126,7 @@ if ~isstr(Hx)
 
   % The parameters used in the simulation for demos, or upon which to base "thini"
   % Check Vanmarcke 1st edition for suggestions on initial rho
-  defval('aguess',[var(Hx(~isnan(Hx))) 2.0 sqrt(prod(dydx.*NyNx))/pi/2/5]);
+  defval('aguess',[1 2.0 sqrt(prod(dydx.*NyNx))/pi/2/5]);
   % Scale the parameters by this factor; fix it unless "thini" is supplied
   defval('scl',10.^round(log10(abs(aguess))));
 
@@ -224,7 +224,8 @@ if ~isstr(Hx)
     switch algo
      case 'unc'
       % disp('Using FMINUNC for unconstrained optimization of LOGLIOSL')
-      t0=clock;
+       t0=clock;
+       % W thini=thini.*scl;scl=[1 1 1 ]
       [thhat,logli,eflag,oput,grd,hes]=...
 	  fminunc(@(theta) logliosl(k,theta,scl,params,Hk,xver),...
 		  thini,options);
@@ -696,7 +697,7 @@ elseif strcmp(Hx,'demo5')
 
   % Quick status report, but note that you get more information in demo4
   disp(sprintf('%s\n',repmat('-',1,97)))
-  disp('analytical and numerical scaled Hessian standard deviations and their ratio')
+  disp('Analytical and numerical scaled Hessian standard deviations and their ratio')
   disp(sprintf([repmat('%6.3f  ',1,length(obscov)) '\n'],...
 	       [sqrt(diag(predcov))' ; sqrt(diag(obscov))' ; ...
 		sqrt(diag(predcov))'./sqrt(diag(obscov))']'))
