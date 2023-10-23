@@ -1,5 +1,5 @@
 function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
-% [thhat,covFHh,lpars,scl,thini,params,Hk,k,shats]=...
+% [thhat,covFHh,lpars,scl,thini,params,Hk,k]=...
 %          MLEOSL(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % Maximum-likelihood estimation for univariate Gaussian
@@ -61,7 +61,6 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 % params   The known constants used inside, see above under INPUT
 % Hk       The spectral-domain version of the spatial-domain vector Hx
 % k        The wavenumbers on which the estimate is actually based
-% shats    The extra parameter scaling to factor out the variance
 %
 % NOTE: 
 %
@@ -175,6 +174,8 @@ if ~isstr(Hx)
   scl(1)=1;
   % Scale the data
   Hx(:,1)=Hx(:,1)./shat;
+  % Rescale the initial value so the output applies to both THHAT and THINI
+  thini(1)=thini(1).*scl(1)/shat(1);
   % Always demean the data sets - think about deplaning as well?
   Hx(:,1)=Hx(:,1)-nanmean(Hx(:,1));
 
@@ -481,7 +482,7 @@ elseif strcmp(Hx,'demo1')
     % Form the maximum-likelihood estimate, pass on the params, use th0
     % as the basis for the perturbed initial values. Remember hes is scaled.
     t0=clock;
-    [thhat,covFHh,lpars,scl,thini,p,Hk,k,shats]=mleosl(Hx,[],p,algo,[],th0,xver);
+    [thhat,covFHh,lpars,scl,thini,p,Hk,k]=mleosl(Hx,[],p,algo,[],th0,xver);
     ts=etime(clock,t0);
 
     % Initialize the THZRO file... note that the bounds may change
@@ -524,7 +525,7 @@ elseif strcmp(Hx,'demo1')
         % writing the numerical versions. Be aware that covFHh{3} is the
         % current favorite covariance estimate on the parameters!
 	% Print optimization results and diagnostics to different file
-	oswdiag(fids(4),fmts,lpars,thhat.*shats,thini.*shats,scl,ts,var(Hx),covFHh{3})
+	oswdiag(fids(4),fmts,lpars,thhat,thini,scl,ts,var(Hx),covFHh{3})
       end
     end
   end
