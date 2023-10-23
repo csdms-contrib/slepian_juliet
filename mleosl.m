@@ -523,8 +523,8 @@ elseif strcmp(Hx,'demo1')
         % analytical, poorly approximately blurred, derivatives, and we be
         % writing the numerical versions. Be aware that covFHh{3} is the
         % current favorite covariance estimate on the parameters!
-	% Print optimization results and diagnostics to different file 
-	oswdiag(fids(4),fmts,lpars,thhat.*shats,thini.*shat,scl,ts,var(Hx),covFHh{3})
+	% Print optimization results and diagnostics to different file
+	oswdiag(fids(4),fmts,lpars,thhat.*shats,thini.*shats,scl,ts,var(Hx),covFHh{3})
       end
     end
   end
