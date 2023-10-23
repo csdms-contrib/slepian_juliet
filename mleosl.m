@@ -126,7 +126,7 @@ if ~isstr(Hx)
 
   % The parameters used in the simulation for demos, or upon which to base "thini"
   % Check Vanmarcke 1st edition for suggestions on initial rho
-  defval('aguess',[1 2.0 sqrt(prod(dydx.*NyNx))/pi/2/5]);
+  defval('aguess',[nanvar(Hx) 2.0 sqrt(prod(dydx.*NyNx))/pi/2/5]);
   % Scale the parameters by this factor; fix it unless "thini" is supplied
   defval('scl',10.^round(log10(abs(aguess))));
 
@@ -168,9 +168,15 @@ if ~isstr(Hx)
   knz=(~~k);
 
   % Always scale the data sets but don't forget to reapply at the very end
-  shat=nanstd(Hx(:,1)); shats=[shat.^2 1 1];
+  shat=nanstd(Hx(:,1)); 
+  % Prepare for the unscaling
+  shats=[shat.^2 1 1];
+  % Scale the data and rescale the initial guess
   Hx(:,1)=Hx(:,1)./shat;
-
+  thini=thini./shats;
+  % And with these new scalings you have no more business for the first scale
+  scl(1)=1;
+  
   % Always demean the data sets - think about deplaning as well?
   Hx(:,1)=Hx(:,1)-nanmean(Hx(:,1));
 
