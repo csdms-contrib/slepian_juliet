@@ -167,9 +167,12 @@ if ~isstr(Hx)
   % We could get into the habit of never involving the zero-wavenumber
   knz=(~~k);
 
-  % Always demean the data sets
+  % Always scale the data sets but don't forget to reapply at the very end
+  shat=nanstd(Hx(:,1)); shats=[shat.^2 1 1];
+  Hx(:,1)=Hx(:,1)./shat;
+
+  % Always demean the data sets - think about deplaning as well?
   Hx(:,1)=Hx(:,1)-nanmean(Hx(:,1));
-  % FJS think about deplaning as well
 
   % Turn the tapered observation vector to the spectral domain
   % Watch the 2pi in SIMULOSL
@@ -225,7 +228,7 @@ if ~isstr(Hx)
      case 'unc'
       % disp('Using FMINUNC for unconstrained optimization of LOGLIOSL')
        t0=clock;
-       % W thini=thini.*scl;scl=[1 1 1 ]
+       % Will this undo the scaling if you need to look? thini=thini.*scl; scl=[1 1 1 ]
       [thhat,logli,eflag,oput,grd,hes]=...
 	  fminunc(@(theta) logliosl(k,theta,scl,params,Hk,xver),...
 		  thini,options);
@@ -327,6 +330,7 @@ if ~isstr(Hx)
   [H,covH]=hessiosl(k,thhat.*scl,params,Hk,xver);
 
   % FJS how about a step further, use F-1 H F-T to get any influence at all
+  % Does Arthur use the average variance of the gradient here somewhere
   covFHF=inv(F)*[-H]*inv(F)/df;
   covFhF=inv(F)*[hes./matscl]*inv(F)/df;
 
@@ -377,7 +381,7 @@ if ~isstr(Hx)
   disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3s,1,np)),...
 	       ' ','s2','nu','rho'))
   disp(sprintf(sprintf('%s : %s ',str0,str2),...
-	       'Estimated theta',thhat.*scl))
+	       'Estimated theta',thhat.*scl.*shats))
   disp(' ')
   disp(sprintf(sprintf('%s : %s ',str0,str2),...
 	       'Numer Hessi std',sqrt(diag(covh))))
@@ -416,7 +420,7 @@ if ~isstr(Hx)
   lpars{9}=vr;
   
   % Generate output as needed
-  varns={thhat,covFHh,lpars,scl,thini,params,Hk,k};
+  varns={thhat.*shats,covFHh,lpars,scl,thini,params,Hk,k};
   varargout=varns(1:nargout);
 elseif strcmp(Hx,'demo1')
   more off
