@@ -1,5 +1,5 @@
 function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
-% [thhat,covFHh,lpars,scl,thini,params,Hk,k]=...
+% [thhat,covFHh,lpars,scl,thini,params,Hk,k,shats]=...
 %          MLEOSL(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % Maximum-likelihood estimation for univariate Gaussian
@@ -61,6 +61,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 % params   The known constants used inside, see above under INPUT
 % Hk       The spectral-domain version of the spatial-domain vector Hx
 % k        The wavenumbers on which the estimate is actually based
+% shats    The extra parameter scaling to factor out the variance
 %
 % NOTE: 
 %
@@ -96,8 +97,8 @@ if ~isstr(Hx)
   % The necessary strings for formatting, see OSDISP and OSANSW
   str0='%18s';
   str1='%13.0e ';
-  str2='%13.5g %13.5g %13.5g';
   str2='%13.0f %13.2f %13.0f';
+  str2='%13.3g %13.2g %13.5g';
   str3s='%13s ';
 
   % Supply the needed parameters, keep the givens, extract to variables
@@ -125,8 +126,8 @@ if ~isstr(Hx)
   defval('xver',1)
 
   % The parameters used in the simulation for demos, or upon which to base "thini"
-  % Check Vanmarcke 1st edition for suggestions on initial rho
-  defval('aguess',[nanvar(Hx) 2.0 sqrt(prod(dydx.*NyNx))/pi/2/5]);
+  % Check Vanmarcke 1st edition for suggestions on initial rho, very important
+  defval('aguess',[nanvar(Hx) 2.0 sqrt(prod(dydx.*NyNx))/pi/2/20]);
   % Scale the parameters by this factor; fix it unless "thini" is supplied
   defval('scl',10.^round(log10(abs(aguess))));
 
@@ -231,7 +232,6 @@ if ~isstr(Hx)
      case 'unc'
       % disp('Using FMINUNC for unconstrained optimization of LOGLIOSL')
        t0=clock;
-       % Will this undo the scaling if you need to look? thini=thini.*scl; scl=[1 1 1 ]
       [thhat,logli,eflag,oput,grd,hes]=...
 	  fminunc(@(theta) logliosl(k,theta,scl,params,Hk,xver),...
 		  thini,options);
@@ -397,7 +397,7 @@ if ~isstr(Hx)
 	       'Estimated theta',thhat.*scl.*shats))
   disp(' ')
   if xver==1 | xver==0
-    disp(sprintf('%58.1fs per %i iterations or %5.1fs per %i function counts',...
+    disp(sprintf('%8.1fs per %i iterations or %5.1fs per %i function counts',...
                  ts/oput.iterations*100,100,ts/oput.funcCount*1000,1000))
     disp(sprintf('%s\n',repmat('_',119,1)))
   end
@@ -421,9 +421,8 @@ if ~isstr(Hx)
   lpars{7}=bounds;
   lpars{8}=momx;
   lpars{9}=vr;
-  
   % Generate output as needed
-  varns={thhat.*shats,covFHh,lpars,scl,thini,params,Hk,k};
+  varns={thhat.*scl.*shats,covFHh,lpars,scl,thini.*scl.*shats,params,Hk,k,shats};
   varargout=varns(1:nargout);
 elseif strcmp(Hx,'demo1')
   more off
@@ -482,7 +481,7 @@ elseif strcmp(Hx,'demo1')
     % Form the maximum-likelihood estimate, pass on the params, use th0
     % as the basis for the perturbed initial values. Remember hes is scaled.
     t0=clock;
-    [thhat,covFHh,lpars,scl,thini,p,Hk,k]=mleosl(Hx,[],p,algo,[],th0,xver);
+    [thhat,covFHh,lpars,scl,thini,p,Hk,k,shats]=mleosl(Hx,[],p,algo,[],th0,xver);
     ts=etime(clock,t0);
 
     % Initialize the THZRO file... note that the bounds may change
@@ -517,15 +516,15 @@ elseif strcmp(Hx,'demo1')
 	good=good+1;
 	% Build the AVERAGE of the Hessians for printout later
 	avhsz=avhsz+lpars{3}./[scl(:)*scl(:)'];
-	% Reapply the scaling before writing it out
-	fprintf(fids(2),fmts{1},thhat.*scl);
-	fprintf(fids(3),fmts{1},thini.*scl);
+	% Reapply the scalings before writing it out
+	fprintf(fids(2),fmts{1},thhat.*scl.*shats);
+	fprintf(fids(3),fmts{1},thini.*scl.*shats);
         % We don't compare the second and third outputs of LOGLIOSL since these are
         % analytical, poorly approximately blurred, derivatives, and we be
         % writing the numerical versions. Be aware that covFHh{3} is the
         % current favorite covariance estimate on the parameters!
 	% Print optimization results and diagnostics to different file 
-	oswdiag(fids(4),fmts,lpars,thhat,thini,scl,ts,var(Hx),covFHh{3})
+	oswdiag(fids(4),fmts,lpars,thhat.*shats,thini.*shat,scl,ts,var(Hx),covFHh{3})
       end
     end
   end
