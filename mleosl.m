@@ -133,7 +133,6 @@ if ~isstr(Hx)
   % Unless you supply an initial value, construct one from "aguess" by perturbation
   nperturb=0.25;
   % So not all the initialization points are the same!!
-  
   defval('thini',abs((1+nperturb*randn(size(aguess))).*aguess))
   % If you brought in your own initial guess, need an appropriate new scale
   if ~isempty(inputname(2)) || any(aguess~=thini)
@@ -149,7 +148,7 @@ if ~isstr(Hx)
     disp(sprintf(sprintf('%s : %s',str0,str2),...
                  'Upper bounds',bounds{6}))
   end
-  
+
   % Now scale so the minimization doesn't get into trouble
   thini=thini./scl;
 
@@ -171,12 +170,10 @@ if ~isstr(Hx)
   shat=nanstd(Hx(:,1)); 
   % Prepare for the unscaling
   shats=[shat.^2 1 1];
-  % Scale the data and rescale the initial guess
-  Hx(:,1)=Hx(:,1)./shat;
-  thini=thini./shats;
   % And with these new scalings you have no more business for the first scale
   scl(1)=1;
-  
+  % Scale the data
+  Hx(:,1)=Hx(:,1)./shat;
   % Always demean the data sets - think about deplaning as well?
   Hx(:,1)=Hx(:,1)-nanmean(Hx(:,1));
 
@@ -227,7 +224,7 @@ if ~isstr(Hx)
     % Leave the below "on" since it's inconsequential when the above is "off"
     options.DerivativeCheck='on';
   end
-
+keyboard
   % And find the MLE! Work on scaled parameters
   try
     switch algo
