@@ -89,7 +89,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/14/2023
+% Last modified by fjsimons-at-alum.mit.edu, 10/23/2023
 
 if ~isstr(Hx)
   defval('algo','unc')
