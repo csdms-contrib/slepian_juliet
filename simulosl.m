@@ -83,12 +83,12 @@ function varargout=simulosl(th0,params,xver,varargin)
 % MLEOSL, LOADING, SIMULOS, EGGERS1, EGGERS2, EGGERS4, etc
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
-% Last modified by fjsimons-at-alum.mit.edu, 09/22/2023
+% Last modified by fjsimons-at-alum.mit.edu, 10/23/2023
 
 % Make a demo8 with Baig's example
 
 % Here is the true parameter vector and the only variable that gets used 
-defval('th0',[1e6 1.5 3e4]);
+defval('th0',[1e6 1.5 2e4]);
 
 % If not a demo...
 if ~isstr(th0)
@@ -100,7 +100,7 @@ if ~isstr(th0)
 
   % Here is the extra verification parameter
   defval('xver',1)
-  if xver==1
+  if xver==1 | xver==0
     % Dump to screen
     osdisp(th0,params)
   end
