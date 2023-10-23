@@ -168,14 +168,14 @@ if ~isstr(Hx)
 
   % Always scale the data sets but don't forget to reapply at the very end
   shat=nanstd(Hx(:,1)); 
-  % Prepare for the unscaling
+  % Prepare for the unscaling of the variance
   shats=[shat.^2 1 1];
-  % And with these new scalings you have no more business for the first scale
-  scl(1)=1;
-  % Scale the data
+  % Scale the data; don't reorder the next three lines!
   Hx(:,1)=Hx(:,1)./shat;
   % Rescale the initial value so the output applies to both THHAT and THINI
-  thini(1)=thini(1).*scl(1)/shat(1);
+  thini(1)=thini(1).*scl(1)/shats(1);
+  % And with these new scalings you have no more business for the first scale
+  scl(1)=1;
   % Always demean the data sets - think about deplaning as well?
   Hx(:,1)=Hx(:,1)-nanmean(Hx(:,1));
 
@@ -518,8 +518,8 @@ elseif strcmp(Hx,'demo1')
 	% Build the AVERAGE of the Hessians for printout later
 	avhsz=avhsz+lpars{3}./[scl(:)*scl(:)'];
 	% Reapply the scalings before writing it out
-	fprintf(fids(2),fmts{1},thhat.*scl.*shats);
-	fprintf(fids(3),fmts{1},thini.*scl.*shats);
+	fprintf(fids(2),fmts{1},thhat.*scl);
+	fprintf(fids(3),fmts{1},thini.*scl);
         % We don't compare the second and third outputs of LOGLIOSL since these are
         % analytical, poorly approximately blurred, derivatives, and we be
         % writing the numerical versions. Be aware that covFHh{3} is the
@@ -541,7 +541,7 @@ elseif strcmp(Hx,'demo1')
   end
   
   if good>=1 
-    % This is the scaling based on the truth which we use here 
+    % This is the new scaling based on the truth which we use here 
     sclth0=10.^round(log10(th0));
 
     % This is the AVERAGE of the numerical Hessians, should be closer to the Fisher
