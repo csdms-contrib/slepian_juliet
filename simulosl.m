@@ -95,7 +95,7 @@ if ~isstr(th0)
   % Supply the needed parameters, keep the givens, extract to variables
   fields={               'dydx','NyNx','blurs','kiso','quart','taper'};
   defstruct('params',fields,...
-	    {                      [10 10]*1e3,[64 64],Inf,NaN,0,0});
+	    {                      [10 10]*1e3,[256 256],Inf,NaN,0,0});
   struct2var(params)
 
   % Here is the extra verification parameter
