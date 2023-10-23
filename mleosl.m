@@ -224,7 +224,7 @@ if ~isstr(Hx)
     % Leave the below "on" since it's inconsequential when the above is "off"
     options.DerivativeCheck='on';
   end
-keyboard
+
   % And find the MLE! Work on scaled parameters
   try
     switch algo
@@ -378,6 +378,16 @@ keyboard
     disp(sprintf(sprintf(' Cov ( FishHFish.) : %s',str3),trilos(covFHF)))
     disp(sprintf(sprintf(' Cov ( FishhFish.) : %s',str3),trilos(covFhF)))
     disp(sprintf('%s',repmat('_',119,1)))
+    disp(sprintf(sprintf('%s : %s ',str0,str2),...
+	         'Numer Hessi std',sqrt(diag(covh))))
+    disp(sprintf(sprintf('%s : %s ',str0,str2),...
+	         'Analy Hessi std',sqrt(diag(covH))))
+    disp(sprintf(sprintf('%s : %s\n ',str0,str2),...
+	         'Anal Fisher std',sqrt(diag(covF))))
+    disp(sprintf(sprintf('%s : %s ',str0,str2),...
+	         ' FishHFish. std',sqrt(diag(covFHF))))
+    disp(sprintf(sprintf('%s : %s\n ',str0,str2),...
+	         ' FishhFish. std',sqrt(diag(covFhF))))
   end
 
   % Talk!
@@ -386,18 +396,8 @@ keyboard
   disp(sprintf(sprintf('%s : %s ',str0,str2),...
 	       'Estimated theta',thhat.*scl.*shats))
   disp(' ')
-  disp(sprintf(sprintf('%s : %s ',str0,str2),...
-	       'Numer Hessi std',sqrt(diag(covh))))
-  disp(sprintf(sprintf('%s : %s ',str0,str2),...
-	       'Analy Hessi std',sqrt(diag(covH))))
-  disp(sprintf(sprintf('%s : %s\n ',str0,str2),...
-	       'Anal Fisher std',sqrt(diag(covF))))
-  disp(sprintf(sprintf('%s : %s ',str0,str2),...
-	       ' FishHFish. std',sqrt(diag(covFHF))))
-  disp(sprintf(sprintf('%s : %s\n ',str0,str2),...
-	       ' FishhFish. std',sqrt(diag(covFhF))))
   if xver==1 | xver==0
-    disp(sprintf('%8.3gs per %i iterations or %8.3gs per %i function counts',...
+    disp(sprintf('%58.1fs per %i iterations or %5.1fs per %i function counts',...
                  ts/oput.iterations*100,100,ts/oput.funcCount*1000,1000))
     disp(sprintf('%s\n',repmat('_',119,1)))
   end
