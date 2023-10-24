@@ -35,12 +35,15 @@ function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpi
 %
 % This only gets used in MLEOS/MLEROS/MLEROS0/MLEOSL thus far, their 'demo2'
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/20/2023
+% Last modified by fjsimons-at-alum.mit.edu, 10/23/2023
 
 defval('xver',1)
 
 % Number of times the standard deviation for scale truncation
 nstats=[-3:3]; fax=3;
+pstats=[-2 2];
+tstats=[-3 3];
+vstats=[-2 0 2];
 sclth0=10.^round(log10(abs(th0)));
 movit=0.01;
 yls=[-0.0 0.75];
@@ -182,22 +185,26 @@ for ind=1:np
   % QUANTILE-QUANTILE PLOTS  
   axes(ah(ind+np))
   h=qqplot(thhats(:,ind)); delete(h(2))
-  set(h(1),'MarkerE','k')  
-  set(h(3),'LineS','-','Color',grey)
+  set(h(1),'MarkerEdgeColor','k')  
+  set(h(3),'LineStyle','-','Color',grey)
   top(h(3),ah(ind+np))
   set(ah(ind+np),'xlim',nstats([1 end]),...
-		'box','on','xtick',nstats,'XTickLabel',nstats)
+		'box','on','Xtick',nstats,'XTickLabel',nstats)
   delete(get(ah(ind+np),'Ylabel'));
   delete(get(ah(ind+np),'Title'));
   delete(get(ah(ind+np),'XLabel'));
-
-  set(ah(ind+np),'YLim',stats([1 end]),'YTickLabel',stats,...		       
+  % Label the sample values
+  set(ah(ind+np),'YLim',stats([1 end]),'YTick',stats,...		       
 		'YTickLabel',round(rondo*stats/sclth0(ind))/rondo);
   hold on
-  e(ind)=plot(xlim,[mobs mobs],'k:');
-  f(ind)=plot([0 0],ylim,'k:');
-  bottom(e(ind),ah(ind+np))
-  bottom(f(ind),ah(ind+np))
+  % Plot the sample mean and two standard deviations
+  %e(ind)=plot(xlim,[mobs mobs],'-','Color',grey);
+  e{ind}=plot(xlim,repmat(stats([2 4 6]),2,1),'-','Color',grey);
+  f{ind}=plot(repmat([-2 0 2],2,1),ylim,'k:');
+  for jnd=1:length(e{ind})
+      bottom(e{ind}(jnd),ah(ind+np))
+      bottom(f{ind}(jnd),ah(ind+np))
+  end
   set(ah(ind+np),'plotbox',[1 1 1])
   if sclth0(ind)~=1
     tl(ind)=title(sprintf('%s = %5.3f %s %4.0e %s',labs{ind},...
@@ -251,7 +258,7 @@ set(psXpix,'linew',0.5,'color','k')
 set(pobs,'linew',1.5,'color',grey(3.5))
 
 % Delete the one you know barely works
-%delete(psF0)
+delete(psF0)
 
 % Do this so the reduction looks slightly better
 set(yl,'FontSize',12)
@@ -299,7 +306,6 @@ if xver==1
     figure(2)
     clf
     pcomb=nchoosek(1:np,2);
-    pstats=[-2 2]; tstats=[-3 3]; vstats=[-2 0 2];
     [ah,ha]=krijetem(subnum(1,3));
     
     % Scale everything
@@ -340,10 +346,10 @@ if xver==1
         o2(ind)=plot([mobss(p1) mobss(p1)],...
 		     mobss(p2)+pstats*sobss(p2),'LineWidth',1);
         hold off
-        % Truths
-        try
-            set(ah(ind),'xtick',round(100*[th0(p1)+vstats*sobss(p1)])/100,...
-	       'ytick',round(100*[th0(p2)+vstats*sobss(p2)])/100)
+        % Label around the truths
+        try          
+            set(ah(ind),'xtick',round(rondo*[th0(p1)+vstats*sobss(p1)])/rondo,...
+	       'ytick',round(rondo*[th0(p2)+vstats*sobss(p2)])/rondo)
         end
         axis square;  grid on
         xlim(th0(p1)+tstats*sobss(p1))
