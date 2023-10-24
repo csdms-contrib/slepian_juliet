@@ -175,7 +175,8 @@ if ~isstr(Hx)
   % Rescale the initial value so the output applies to both THHAT and THINI
   thini(1)=thini(1).*scl(1)/shats(1);
   % And with these new scalings you have no more business for the first scale
-  scl(1)=1;
+  % though for the derived quantity you need to retain them
+  matscl=[scl(:)*scl(:)']; scl(1)=1;
   % Always demean the data sets - think about deplaning as well?
   Hx(:,1)=Hx(:,1)-nanmean(Hx(:,1));
 
@@ -308,8 +309,7 @@ if ~isstr(Hx)
 
   % Degrees of freedom for full-wavenumber domain (redundant for real data)
   % Not including the zero wavenumber, since LOGLIOS doesn't either
-  df=length(k(~~k))/2; 
-  matscl=[scl(:)*scl(:)'];
+  df=length(k(~~k))/2;
 
   % Watch out for singularity or scaling warnings, they are prone to pop up
 
@@ -515,7 +515,7 @@ elseif strcmp(Hx,'demo1')
 	    && lpars{5}.iterations > itmin ...
 	    && lpars{5}.firstorderopt < optmin
 	good=good+1;
-	% Build the AVERAGE of the Hessians for printout later
+	% Build the AVERAGE of the Hessians for printout by OSWZEROE later
 	avhsz=avhsz+lpars{3}./[scl(:)*scl(:)'];
 	% Reapply the scalings before writing it out
 	fprintf(fids(2),fmts{1},thhat.*scl);
@@ -524,7 +524,7 @@ elseif strcmp(Hx,'demo1')
         % analytical, poorly approximately blurred, derivatives, and we be
         % writing the numerical versions. Be aware that covFHh{3} is the
         % current favorite covariance estimate on the parameters!
-	% Print optimization results and diagnostics to different file
+	% Print optimization results and diagnostics to different file with OSWDIAG
 	oswdiag(fids(4),fmts,lpars,thhat,thini,scl,ts,var(Hx),covFHh{3})
       end
     end
@@ -579,17 +579,20 @@ elseif strcmp(Hx,'demo2')
   % Load everything you know about this simulation
   [th0,thhats,p,covX,covavhs,thpix,~,~,~,~,momx,covXpix,covF0]=osload(datum,trims);
 
-  % Report the findings of all of the moment parameters
-  disp(sprintf('\nm(m(Xk)) %f m(v(Xk)) %f\nm(magic) %f v(magic) %f',...
-	      mean(momx),var(momx(:,end))))
+  defval('xver',0)
+
+  if xver==1
+      % Report the findings of all of the moment parameters
+      disp(sprintf('\nm(m(Xk)) %f m(v(Xk)) %f\nm(magic) %f v(magic) %f',...
+	           mean(momx),var(momx(:,end))))
+  end
   
-  % Plot it all - perhaps some outlier selection?
+  % Plot it all
   figure(1)
   fig2print(gcf,'landscape')
   clf
 
-  % If the above two are close, we need to start using the second one
-  % Let us feed it the Fisher covariance at the TRUTH
+  % We feed it various things and it calculates a bunch more
   [ah,ha]=mleplos(thhats,th0,covF0,covavhs,covXpix,[],[],p, ...
                   sprintf('MLEOSL-%s',datum),thpix);
   
