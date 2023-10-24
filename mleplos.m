@@ -120,7 +120,7 @@ for ind=1:np
     bdens=bdens/indeks(diff(c),1)/size(thhats(:,ind),1);
   end
   % This number is close to one... it's a proper density!
-  if xver==1
+  if xver==2
     disp(sprintf('%s pdf normalization check by summation %g',...
                  upper(mfilename),sum(bdens)*indeks(diff(c),1)))
     disp(' ')
@@ -251,7 +251,7 @@ set(psXpix,'linew',0.5,'color','k')
 set(pobs,'linew',1.5,'color',grey(3.5))
 
 % Delete the one you know barely works
-delete(psF0)
+%delete(psF0)
 
 % Do this so the reduction looks slightly better
 set(yl,'FontSize',12)
@@ -266,8 +266,8 @@ if isstruct(params)
   t=ostitle(ah,params,name); movev(t,.4)
 end
 
-% Here is the TRUTH and the COVF0 standard deviation
 try 
+    % Here is the TRUTH and the COVF0 standard deviation
     [answ,answs]=osansw(th0,covF0,E,v);
     disp(sprintf('%s',...
                  'Truth and Fisher-based covariance standard deviation'))
@@ -281,13 +281,14 @@ try
 
     % Here is the MEAN ESTIMATE and its OBSERVED-COVARIANCE-based standard
     % deviation - exactly like mobss and sobss==diag(sqrt(cov(thhats)))
-    [answ,answs]=osansw(mean(thhats),cov(thhats),E,v);
+    [answ,answs,pm]=osansw(mean(thhats),cov(thhats),E,v);
     disp(sprintf('\n%s',...
                  'Mean estimate and ensemble-covariance standard deviation'))
     disp(sprintf(answs,answ{:}))
 
-    % By the way, use THAT as a subtitle
-    tt=supertit(ah(np+1:2*np),sprintf(answs,answ{:}));
+    % By the way, use THAT as a subtitle (i.e., the last one in this list!)
+    tt=supertit(ah(np+1:2*np),sprintf('%s\n%s%s',sprintf(answs,answ{:}),pm,...
+                                      'one sigma uncertainty based on the ensemble'));
 end
 
 if np>3; movev(tt,-4); else; movev(tt,-3.5); end
@@ -372,7 +373,9 @@ if xver==1
         %seemax([ah(2) ah(3)],2)
         titi=ostitle(ah,params,name); movev(titi,-2)
         try
-            tt=supertit(ah(1:np),sprintf(answs,answ{:})); movev(tt,-7)
+            tt=supertit(ah(1:np),sprintf('%s\n%s%s',sprintf(answs,answ{:}),pm,...
+                                         'one sigma uncertainty based on the ensemble'));
+            movev(tt,-7)
         end
     end
 end    
