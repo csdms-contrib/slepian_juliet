@@ -76,7 +76,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 % You can stick in partial structures, e.g. only specifying params.kiso
 %
 % Perform a series of N simulations centered on th0 with different p's
-% mleosl('demo1',N,th0,p)
+% mleosl('demo1',N,th,p)
 %
 % Statistical study of a series of simulations using MLEPLOS
 % mleosl('demo2','14-Oct-2023')
@@ -89,7 +89,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/23/2023
+% Last modified by fjsimons-at-alum.mit.edu, 10/30/2023
 
 if ~isstr(Hx)
   defval('algo','unc')
