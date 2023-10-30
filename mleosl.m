@@ -85,7 +85,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 % mleosl('demo4','14-Oct-2023')
 %
 % One simulation and a chi-squared plot using MLECHIPLOS
-% mleosl('demo5',th0,p) % This should be as good as BLUROSY('demo2')
+% mleosl('demo5',th,p) % This should be as good as BLUROSY('demo2',p.NyNx,[],[],1)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
@@ -684,7 +684,7 @@ elseif strcmp(Hx,'demo5')
   thini=[];
 
   % Perform the optimization, whatever the quality of the result
-  [thhat,covFHh,lpars,scl,thini,p,Hk,k]=mleosl(Hx,thini,p);
+  [thhat,covFHh,lpars,scl,thini,p,Hks,k]=mleosl(Hx,thini,p);
   matscl=[scl(:)*scl(:)'];
 
   if any(isnan(k(:))); return; end
@@ -730,7 +730,8 @@ elseif strcmp(Hx,'demo5')
   % Time to rerun LOGLIOS one last time at the solution
   % Do not collect the analytical gradient and Hessian, since these are
   % not the observed blurred gradients
-  [L,~,~,momx]=logliosl(k,thhat,scl,p,Hk,1);
+  [L,~,~,momx]=logliosl(k,thhat,[1 scl(2:3)],p,Hks,1);
+
   % We had this already, just making sure it checks out
   diferm(L,lpars{1})
 
