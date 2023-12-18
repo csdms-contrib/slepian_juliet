@@ -60,8 +60,10 @@ if ~isstr(S)
   end
 
   if isfield(params,'taper')
-      if length(params.taper)>1 || iscell(params.taper)
-          error('Build in the taper properly')
+      if ~[all(params.taper)==1]
+          if length(params.taper)>1 || iscell(params.taper)
+              error('Build in the taper properly')
+          end
       end
   end
   % Set defaults
