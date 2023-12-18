@@ -54,12 +54,6 @@ if ~isstr(y)
     Cy=2^(1-nu)*s2/gamma(nu)*argu.^nu.*besselk(nu,argu);
     % Supply the smallest arguments
     Cy(y==0)=s2;
-    % Probably in SIMULOSL we would add Cy(y==0)=s2*1.025;
-    % If the use of the nugget a la Arthur is desired, uncomment the
-    % following. Arthur says there is no magical value for the nugget, but
-    % uses 0.025 in a shared example.
-    % nugget_effect = s2*0.025.*(y==0);
-    % Cy+=nugget_effect;
     if nargout>1
         % If the number of outputs requested is greater than 1, we
         % are seeking to evaluate Cy2 from the simplified analytic
@@ -98,8 +92,6 @@ if ~isstr(y)
         if isinf(nu)
             Cy2=s2*exp(-y^2/(2*pi^2*rh^2));
         end
-        % Uncomment if using the nugget effect:
-        % Cy2+=nugget_effect;
         % If we calculated Cy2 for a special case of nu, we should 
         % compare it to Cy
         difer(Cy/(Cy(1))-Cy2/Cy2(1))
