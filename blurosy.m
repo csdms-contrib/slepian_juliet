@@ -27,7 +27,7 @@ function varargout=blurosy(th,params,xver,method,tsto)
 %                1 it's a unit taper, implicitly
 %                OR an appropriately sized taper with explicit values 
 %                   (1 is yes and 0 is no and everything in between)
-% xver    1 Extra verification via BLURCHECK and alternative computations
+% xver    1 or 2 extra verification via BLURCHECK and alternative computations
 %         0 No checking at all
 % method  'ef' exact, efficient and fast [default]
 %         'efs' exact, efficient and exploiting symmetry
@@ -61,7 +61,8 @@ function varargout=blurosy(th,params,xver,method,tsto)
 % BLUROSY('demo3') % should produce no output
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 10/14/2023
+% Last modified by fjsimons-at-alum.mit.edu, 12/18/2023
+% Last modified by olwalbert-at-princeton.edu, 12/18/2023
 
 if ~isstr(th)
     if params.blurs>=0 & ~isinf(params.blurs)
@@ -136,7 +137,7 @@ if ~isstr(th)
     if any(Sbar<0); keyboard; end
 
     % Check Hermiticity of the results
-    if xver==1
+    if xver==1 || xver==2
         blurcheck(Sbar,params)
         if strcmp('method','ef')
             hermcheck(tyy)
@@ -458,6 +459,9 @@ function [Cyy,t]=spatmat(ydim,xdim,th,params,xver)
 % Dimensions of the original grid
 NyNx=params.NyNx;
 dydx=params.dydx;
+if ~isfield(params,'taper')
+    params.taper=[];
+end
 
 % Specify the spatial taper EXPLICITLY
 if prod(size(params.taper))>1
@@ -502,7 +506,7 @@ if prod(size(params.taper))>1
     % kernel2 = kernel2(1:p.NyNx(1),1:p.NyNx(2));
     % Then feed that into COMPUTE_EXPECTATION_FROM_KERNELS
 
-    if xver==1 && all(size(t)==NyNx)
+    if (xver==1 || xver==2)  && all(size(t)==NyNx)
         t3=xcorr2(Tx); t3=t3/sum(sum(Tx.^2));
         if all(size(t)==NyNx)
             % Then the doubling inside this block needs to be undone
@@ -521,7 +525,7 @@ else
     % Here is the gridded triangle for this case
     t=bsxfun(@times,triy,trix);
 
-    if xver==1
+    if xver==1 || xver==2
         % Do form the taper explicitly after all, normalize ahead of time
         Tx=ones(NyNx)/sqrt(prod(NyNx));
         % Need to cut one off Arthur says, possibly need to
