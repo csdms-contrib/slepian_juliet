@@ -32,6 +32,9 @@ function varargout=simulosl(th0,params,xver,varargin)
 %                 1 it's a unit taper, implicitly
 %                 OR an appropriately sized taper with proper values 
 %                    (1 is yes and 0 is no and everything in between)
+%          nugget 0 there is none
+%                 c substitutes Cy(0)=(1+c)*s2 at zero lag (not yet)
+%                               Sb=Sb+c*s2 at all wavenumbers
 % xver     1 for extra verification, 0 if not needed
 % ... Only for 'demo4', which is used by EGGERS4
 % th0      ... as above
@@ -83,7 +86,8 @@ function varargout=simulosl(th0,params,xver,varargin)
 % MLEOSL, LOADING, SIMULOS, EGGERS1, EGGERS2, EGGERS4, etc
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
-% Last modified by fjsimons-at-alum.mit.edu, 10/23/2023
+% Last modified by fjsimons-at-alum.mit.edu, 12/18/2023
+% Last modified by olwalbert-at-princeton.edu, 12/18/2023
 
 % Make a demo8 with Baig's example
 
@@ -93,9 +97,9 @@ defval('th0',[1e6 1.5 2e4]);
 % If not a demo...
 if ~isstr(th0)
   % Supply the needed parameters, keep the givens, extract to variables
-  fields={               'dydx','NyNx','blurs','kiso','quart','taper'};
+  fields={               'dydx','NyNx','blurs','kiso','quart','taper','nugget'};
   defstruct('params',fields,...
-	    {                      [10 10]*1e3,[256 256],Inf,NaN,0,0});
+	    {                      [10 10]*1e3,[256 256],Inf,NaN,0,0,0});
   struct2var(params)
 
   % Here is the extra verification parameter
@@ -133,12 +137,15 @@ if ~isstr(th0)
     
     % We need the (blurred) power spectrum - the theoretical quantity
     Sb=maternosp(th0,params,xver);
+
+    % Maybe add nugget here, add to all wavenumbers
+    Sb=Sb+params.nugget*th0(1);
     
     % Should make sure that this is real! Why wouldn't it be?
     Lb=realize(sqrt(Sb));
     
     % Blurred or unblurred, go on
-    
+
     % And put it all together, unwrapped over k and over x
     Hk=Lb.*Z1(:);
     
@@ -153,7 +160,7 @@ if ~isstr(th0)
     Hx=(2*pi)*tospace(Hk,params);
     if xver==1
       % Check Hermiticity before transformation, absolute tolerance
-      hermcheck(reshape(Hk,NyNx))
+        hermcheck(reshape(Hk,NyNx))
       % Check unitarity of the transform; relative tolerance
       diferm(Hk-tospec(Hx,params)/(2*pi),[],9-round(log10(mean(abs(Hk)))));
     end
@@ -172,7 +179,12 @@ if ~isstr(th0)
     end
   else
     % Make the Matern covariance OBJECT as required - vectorized
-    Cmn=@(h) maternosy(sqrt([h(:,1)*params.dydx(1)].^2+[h(:,2)*params.dydx(2)].^2),th0);
+    %  Cmn=@(h) maternosy(sqrt([h(:,1)*params.dydx(1)].^2+[h(:,2)*params.dydx(2)].^2),th0);
+
+     % Maybe add nugget here add only to zero lag
+     Cmn=@(h) maternosy(sqrt([h(:,1)*params.dydx(1)].^2+[h(:,2)*params.dydx(2)].^2),th0)+...
+                ([sqrt(h(:,1).^2+h(:,2).^2)]==0)*params.nugget*th0(1);
+      
     % Double/triple up? 
     fax=1;
     params.NyNx=params.NyNx*fax;
@@ -200,7 +212,7 @@ if ~isstr(th0)
     % Let's make Sb the periodogram to look at later? And forget about Lb.
     Lb=deal(NaN);
 
-    % Make the periodogram
+    % Make the PERIODOGRAM
     Sb=Hk.*conj(Hk);
     hermcheck(reshape(Sb,params.NyNx));
   end
@@ -415,7 +427,7 @@ elseif strcmp(th0,'demo4')
 	    Hx=simulosl(th0,p);
 	    try
 	      % Make reasonable guesses from the data themselves, then invert
-	      [th,covh,~,~,scl]=mleosl(Hx,[var(Hx) 2.0 sqrt(prod(p.dydx.*p.NyNx))/5],p);
+	      [th,covh,~,scl]=mleosl(Hx,[var(Hx) 2.0 sqrt(prod(p.dydx.*p.NyNx))/5],p);
 	      % It it was a single NaN, fix the dimensions so it's NaN for all
 	      if isnan(th); [th,scl]=deal(nan(1,length(th0))); disp('NaN set'); end
 	      % Output was scaled, so apply the scaling
