@@ -50,7 +50,7 @@ function varargout=bluros(S,params,xver)
 %
 % BLUROS('demo2',pp,bb) a very simple run test with graphical output
 % 
-% Last modified by fjsimons-at-alum.mit.edu, 09/22/2023
+% Last modified by fjsimons-at-alum.mit.edu, 12/18/2023
 
 if ~isstr(S)
   % disp('Ich bin so lang nicht bei dir g''west')
@@ -59,6 +59,11 @@ if ~isstr(S)
     error('You should be calling BLUROSY, not BLUROS!')
   end
 
+  if isfield(params,'taper')
+      if length(params.taper)>1 || iscell(params.taper)
+          error('Build in the taper properly')
+      end
+  end
   % Set defaults
   defval('xver',1)
 
@@ -334,8 +339,10 @@ pp=2*round(pp/2);
 
 % Supply the grid size and spacing and the Matern covariance parameters
 p.NyNx=[pp pp];
-p.dydx=1e3*[1 1]; 
-th=1e6*[1 0.0000025 0.02]; 
+p.dydx=1e3*[1 1];
+p.dydx=[10 10]
+th=1e6*[1 0.0000025 0.02];
+th=[589 3 86]
 
 % Perform the blurring of the spectral matrix using different techniques
 % Convolutionally blurred with the specified refinement parameter
@@ -343,7 +350,7 @@ p.blurs= bb; S2=maternosp(th,p,1);
 % Make sure you specify the comparison here is with respect to a unit taper
 % which amounts to either 0 or 1 or ones(p.NyNx)
 choix={0,1,ones(p.NyNx)};
-p.taper=choix(randi(3));
+p.taper=choix{randi(3)};
  % Exactly blurred, slow (do not use MATERNOSP; it defaults BLUROSY's default 'efs')
 p.blurs=-1; S3=blurosy(th,p,1,'ef');
 % Exactly blurred, fast (here you could use MATERNOSP)
