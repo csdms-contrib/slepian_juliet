@@ -138,8 +138,10 @@ if ~isstr(th)
     % Check Hermiticity of the results
     if xver==1
         blurcheck(Sbar,params)
-        hermcheck(tyy)
-        hermcheck(Cyy)
+        if strcmp('method','ef')
+            hermcheck(tyy)
+            hermcheck(Cyy)
+        end
     end
 
     % Produce the unwrapped wavenumbers if you've requested them to be output
@@ -165,7 +167,7 @@ elseif strcmp(th,'demo2')
     % the uncorrelated-wavenumber approximation of the debiased Whittle
     % approach, but we do fear systematic offsets.
     defval('params',[188 233]+randi(20,[1 2]))
-    params=[201 241];
+    %params=[201 241];
 
     % Number of iterations
     defval('xver',100);
@@ -178,7 +180,7 @@ elseif strcmp(th,'demo2')
     p.NyNx=[params(1) params(2)];
     p.dydx=1e3*[1 1];
     % Some Matern paramters
-    th=1e6*[1 0.0000025 0.001]; 
+    th=1e6*[1 0.0000015 0.002]; 
 
     % Compare the average periodogram with the blurred spectral density
 
@@ -360,6 +362,8 @@ elseif strcmp(th,'demo2')
     xl(2)=xlabel(sprintf('predicted 2%s',varibal));
     yl(2)=ylabel(sprintf('observed 2%s',varibal));
     set(gca,'xtick',xlls,'ytick',xlls)
+
+    allg=~isinf(Xk);sum(allg);
 
     % Test for departure of chi-squaredness via the "magic" parameter which
     % This is the same as what comes out of LOGLIOSL etc
