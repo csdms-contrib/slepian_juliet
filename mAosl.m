@@ -11,6 +11,7 @@ function varargout=mAosl(k,th,xver)
 %          th(1)=s2  The first Matern parameter [variance in unit^2]
 %          th(2)=nu  The second Matern parameter [differentiability]
 %          th(3)=rh  The third Matern parameter [range in m]
+% xver     Excessive verification [0, 1 or 2]
 %
 % OUTPUT:
 %
@@ -18,7 +19,7 @@ function varargout=mAosl(k,th,xver)
 % mththp   The second-partials parameters for GAMMIOSL, HESSIOSL, as a cell
 % A        The "A" matrices for GAMMIOSL, HESSIOSL, as a cell
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/21/2017
+% Last modified by fjsimons-at-alum.mit.edu, 12/19/2023
 
 % Extra verification?
 defval('xver',1)
@@ -63,7 +64,7 @@ else
 end
 
 % Full output and extra verification
-if nargout>2 || xver==1
+if nargout>2 || xver==1 || xver==2
   % How many wavenumbers?
   lk=length(k(:));
   
@@ -78,7 +79,7 @@ if nargout>2 || xver==1
   A{3}=-repmat(mth{3},1,3);
 
   % Verification mode
-  if xver==1
+  if xver==1 || xver==2
     % In this univariate case, we have some rather simple forms
     % In the bivariate case, these are the nonzero lower-triangular
     % entries of a matrix that is another's Cholesky decomposition
