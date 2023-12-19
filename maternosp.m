@@ -23,7 +23,7 @@ function [Sk,k]=maternosp(th,params,xver)
 %                  1 it's a unit taper, implicitly
 %                  OR an appropriately sized taper with proper values 
 %                    (1 is yes and 0 is no and everything in between)
-% xver     Perform excessive verification [0 or 1]
+% xver     Perform excessive verification [0, 1 or 2]
 %
 % OUTPUT:
 %
@@ -34,7 +34,7 @@ function [Sk,k]=maternosp(th,params,xver)
 %
 % MATERNOS, MATERNOSY, MATERNPRC, KNUMS, BLUROS, BLUROSY, BLURCHECK
 %
-% Last modified by fjsimons-at-alum.mit.edu, 03/07/2023
+% Last modified by fjsimons-at-alum.mit.edu, 12/19/2023
 
 % Default is to oververify it all
 defval('xver','1')
