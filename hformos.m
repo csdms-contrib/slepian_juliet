@@ -11,7 +11,7 @@ function Xk=hformos(S,Hk,A,xver)
 %       a complex 1-column vector of Fourier-domain observations, [Nx1]
 % A     A wavenumber-dependent SYMMETRIC matrix, e.g. Tinv, [Nx3], or
 %       a wavenumber-dependent vector, [Nx1]
-% xver  1 Extra verification for the univariate case, when A=1
+% xver  1 or 2 Extra verification for the univariate case, when A=1
 %
 % OUTPUT:
 %
@@ -21,7 +21,7 @@ function Xk=hformos(S,Hk,A,xver)
 %
 % In our formalism, this should result in a real-valued function. 
 %
-% Last modified by fjsimons-at-alum.mit.edu, 03/10/2022
+% Last modified by fjsimons-at-alum.mit.edu, 12/19/2023
 
 defval('A',1)
 defval('xver',1)
@@ -38,9 +38,9 @@ end
 % Still may have a tiny imaginary part, get rid of it if it is small 
 Xk=realize(Xk);
 
-if xver==1
-  if A==1
-    diferm(Xk,abs(Hk).^2./S,8);
-  end
+if xver==1 || xver==2
+    if A==1
+        diferm(Xk,abs(Hk).^2./S,7);
+    end
 end
 
