@@ -61,8 +61,8 @@ function varargout=blurosy(th,params,xver,method,tsto)
 % BLUROSY('demo3') % should produce no output
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 12/18/2023
-% Last modified by olwalbert-at-princeton.edu, 12/18/2023
+% Last modified by fjsimons-at-alum.mit.edu, 12/19/2023
+% Last modified by olwalbert-at-princeton.edu, 12/19/2023
 
 if ~isstr(th)
     if params.blurs>=0 & ~isinf(params.blurs)
@@ -131,7 +131,6 @@ if ~isstr(th)
 
     % Normalize and vectorize
     Sbar=Hh(:)*prod(dydx)/(2*pi)^2;
-
 
     % Should check positivity always!
     if any(Sbar<0); keyboard; end
@@ -437,13 +436,21 @@ elseif strcmp(th,'demo3')
     [Sbar3,k3,tyy3,Cyy3]=blurosy(th,p,1,'ef');
     [Sbar4,k4,tyy4,Cyy4]=blurosy(th,p,1,'efs');
     % All of these should be virtually identical
-    % Note the Sbar are large so the tolerance is high 
-    diferm(Sbar1,Sbar2,-2); diferm(tyy1,tyy2); diferm(Cyy1,Cyy2);
-    diferm(Sbar1,Sbar3,-2); diferm(tyy1,tyy3); diferm(Cyy1,Cyy3);
-    diferm(Sbar1,Sbar4,-2); diferm(tyy1,tyy4); diferm(Cyy1,Cyy4);
-    diferm(Sbar2,Sbar3,-2); diferm(tyy2,tyy4); diferm(Cyy2,Cyy3);
-    diferm(Sbar2,Sbar4,-2); diferm(tyy2,tyy4); diferm(Cyy2,Cyy4);
-    diferm(Sbar3,Sbar4,-2); diferm(tyy3,tyy4); diferm(Cyy3,Cyy4);
+    % Note the Sbar are large so the tolerance is high
+    tolex=-(log10(max(Sbar1))-11);
+    diferm(Sbar1,Sbar2,tolex);
+    diferm(tyy1,tyy2); diferm(Cyy1,Cyy2);
+    diferm(Sbar1,Sbar3,tolex);
+    diferm(tyy1,tyy3); diferm(Cyy1,Cyy3);
+    diferm(Sbar1,Sbar4,tolex);
+    diferm(tyy1,tyy4); diferm(Cyy1,Cyy4);
+    diferm(Sbar2,Sbar3,tolex);
+    diferm(tyy2,tyy4); diferm(Cyy2,Cyy3);
+    diferm(Sbar2,Sbar4,tolex);
+    diferm(tyy2,tyy4); diferm(Cyy2,Cyy4);
+    diferm(Sbar3,Sbar4,tolex);
+    diferm(tyy3,tyy4); diferm(Cyy3,Cyy4);
+    % subplot(221); imagesc(log10(v2s(Sbar1,p))); axis square
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
