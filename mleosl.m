@@ -85,11 +85,13 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 % mleosl('demo4','14-Oct-2023')
 %
 % One simulation and a chi-squared plot using MLECHIPLOS
-% mleosl('demo5',th,p) % This should be as good as BLUROSY('demo2',p.NyNx,[],[],1)
+% mleosl('demo5',th,p) % This should be as good as
+% blurosy('demo2',p.NyNx,[],[],1) % for the same th
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/30/2023
+% Last modified by fjsimons-at-alum.mit.edu, 12/19/2023
+% Last modified by olwalbert-at-princeton.edu, 12/19/2023
 
 if ~isstr(Hx)
   defval('algo','unc')
