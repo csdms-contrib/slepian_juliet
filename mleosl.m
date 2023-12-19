@@ -36,7 +36,15 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %           simulations for demo purposes, and on which "thini" will be
 %           based if that was left blank. If "aguess" is blank, there is
 %           a default. If "thini" is set, there is no need for "aguess"
-% xver      Conduct extra verification steps
+% xver      0 Minimal output, no extra verification steps
+%           1 Conduct extra verification steps
+%           2 Only minimize the log-likelihood function for parameters 
+%             th(1:end-2) and th(end), and conduct extra verification steps; 
+%             smoothness parameter, nu=th(end-1), is fixed to the value 
+%             provided in thini, either directly or as default; this has 
+%             the effect of speeding up the estimation procedure but may 
+%             not be appropriate in the case of real data where smoothness
+%             of the random field realized by Hx remains unknown
 %
 % OUTPUT:
 %
@@ -135,7 +143,12 @@ if ~isstr(Hx)
   % Unless you supply an initial value, construct one from "aguess" by perturbation
   nperturb=0.25;
   % So not all the initialization points are the same!!
-  defval('thini',abs((1+nperturb*randn(size(aguess))).*aguess))
+  if xver==2
+    defval('thini',[abs((1+nperturb)*randn(size(aguess(1:end-2))).*aguess(1:end-2)),...
+        aguess(end-1), abs((1+nperturb)*randn(size(aguess(end))).*aguess(end))])
+  else
+    defval('thini',abs((1+nperturb*randn(size(aguess))).*aguess))
+  end
   % If you brought in your own initial guess, need an appropriate new scale
   if ~isempty(inputname(2)) || any(aguess~=thini)
     scl=10.^round(log10(abs(thini)));
@@ -213,7 +226,7 @@ if ~isstr(Hx)
   % The number of unique entries in an np*np symmetric matrix
   npp=np*(np+1)/2;
 
-  if xver==1 && blurs>-1 && blurs<2 
+  if (xver==1 || xver==2) && blurs>-1 && blurs<2 
     % Using the analytical gradient in the optimization is not generally a good
     % idea but if the likelihoods aren't blurred, you can set this option to
     % 'on' and then let MATLAB verify that the numerical calculations match
@@ -235,11 +248,30 @@ if ~isstr(Hx)
     switch algo
      case 'unc'
       % disp('Using FMINUNC for unconstrained optimization of LOGLIOSL')
-       t0=clock;
-      [thhat,logli,eflag,oput,grd,hes]=...
-	  fminunc(@(theta) logliosl(k,theta,scl,params,Hk,xver),...
-		  thini,options);
-      ts=etime(clock,t0);
+       if xver==2
+           % we will only optimize for the variance and range parameters and
+           % will take the set value of nu from thini
+           t0=clock;
+           [thhat,logli,eflag,oput,~,~]=...
+               fminunc(@(theta) logliosl(k,[theta(1) thini(end-1) theta(2)],scl,params,Hk,xver),...
+                       [thini(1:end-2) thini(end)],options);
+           ts=etime(clock,t0);
+           % the estimate of theta should include the parameters that we
+           % optimized for, as well as the set value of nu
+           thhat = [thhat(1) thini(end-1) thhat(2)];
+           % calculate the numerical gradient and hessian from all three
+           % parameters
+           derivopts=optimset('MaxIter',0,'MaxFunEvals',0,'Display','off');
+           [~,~,~,~,grd,hes]=...
+               fminunc(@(theta) logliosl(k,theta,scl,params,Hk,0),...
+                       thhat,derivopts);
+       else
+           t0=clock;
+           [thhat,logli,eflag,oput,grd,hes]=...
+	       fminunc(@(theta) logliosl(k,theta,scl,params,Hk,xver),...
+		       thini,options);
+           ts=etime(clock,t0);
+       end
      case 'con'
       % New for FMINCON
       options.Algorithm='active-set';
@@ -251,25 +283,48 @@ if ~isstr(Hx)
       thhat(2)=bounds{6}(2); nwh=4; nwi=0; hitit=thhat(2)/10;
       while [bounds{6}(2)-thhat(2)<hitit ...
              || thhat(2)-bounds{5}(2)<hitit] ...
-            && nwi<nwh
-	nwi=nwi+1;
-	thisthini=thini;
-        if nwi>1
-          disp(sprintf(...
-              '\nHit the wall on differentiability... trying again %i/%i\n',...
-              nwi,nwh))
-        end
-        [thhat,logli,eflag,oput,lmd,grd,hes]=...
-            fmincon(@(theta) logliosl(k,theta,scl,params,Hk,xver),...
-                    thini,...
-                    bounds{1},bounds{2},bounds{3},bounds{4},...
-                    bounds{5}./scl,bounds{6}./scl,bounds{7},...
-                    options);
-        % Try resetting the offending parameter nu by a serious kick
-        thini(2)=thini(2)/[1+1/4-rand/2];
-        % And the others, switching the relationship between sigma^2 and rho
-        thini(1)=thini(1)*rand;
-        thini(3)=thini(3)/rand;
+             && nwi<nwh
+	  nwi=nwi+1;
+	  thisthini=thini;
+          if nwi>1
+              disp(sprintf(...
+                  '\nHit the wall on differentiability... trying again %i/%i\n',...
+                  nwi,nwh))
+          end
+          if xver==2
+              % Only optimize for variance and range, fix value of nu given by
+              % thini
+              lb=bounds{5}./scl;lb=[lb(1) lb(3)];
+              ub=bounds{6}./scl;ub=[ub(1) ub(3)];
+              [thhat,logli,eflag,oput,lmd,grd,hes]=...
+                  fmincon(@(theta) logliosl(k,[theta(1) thini(end-1) theta(2)],scl,params,Hk,xver),...
+                          [thini(1:end-2) thini(end)],...
+                          bounds{1},bounds{2},bounds{3},bounds{4},...
+                          lb,ub,bounds{7},...
+                          options);
+              thhat = [thhat(1) thini(end-1) thhat(2)];
+              % calculate the numerical gradient and hessian from all three
+              % parameters
+              derivopts=optimset('MaxIter',0,'MaxFunEvals',0,'Display','off');
+              [~,~,~,~,lmd,grd,hes]=...
+                  fmincon(@(theta) logliosl(k,theta,scl,params,Hk,0),...
+                          thhat,...
+                          bounds{1},bounds{2},bounds{3},bounds{4},...
+                          bounds{5}./scl,bounds{6}./scl,bounds{7},...
+                          derivopts);
+          else
+              [thhat,logli,eflag,oput,lmd,grd,hes]=...
+                  fmincon(@(theta) logliosl(k,theta,scl,params,Hk,xver),...
+                          thini,...
+                          bounds{1},bounds{2},bounds{3},bounds{4},...
+                          bounds{5}./scl,bounds{6}./scl,bounds{7},...
+                          options);
+              % Try resetting the offending parameter nu by a serious kick
+              thini(2)=thini(2)/[1+1/4-rand/2];
+          end
+          % And the others, switching the relationship between sigma^2 and rho
+          thini(1)=thini(1)*rand;
+          thini(3)=thini(3)/rand;
       end
       % You've left the loop, so you've used the last thini
       thini=thisthini;
@@ -318,7 +373,7 @@ if ~isstr(Hx)
   % Covariance from FMINUNC/FMINCON's numerical scaled Hessian NEAR estimate
   covh=inv(hes./matscl)/df;
   
-  if xver==1 & verLessThan('matlab','8.4.0')
+  if (xver==1 || xver==2) & verLessThan('matlab','8.4.0')
     % Try variable-precision arithmetic?
     vh=sym('vh',[np np]);
     for index=1:prod(size(vh))
@@ -343,7 +398,7 @@ if ~isstr(Hx)
   % Analytical calculations of the gradient and the Hessian poorly represent
   % the blurring (though it's much better than not trying at all), and thus,
   % are expected to be close to numerical results only without blurring
-  if xver==1 
+  if xver==1 || xver==2
     % Analytic (poorly blurred) gradient, scaled for numerical comparison
     gros=gammiosl(k,thhat.*scl,params,Hk,xver).*scl(:);
 
@@ -399,7 +454,7 @@ if ~isstr(Hx)
   disp(sprintf(sprintf('%s : %s ',str0,str2),...
 	       'Estimated theta',thhat.*scl.*shats))
   disp(' ')
-  if xver==1 | xver==0
+  if xver==0 || xver==1 || xver==2
     disp(sprintf('%8.1fs per %i iterations or %5.1fs per %i function counts',...
                  ts/oput.iterations*100,100,ts/oput.funcCount*1000,1000))
     disp(sprintf('%s\n',repmat('_',119,1)))
