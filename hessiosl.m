@@ -23,7 +23,7 @@ function [H,covH,cH]=hessiosl(k,th,params,Hk,xver)
 %          NOTE: It's not going to be a great derivative unless you could
 %          change MAOSL also. Still, the order of magnitude will be OK.
 % Hk       A complex matrix of Fourier-domain observations
-% xver     Excessive verification [0 or 1, which also computes H(k)]
+% xver     Excessive verification [0, 1 or 2, which also compute H(k)]
 %
 % OUTPUT:
 %
@@ -45,7 +45,7 @@ function [H,covH,cH]=hessiosl(k,th,params,Hk,xver)
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/12/2021
+% Last modified by fjsimons-at-alum.mit.edu, 09/19/2023
 
 % params.blurs=Inf can only refer to spatial-domain generation and at
 % this point we are already in the spectral domain; reset not returned
@@ -89,7 +89,7 @@ if xver==0
     % Eq. (135) in doi: 10.1093/gji/ggt056
     cH(ind)=nanmean(-mththp{ind}-[mth{i(ind)}.*mth{j(ind)}-mththp{ind}].*Xk);
   end
-elseif xver==1
+elseif xver==1 || xver==2
   % Initialize; no cell since all of them depend on the wave vectors
   cHk=nan(lk,npp);
   % Do save the wavenumber-dependent entities
