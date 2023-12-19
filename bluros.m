@@ -27,7 +27,7 @@ function varargout=bluros(S,params,xver)
 %                1 it's a unit taper, implicitly
 %                OR an appropriately sized taper with proper values 1 or 0
 %                   not supported here yet, for that use BLUROSY   
-% xver    1 Extra verification, among other ways, via BLURCHECK
+% xver    1 or 2 Extra verification, among other ways, via BLURCHECK
 %         0 No checking at all
 %
 % OUTPUT:
@@ -50,7 +50,7 @@ function varargout=bluros(S,params,xver)
 %
 % BLUROS('demo2',pp,bb) a very simple run test with graphical output
 % 
-% Last modified by fjsimons-at-alum.mit.edu, 12/18/2023
+% Last modified by fjsimons-at-alum.mit.edu, 12/19/2023
 
 if ~isstr(S)
   % disp('Ich bin so lang nicht bei dir g''west')
@@ -85,7 +85,7 @@ if ~isstr(S)
   % point, we played with parity preservation, since abandoned
   NyNx2=[length(ky2) length(kx2)];
 
-  if xver==1
+  if xver==1 || xver==2
     % Other checks are inside KNUM2 called from KNUMS called here
     diferm(k(dci(1),dci(2)))
     % Is the zero-wavenumber indeed, well, zero?
@@ -101,7 +101,7 @@ if ~isstr(S)
   % dimensions. But it's not like it ever needs to be IFFTSHIFT.
   Fejk=fftshift(abs(fft2(repmat(1/sqrt(prod(NyNx))/sqrt(prod(NyNx2)),NyNx),NyNx2(1),NyNx2(2))).^2);
 
-  if xver==1
+  if xver==1 || xver==2
     % Make sure the kernel is unitary and norm-preserving
     difer(sum(Fejk(:))-1,[],[],NaN)
     % Check Hermiticity of the Fejer kernel, this NEVER fails
@@ -246,7 +246,7 @@ if ~isstr(S)
     Sbar(:,in)=Hh(:);
     
     % Make sure the zero wavenumber gets the correct value, the zero-wavenumber
-    if xver==1
+    if xver==1 || xver==2
       % We need the indicial zero-wavenumber location for the REFINED grid
       kzx2=floor(NyNx2(2)/2)+1; kzy2=floor(NyNx2(1)/2)+1;
       % We need the running zero-wavenumber location for the REFINED grid
@@ -260,7 +260,7 @@ if ~isstr(S)
     end
   end
 
-  if xver==1
+  if xver==1 || xver==2
     % Check that no extrapolation was demanded, effectively
     % but know that griddedInterpolant would have EXTRApolated fine
     difer(sum(isnan(Sbar(:))),[],2,NaN)
