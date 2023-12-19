@@ -14,7 +14,7 @@ function [F,covF,cF]=fishiosl(k,th,xver,params)
 %          th(1)=s2   The first Matern parameter [variance in unit^2]
 %          th(2)=nu   The second Matern parameter [differentiability]
 %          th(3)=rho  The third Matern parameter [range in m]
-% xver     Excessive verification [0 or 1, which also computes F(k)]
+% xver     Excessive verification [0, 1 or 2, which also compute F(k)]
 % params   Attempt at bringing blurring in under the radar
 %
 % OUTPUT:
@@ -37,7 +37,7 @@ function [F,covF,cF]=fishiosl(k,th,xver,params)
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/14/2023
+% Last modified by fjsimons-at-alum.mit.edu, 12/19/2023
 
 % Early setup exactly as in HESSIOSL
 defval('xver',1)
@@ -64,7 +64,7 @@ cF=nan(npp,1);
 
 % We're abusing the 'xver' switch to bypass saving wavenumber-dependencies
 if xver==0
-  % Attempt to do this otherwise for variance calculation
+  % Attempt to do this otherwise for variance calculation, see also BLUROS
   % FJS [~,kz,W]=blurosy(th,params);
   % Do not save the wavenumber-dependent entities
   for ind=1:npp
@@ -73,7 +73,7 @@ if xver==0
     % Attempt to do this otherwise for variance calculation
     % FJS cFb(ind)=indeks(bsxfun(@times,mth{i(ind)},mth{j(ind)}'),':').*W(~~kz);
   end
-elseif xver==1
+elseif xver==1 || xver==2
   % Initialize; some of them depend on the wave vectors, some don't
   cFk=cellnan([npp 1],[1 repmat(lk,1,5)],repmat(1,1,6));
   % Do save the wavenumber-dependent entities
