@@ -32,7 +32,7 @@ function varargout=maternosy(y,th,varargin)
 %
 % [Hx,th0,p]=simulosl; bigN=1000;
 % y=linspace(0,sqrt(prod(p.dydx))*sqrt(prod(p.NyNx)),bigN);
-% S(0)=1/(2*pi)\int C(r)rdr
+% % S(0)=1/(2*pi)\int C(r)rdr
 % [sum(y.*maternosy(y,th0))*(y(2)-y(1))/(2*pi) maternos(0,th0)]
 %
 % nu=[1/3 1/2 1 3/2 5/2]; th0(2)=nu(randi(length(nu))); th0(2)
@@ -84,13 +84,14 @@ if ~isstr(y)
             % Third-order autoregressive
             Cy2=s2*exp(-sqrt(10)/(pi*rh)*abs(y)).*(1+sqrt(10)/(pi*rh)*...
                 abs(y)+10/(3*pi^2*rh^2)*abs(y).^2);            
+        elseif isinf(nu)
+            % This is yet to be verified if not internally then with MATERNOS 
+            % and ultimately through a BLUROSY demo that uses both spatial/spectral
+            Cy2=s2*exp(-y.^2/(2*pi^2*rh^2));
         else
             % However, if the nu provided to MATERNOSY is not one of the
             % five special values of nu, we should throw an error
             error('This is not a special case of nu. Request a single output.')        
-        end
-        if isinf(nu)
-            Cy2=s2*exp(-y^2/(2*pi^2*rh^2));
         end
         % If we calculated Cy2 for a special case of nu, we should 
         % compare it to Cy
