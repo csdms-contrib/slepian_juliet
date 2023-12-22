@@ -25,7 +25,7 @@ function Sk=maternos(k,th,varargin)
 %
 % [~,th0]=simulosl; difer(maternos(0,th0)/th0(1)-pi*th0(3)^2/4,7,[],NaN)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 11/03/2016
+% Last modified by fjsimons-at-alum.mit.edu, 12/18/2023
 
 % These are always the last three elements of the input 
 s2=th(end-2);
@@ -37,6 +37,10 @@ if nargin==3
   d=varargin{1};
 else
   d=2;
+end
+
+if isinf(nu)
+    warning('Build in special case from Fourier transforming asymptotic exponential from MATERNOSY')
 end
 
 % Adjust for dimensionality by specialization
@@ -51,4 +55,3 @@ end
 avark=4*nu/pi^2/rh^2+k(:).^2;
 % Calculate the d-dimensional spectral density
 Sk=s2*pd*nu^nu*4^nu/pi^(d/2)/(pi*rh)^(2*nu).*avark.^(-nu-d/2);
-
