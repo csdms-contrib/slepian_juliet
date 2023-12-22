@@ -38,10 +38,12 @@ function varargout=maternosy(y,th,varargin)
 % nu=[1/3 1/2 1 3/2 5/2]; th0(2)=nu(randi(length(nu))); th0(2)
 % [Cy,Cy2]=maternosy(y,th0);
 %
+% th0(2)=Inf; Cy=maternosy(y,th0);
+%
 % maternosy('demo1')
 %
 % Last modified by fjsimons-at-alum.mit.edu, 12/18/2023
-% Last modified by olwalbert-at-princeton.edu, 12/18/2023
+% Last modified by olwalbert-at-princeton.edu, 12/22/2023
 
 if ~isstr(y)
     % These are always the last three elements of the input 
@@ -50,7 +52,7 @@ if ~isstr(y)
     rh=th(end  );
     % The argument, make sure it is a distance
     argu=2*sqrt(nu)/pi/rh*abs(y);
-    % The evaluation
+    % The evaluation, noting that nu=Inf will be overwritten properly
     Cy=2^(1-nu)*s2/gamma(nu)*argu.^nu.*besselk(nu,argu);
     % Supply the smallest arguments
     Cy(y==0)=s2;
@@ -84,10 +86,6 @@ if ~isstr(y)
             % Third-order autoregressive
             Cy2=s2*exp(-sqrt(10)/(pi*rh)*abs(y)).*(1+sqrt(10)/(pi*rh)*...
                 abs(y)+10/(3*pi^2*rh^2)*abs(y).^2);            
-        elseif isinf(nu)
-            % This is yet to be verified if not internally then with MATERNOS 
-            % and ultimately through a BLUROSY demo that uses both spatial/spectral
-            Cy2=s2*exp(-y.^2/(2*pi^2*rh^2));
         else
             % However, if the nu provided to MATERNOSY is not one of the
             % five special values of nu, we should throw an error
@@ -99,6 +97,18 @@ if ~isstr(y)
         % Make both Cy and Cy2 available as output
         varns={Cy,Cy2};
     else
+        % Check whether we are asking for the case that nu approaches
+        % infinity; if so, our current Cy will have NaN entries and we will
+        % want to recalculate Cy using the following expression.
+        if isinf(nu)
+            % Squared exponential 
+            % This analytic form of the isotropic Matern covariance 
+            % was solved from the inverse Fourier transform of the limit as
+            % nu approaches infinity of the spectral density (see MATERNOS
+            % for details). Eq. 3.323.2 of Gradeshtyn & Ryzhik (1980) was
+            % applied. (Consistency with BLUROSY demo?)
+            Cy=s2/(pi*rh)*exp(-abs(y).^2/(pi^2*rh^2));
+        end
         % Optional output
         varns={Cy};
     end
