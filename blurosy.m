@@ -1,5 +1,5 @@
-function varargout=blurosy(th,params,xver,method,tsto)
-% [Sbar,k,tyy,Cyy]=blurosy(th,params,xver,method,tsto)
+function varargout=blurosy(th,params,xver,method,tsto,dth)
+% [Sbar,k,tyy,Cyy]=blurosy(th,params,xver,method,tsto,dth)
 %
 % Wavenumber blurring of a univariate Matern spectral density with the
 % periodogram of a spatial taper. The result is the expected periodogram.
@@ -31,7 +31,10 @@ function varargout=blurosy(th,params,xver,method,tsto)
 %         0 No checking at all
 % method  'ef' exact, efficient and fast [default]
 %         'efs' exact, efficient and exploiting symmetry
-% tsto    An extra parameter slot to pass onto demo2    
+% tsto    An extra parameter slot to pass onto demo2
+% dth     1, 2, or 3 specifies which element of th gets differentiated, to serve as
+%         an input to the variance calculation, which requires a "blurred" version of
+%         mAosl, if you will, but there is no sense doing it there.
 %
 % OUTPUT:
 %
@@ -61,8 +64,8 @@ function varargout=blurosy(th,params,xver,method,tsto)
 % BLUROSY('demo3') % should produce no output
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 12/19/2023
-% Last modified by olwalbert-at-princeton.edu, 12/19/2023
+% Last modified by fjsimons-at-alum.mit.edu, 04/30/2024
+% Last modified by olwalbert-at-princeton.edu, 04/30/2024
 
 if ~isstr(th)
     if params.blurs>=0 & ~isinf(params.blurs)
@@ -75,6 +78,7 @@ if ~isstr(th)
     % Defaults
     defval('xver',1)
     defval('method','ef')
+    defval('dth',[])
 
     % Target dimensions, the original ones
     NyNx=params.NyNx;
@@ -93,7 +97,7 @@ if ~isstr(th)
         % multiplied by the spatial taper in a way that its Fourier
         % transform can be the convolution of the spectral density with the
         % spectral density of the taper, i.e. the expected periodogram
-        [Cyy,tyy]=spatmat(ydim,xdim,th,params,xver);
+        [Cyy,tyy]=spatmat(ydim,xdim,th,params,xver,dth);
 
         % http://blogs.mathworks.com/steve/2010/07/16/complex-surprises-from-fft/
         % Here is the blurred covariance on the 'double' grid
@@ -110,7 +114,7 @@ if ~isstr(th)
         xdim=[0:NyNx(2)-1] ;
         
         % Here is the Matern spatial covariance on the quarter distance grid, see above
-        [Cyy,tyy]=spatmat(ydim,xdim,th,params,xver);
+        [Cyy,tyy]=spatmat(ydim,xdim,th,params,xver,dth);
 
         % Exploit the symmetry just a tad, which allows us to work with smaller matrices
         q1=fft2(Cyy);
@@ -182,6 +186,10 @@ elseif strcmp(th,'demo2')
     % Some Matern paramters
     th=1e6*[1 0.0000015 0.002]; 
 
+    % Try
+    th(2)=Inf
+    to be continued
+    
     % Compare the average periodogram with the blurred spectral density
 
     % What kind of a test are we running? Boxcar, or France/Ukraine?
@@ -454,8 +462,8 @@ elseif strcmp(th,'demo3')
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [Cyy,t]=spatmat(ydim,xdim,th,params,xver)
-% [Cyy,t]=spatmat(ydim,xdim,th,params,xver)
+function [Cyy,t]=spatmat(ydim,xdim,th,params,xver,dth)
+% [Cyy,t]=spatmat(ydim,xdim,th,params,xver,dth)
 %
 % Returns the modified spatial covariance whose Fourier transform is the blurred
 % spectrum after spatial data tapering, i.e. the expected periodogram. No use to
@@ -555,7 +563,7 @@ end
 y=sqrt(bsxfun(@plus,[ydim*dydx(1)].^2,[xdim*dydx(2)].^2));
 
 % The modified spatial covariance
-Cyy=maternosy(y,th).*t;
+Cyy=maternosy(y,th,[],dth).*t;
 
 % Remind me: Arthur: diag(U^T * Cyy * U) where U is the DFMTX is the
 % expected periodogram, the diagonal variance, but to get the variance of
