@@ -1,5 +1,5 @@
-function varargout=maternosy(y,th,varargin)
-% varargout=MATERNOSY(y,th,d)
+function varargout=maternosy(y,th,meth,dth)
+% varargout=MATERNOSY(y,th,meth,dth)
 %
 % Calculates d-dimensional isotropic Matern correlation, which is
 % independent of d, also the counterpart to the spectral covariance.
@@ -13,14 +13,16 @@ function varargout=maternosy(y,th,varargin)
 %          s2    The first Matern parameter [variance in units^2]
 %          nu    The second Matern parameter [differentiability]
 %          rh    The third Matern parameter [range in units]
-% d        The dimensionality. Not used, for symmetry with MATERNOS only.
+% meth     1 straight up calculation
+%          2 analytical simplification for th(2)=n+1/2 smoothness
+% dth      1, 2, or 3 specifies which element of th gets differentiated
 %
 % OUTPUT:
 %
-% Cy       The spatial Matern covariance at all the requested lags
-% Cy2      The spatial Matern covariance calculated using the Abramowitz &
-%          Stegun (1965) simplifications to the Bessel function for half-
-%          integer values of nu; Cy2 should be equivalent to Cy
+% Cy       The spatial Matern covariance at all the requested lags, possibly
+%          calculated using the Abramowitz & Stegun (1965) simplifications to
+%          the Bessel function for half-integer values of nu
+% dCydth   Returns the derivative in the dth element of th
 %
 % SEE ALSO:
 %
@@ -36,82 +38,89 @@ function varargout=maternosy(y,th,varargin)
 % [sum(y.*maternosy(y,th0))*(y(2)-y(1))/(2*pi) maternos(0,th0)]
 %
 % nu=[1/3 1/2 1 3/2 5/2]; th0(2)=nu(randi(length(nu))); th0(2)
-% [Cy,Cy2]=maternosy(y,th0);
+% Cy=maternosy(y,th0,1); Cy2=maternosy(y,th0,2); difer(Cy/(Cy(1))-Cy2/Cy2(1))
 %
 % th0(2)=Inf; Cy=maternosy(y,th0);
 %
 % maternosy('demo1')
 %
-% Last modified by fjsimons-at-alum.mit.edu, 12/18/2023
-% Last modified by olwalbert-at-princeton.edu, 12/22/2023
+% Last modified by fjsimons-at-alum.mit.edu, 04/30/2024
+% Last modified by olwalbert-at-princeton.edu, 04/30/2024
 
 if ~isstr(y)
+    % Defaults
+    defval('meth',1)
+    defval('dth',[])
     % These are always the last three elements of the input 
     s2=th(end-2);
     nu=th(end-1);
     rh=th(end  );
     % The argument, make sure it is a distance
     argu=2*sqrt(nu)/pi/rh*abs(y);
-    % The evaluation, noting that nu=Inf will be overwritten properly
-    Cy=2^(1-nu)*s2/gamma(nu)*argu.^nu.*besselk(nu,argu);
-    % Supply the smallest arguments
-    Cy(y==0)=s2;
-    if nargout>1
-        % If the number of outputs requested is greater than 1, we
-        % are seeking to evaluate Cy2 from the simplified analytic
-        % expression of the isotropic Matern covariance for a special 
-        % value of nu. The following analytic forms of half-integer
-        % nu are calculated from substitution of Eqs 10.1.9 and 10.2.15
-        % of Abramowitz & Stegun (1965) for modified
-        % Bessel functions of half-integer orders.
-        % See also 10.1093/biomet/93.4.989
-        if nu==1/3
-            % von Karman 
-            Cy2=s2*2^(2/3)/gamma(nu).*(2*sqrt(3)/(3*pi*rh)*abs(y)).^...
-                (nu).*besselk(nu,2*sqrt(3)/(3*pi*rh)*abs(y));
-            % Compute the value at zero lag
-            Cy2(y==0)=s2;
-        elseif nu==1/2
-            % Exponential
-            Cy2=s2*exp(-sqrt(2)/(pi*rh)*abs(y));
-        elseif nu==1
-            % Whittle
-            Cy2=s2*2/(pi*rh)*abs(y).*besselk(nu,2/(pi*rh)*abs(y));
-            % Compute the value at zero lag
-            Cy2(y==0)=s2;
-        elseif nu==3/2
-            % Second-order autoregressive
-            Cy2=s2*exp(-sqrt(6)/(pi*rh)*abs(y)).*(1+sqrt(6)/(pi*rh)*abs(y));
-        elseif nu==5/2
-            % Third-order autoregressive
-            Cy2=s2*exp(-sqrt(10)/(pi*rh)*abs(y)).*(1+sqrt(10)/(pi*rh)*...
-                abs(y)+10/(3*pi^2*rh^2)*abs(y).^2);            
-        else
-            % However, if the nu provided to MATERNOSY is not one of the
-            % five special values of nu, we should throw an error
-            error('This is not a special case of nu. Request a single output.')        
-        end
-        % If we calculated Cy2 for a special case of nu, we should 
-        % compare it to Cy
-        difer(Cy/(Cy(1))-Cy2/Cy2(1))
-        % Make both Cy and Cy2 available as output
-        varns={Cy,Cy2};
+    % Check whether we are asking for the case that nu approaches
+    % infinity; if so, by the regular method Cy would have Inf/NaN entries
+    if isinf(nu)
+        % Squared exponential 
+        % This analytic form of the isotropic Matern covariance 
+        % was solved from the inverse Fourier transform of the limit as
+        % nu approaches infinity of the spectral density (see MATERNOS
+        % for details). Eq. 3.323.2 of Gradshteyn & Ryzhik (1980) was
+        % applied. (Consistency with BLUROSY demo?)
+        Cy=s2/(pi*rh)*exp(-abs(y).^2/(pi^2*rh^2));
     else
-        % Check whether we are asking for the case that nu approaches
-        % infinity; if so, our current Cy will have NaN entries and we will
-        % want to recalculate Cy using the following expression.
-        if isinf(nu)
-            % Squared exponential 
-            % This analytic form of the isotropic Matern covariance 
-            % was solved from the inverse Fourier transform of the limit as
-            % nu approaches infinity of the spectral density (see MATERNOS
-            % for details). Eq. 3.323.2 of Gradeshtyn & Ryzhik (1980) was
-            % applied. (Consistency with BLUROSY demo?)
-            Cy=s2/(pi*rh)*exp(-abs(y).^2/(pi^2*rh^2));
+        % Switch the calculation method
+        switch meth
+          case 1
+            % The evaluation, noting that nu=Inf will be overwritten properly
+            Cy=2^(1-nu)*s2/gamma(nu)*argu.^nu.*besselk(nu,argu);
+            % Supply the smallest arguments
+            Cy(y==0)=s2;
+          case 2
+            % If the number of outputs requested is greater than 1, we
+            % are seeking to evaluate Cy2 from the simplified analytic
+            % expression of the isotropic Matern covariance for a special 
+            % value of nu. The following analytic forms of half-integer
+            % nu are calculated from substitution of Eqs 10.1.9 and 10.2.15
+            % of Abramowitz & Stegun (1965) for modified
+            % Bessel functions of half-integer orders.
+            % See also 10.1093/biomet/93.4.989
+            if nu==1/3
+                % von Karman 
+                Cy=s2*2^(2/3)/gamma(nu).*(2*sqrt(3)/(3*pi*rh)*abs(y)).^...
+                   (nu).*besselk(nu,2*sqrt(3)/(3*pi*rh)*abs(y));
+                % Compute the value at zero lag
+                Cy(y==0)=s2;
+            elseif nu==1/2
+                % Exponential
+                Cy=s2*exp(-sqrt(2)/(pi*rh)*abs(y));
+            elseif nu==1
+                % Whittle
+                Cy=s2*2/(pi*rh)*abs(y).*besselk(nu,2/(pi*rh)*abs(y));
+                % Compute the value at zero lag
+                Cy(y==0)=s2;
+            elseif nu==3/2
+                % Second-order autoregressive
+                Cy=s2*exp(-sqrt(6)/(pi*rh)*abs(y)).*(1+sqrt(6)/(pi*rh)*abs(y));
+            elseif nu==5/2
+                % Third-order autoregressive
+                Cy=s2*exp(-sqrt(10)/(pi*rh)*abs(y)).*(1+sqrt(10)/(pi*rh)*...
+                                                      abs(y)+10/(3*pi^2*rh^2)*abs(y).^2);            
+            else
+                % However, if the nu provided to MATERNOSY is not one of the
+                % five special values of nu, we should throw an error
+                error('This is not a special case of nu. Ask for meth=1.')
+            end
         end
-        % Optional output
-        varns={Cy};
     end
+    varns={Cy};
+    % Calculate the derivatives?
+    if nargout>1
+        % Calculate derivatives in the requested coordinate
+        warning('Coming soon')
+        dCydth='beautiful';
+        varns={Cy,dCydth};
+    end
+    % Serve output
     varargout=varns(1:nargout);
 elseif strcmp(y,'demo1')
     % The Fourier relation between the correlation and the covariance
