@@ -21,8 +21,8 @@ function varargout=maternosy(y,th,meth,dth)
 %
 % Cy       The spatial Matern covariance at all the requested lags, possibly
 %          calculated using the Abramowitz & Stegun (1965) simplifications to
-%          the Bessel function for half-integer values of nu
-% dCydth   Returns the derivative in the dth element of th
+%          the Bessel function for half-integer values of nu, OR
+%          Returns the DERIVATIVE in the dth element of th, to feed into BLUROSY
 %
 % SEE ALSO:
 %
@@ -112,15 +112,15 @@ if ~isstr(y)
             end
         end
     end
-    varns={Cy};
     % Calculate the derivatives?
-    if nargout>1
+    if ~isempty(dth)
         % Calculate derivatives in the requested coordinate
-        warning('Coming soon')
-        dCydth='beautiful';
-        varns={Cy,dCydth};
+        % disp(sprintf('Calculating %i%s parameter derivative',dth,ith(dth)))
+        % Abuse of nomenclature, now you're getting a specific derivative
+        Cy='beautiful';
     end
     % Serve output
+    varns={Cy};
     varargout=varns(1:nargout);
 elseif strcmp(y,'demo1')
     % The Fourier relation between the correlation and the covariance
