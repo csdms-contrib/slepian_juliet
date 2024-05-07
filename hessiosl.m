@@ -1,10 +1,10 @@
 function [H,covH,cH]=hessiosl(k,th,params,Hk,xver)
 % [H,covH,cH]=HESSIOSL(k,th,params,Hk,xver)
 %
-% Calculates the entries in the Hessian matrix of Olhede & Simons (2013) for
-% the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN model, after
-% wavenumber averaging. Blurring is only approximately possible here, we
-% work with analytical expressions for some of the derivatives, see
+% Calculates the entries in the Hessian matrix of Olhede & Simons (2013,
+% eq. 132) for the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN
+% model, after wavenumber averaging. Blurring is only approximately possible
+% here, we work with analytical expressions for some of the derivatives, see
 % LOGLIOSL. Zero-wavenumber excluded. No scaling asked or applied.
 %
 % INPUT:
