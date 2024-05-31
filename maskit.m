@@ -103,8 +103,11 @@ elseif strcmp(v,'demo2')
     % Something larger without overdoing it, check weirdness
     % Here is one that has failed in the past
     p.NyNx=[201 241];
+    
+    % Do all the tests or not
+    xver=0;
 
-    N=60;
+    N=5;
     for index=1:N
         clc; disp(sprintf('\n Simulating all fields \n'))
 
@@ -117,14 +120,16 @@ elseif strcmp(v,'demo2')
         % Simulate second field
         [Gx,th2,p,k,Hk,Sb2]=simulosl(th2,p,1);
 
-        % Very explicit comparison like BLUROSY
-        p.blurs=-1; Sbar1=blurosy(th1,p,1); 
-        p.blurs=-1; Sbar2=blurosy(th2,p,1);
-        % Are any of them bad?
-        if max(Sb1./Sbar1)>20;keyboard ;end
-        if max(Sb2./Sbar2)>20;keyboard ;end
-        % Reset to the original value
-        p.blurs=Inf;
+        if xver==1
+            % Very explicit comparison like BLUROSY
+            p.blurs=-1; Sbar1=blurosy(th1,p,1); 
+            p.blurs=-1; Sbar2=blurosy(th2,p,1);
+            % Are any of them bad?
+            if max(Sb1./Sbar1)>20;keyboard ;end
+            if max(Sb2./Sbar2)>20;keyboard ;end
+            % Reset to the original value
+            p.blurs=Inf;
+        end
         
         % How much should the masked area occupy?
         scl=[];
@@ -146,10 +151,8 @@ elseif strcmp(v,'demo2')
         % Without the boundary the eye is much less clear!
         % imagesc(v2s(HG,p)); axis image
 
-        % As appropriate you'll force the use of BLUROSY in MATERNOSP in LOGLIOS
+        % As appropriate you'll force the use of BLUROSY in MATERNOSP in LOGLIOSL in MLEOSL
         p.blurs=-1;
-        % Do all the tests or not
-        xver=0;
 
         % Make a close initial guess?
         thini1=th1+(-1).^randi(2,[1 3]).*th1/1000;
@@ -183,15 +186,15 @@ elseif strcmp(v,'demo2')
         % Pause so you can watch live
         pause(2)
 
-        % Reset to the original value
-        p.blurs=Inf;
+        % Reset to the original values
+        p.blurs=Inf; p.taper=0;
     end
     % And now look at the statistics of the recovery
     disp(sprintf('\nFirst partial | Second partial\n'))
     disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat1.*scl1 thhat2.*scl2]'))
     disp(sprintf('\nFirst whole | Second whole\n'))
     disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat4.*scl4 thhat5.*scl5]'))
-    disp(sprintf('\nMixed whole\n'))
+    %disp(sprintf('\nMixed whole\n'))
     %disp(sprintf('%8.0f %5.2f %6.0f\n',[thhat3.*scl3]'))
     
     % Then plot these things using MLEPLOS
