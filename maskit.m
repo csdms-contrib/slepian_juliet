@@ -1,6 +1,8 @@
 function varargout=maskit(v,p,scl,w)
 % [v,cr,I,w,vw]=MASKIT(v,p,scl,w)
 %
+% Arbitrary masking of a gridded spatial field
+%
 % INPUT:
 %
 % v       A vector that is the unwrapping of a matrix
@@ -106,7 +108,7 @@ elseif strcmp(v,'demo2')
         clc; disp(sprintf('\n Simulating all fields \n'))
 
         % Simulate first field
-        th1=[0.001 1.5 20000];
+        th1=[1 1.5 20000];
         [Hx,th1,p,k,Hk,Sb1]=simulosl(th1,p,1);
         % Simulate second field by making a small change
         th2=th1; th2(2)=2.5; th2(3)=30000;
