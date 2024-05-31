@@ -51,9 +51,10 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 % thhat    The maximum-likelihood estimate of the vector [scaled]:
 %          [s2 nu rho], in units of variance, "nothing", and distance, see SIMULOSL
 % covFHh   The covariance estimates:
-%          covFHh{1} from Fisher matrix AT the estimate [FISHIOSL]
-%          covFHh{2} from analytical Hessian matrix AT the estimate [HESSIOSL]
+%          covFHh{1} from Fisher matrix AT the estimate [FISHIOSL] (eq. 139)
+%          covFHh{2} from analytical Hessian matrix AT the estimate [HESSIOSL] (eq. 133)
 %          covFHh{3} from numerical Hessian matrix NEAR the estimate [FMINUNC/FMINCON]
+%          covFHh{4} from the full formula (eq. 138), which is not implemented yet
 % lpars    The logarithmic likelihood and its derivatives AT or NEAR the estimate
 %          lpars{1} the numerical logarithmic likelihood [FMINUNC/FMINCON]
 %          lpars{2} the numerical scaled gradient, or score [FMINUNC/FMINCON]
@@ -107,7 +108,7 @@ if ~isstr(Hx)
   str0='%18s';
   str1='%13.0e ';
   str2='%13.0f %13.2f %13.0f';
-  str2='%13.3g %13.2g %13.5g';
+  str2='%13.3g %13.3g %13.5g';
   str3s='%13s ';
 
   % Supply the needed parameters, keep the givens, extract to variables
@@ -136,7 +137,7 @@ if ~isstr(Hx)
 
   % The parameters used in the simulation for demos, or upon which to base "thini"
   % Check Vanmarcke 1st edition for suggestions on initial rho, very important
-  defval('aguess',[nanvar(Hx) 2.0 sqrt(prod(dydx.*NyNx))/pi/2/20]);
+  defval('aguess',[nanvar(Hx) 1.5 sqrt(prod(dydx.*NyNx))/pi/2/20]);
   % Scale the parameters by this factor; fix it unless "thini" is supplied
   defval('scl',10.^round(log10(abs(aguess))));
 
@@ -345,7 +346,8 @@ if ~isstr(Hx)
     end
   catch
     % If something went wrong, exit gracefully
-    varargout=cellnan(nargout,1,1);
+      varargout=cellnan(nargout,1,1);
+      varargout{5}=thini;
     return
   end
 
@@ -801,4 +803,12 @@ elseif strcmp(Hx,'demo5')
   % Print the figure!
   disp(' ')
   figna=figdisp(figna,[],[],2);
+elseif strcmp(Hx,'demo6')
+    % Simulate something
+    [Hx,th0,params]=simulosl;
+    % Optimize the smoothness
+    tic; [thhat,~,~,scl]=mleosl(Hx,[],params); toc
+    % Do not optimize the smoothness
+    thini=thhat.*scl; thini(2)=th0(2);
+    tic ; [thhat2,~,~,scl2]=mleosl(Hx,thini,params,[],[],[],2); toc
 end
