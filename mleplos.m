@@ -377,7 +377,7 @@ if xver==1
         longticks(ah)
         %seemax([ah(1) ah(2)],1)
         %seemax([ah(2) ah(3)],2)
-        titi=ostitle(ah,params,name,length(thhats(:,1)); movev(titi,-2)
+        titi=ostitle(ah,params,name,length(thhats(:,1))); movev(titi,-2)
         try
             tt=supertit(ah(1:np),sprintf('%s\n%s%s',sprintf(answs,answ{:}),pm,...
                                          'one sigma uncertainty based on the ensemble'));
