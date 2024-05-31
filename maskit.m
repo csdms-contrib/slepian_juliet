@@ -29,10 +29,11 @@ function varargout=maskit(v,p,scl,w)
 % [~,~,I]=maskit('demo1'); % To get a quick mask to look at
 % maskit('demo1') % A geographical region masking a single field
 % maskit('demo1','england') % 'amazon', 'orinoco', for geographical variability
-% maskit('demo2') % A geographical region merging two fields
+% maskit('demo2') % A geographical region merging two fields, with estimation
 % maskit('demo2','england') % 'amazon', 'orinoco', for geographical variability
+% maskit('demo3') % Plotting results of previous demo
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/09/2023
+% Last modified by fjsimons-at-alum.mit.edu, 05/31/2024
 
 % The default is the demo, for once
 defval('v','demo1')
