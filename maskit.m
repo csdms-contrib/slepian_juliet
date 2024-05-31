@@ -107,13 +107,19 @@ elseif strcmp(v,'demo2')
     % Do all the tests or not
     xver=0;
 
-    N=5;
+    if xver==1
+        pz=2;
+    else
+        pz=0.1;
+    end
+
+    N=10;
     for index=1:N
         clc; disp(sprintf('\n Simulating all fields \n'))
 
         % Define the parameters for the two fields
-        th1=[1 1.25 20000];
-        th2=[1 1.75 30000];
+        th1=[1.5 1.25 30000];
+        th2=[1.9 1.75 10000];
 
         % Simulate first field
         [Hx,th1,p,k,Hk,Sb1]=simulosl(th1,p,1);
@@ -160,46 +166,46 @@ elseif strcmp(v,'demo2')
 
         % Recover the parameters of the full original fields without any masking
         p.taper=0;
-        pause(2); clc; disp(sprintf('\n Estimating first whole field \n'))
+        pause(pz); clc; disp(sprintf('\n Estimating first whole field \n'))
         [thhat4(index,:),~,~,scl4(index,:)]=mleosl(Hx,thini1,p,[],[],[],xver);
-        pause(2); clc ; disp(sprintf('\n Estimating second whole field \n'))
+        pause(pz); clc ; disp(sprintf('\n Estimating second whole field \n'))
         [thhat5(index,:),~,~,scl5(index,:)]=mleosl(Gx,thini2,p,[],[],[],xver);
 
         % Now recover the parameters of the mixed field but only in the region I or ~I
         % Perform the optimization on the insert which should look like the second field
         p.taper=I;
-        pause(2); clc; disp(sprintf('\n Estimating first partial field \n'))
+        pause(pz); clc; disp(sprintf('\n Estimating first partial field \n'))
         [thhat1(index,:),~,~,scl1(index,:)]=mleosl(HG,thini2,p,[],[],[],xver);
         
         % Take a look inside LOGLIOS that the order of magnitude is good.
         
         % Now recover the parameters of the complement which should look like the first field
         p.taper=~I;
-        pause(2); clc; disp(sprintf('\n Estimating second partial field \n'))
+        pause(pz); clc; disp(sprintf('\n Estimating second partial field \n'))
         [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,thini1,p,[],[],[],xver);
 
         % Now recover the parameters of the merged field without knowing of the partition
         % p.taper=0;
-        % pause(2); clc; disp(sprintf('\n Estimating whole mixed field \n'))
+        % pause(pz); clc; disp(sprintf('\n Estimating whole mixed field \n'))
         % [thhat3(index,:),~,~,scl3(index,:)]=mleosl(HG,[],p,[],[],[],xver);
 
-        % Pause so you can watch live
-        pause(2)
+        % Pause so you can watch live (big pause if xver==0)
+        pause(pz)
 
         % Reset to the original values
         p.blurs=Inf; p.taper=0;
     end
     % And now look at the statistics of the recovery
     disp(sprintf('\nFirst partial | Second partial\n'))
-    disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat1.*scl1 thhat2.*scl2]'))
+    disp(sprintf('%8.2f %5.2f %6.0f  %8.2f %5.2f %6.0f\n',[thhat1.*scl1 thhat2.*scl2]'))
     disp(sprintf('\nFirst whole | Second whole\n'))
-    disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat4.*scl4 thhat5.*scl5]'))
+    disp(sprintf('%8.2f %5.2f %6.0f  %8.2f %5.2f %6.0f\n',[thhat4.*scl4 thhat5.*scl5]'))
     %disp(sprintf('\nMixed whole\n'))
     %disp(sprintf('%8.0f %5.2f %6.0f\n',[thhat3.*scl3]'))
     
     % Then plot these things using MLEPLOS
-    mleplos(thhat1,th1,[],[],[],[],[],p,[],[])
-    mleplos(thhat2,th2,[],[],[],[],[],p,[],[])
+    mleplos(thhat1.*scl1,th1,[],[],[],[],[],p,[],[])
+    mleplos(thhat2.*scl2,th2,[],[],[],[],[],p,[],[])
 
     % Save some output for later?
     keyboard
