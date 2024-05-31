@@ -50,7 +50,7 @@ if ~ischar(Hk)
     % Standard deviations to which the contours refer
     stdCon=[1 2 3];
     % Fineness of the loglihood grids
-    fine=50;
+    fine=10;
 
     % Default options for figure contruction
     % Shade the plot outside the first contour
@@ -364,12 +364,13 @@ elseif strcmp(Hk,'demo1')
     clear
     % Set parameters for creation of a data patch
     fields={'dydx','NyNx','blurs'};
-    defstruct('params',fields,{[10 10]*1e3,128*[1 1],-1});
+    defstruct('params',fields,{[1 1],256*[1 1],-1});
     % Random random parameters
     th0=max(round(rand(1,3).*[1 1 4]*10),[1 1 1])./[1e-4 1 1e-4];
     th0(2)=2+rand(1,1)*2;
     % Examples close to those we've already done
     th0=[1e6 2.5 2e4];
+    th0=[1 2.2 2];
 
     try
         % Create the data patch, both in spatial and Fourier domain
