@@ -35,7 +35,7 @@ function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpi
 %
 % This only gets used in MLEOS/MLEROS/MLEROS0/MLEOSL thus far, their 'demo2'
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/23/2023
+% Last modified by fjsimons-at-alum.mit.edu, 05/30/2024
 
 defval('xver',1)
 
@@ -258,7 +258,7 @@ set(psXpix,'linew',0.5,'color','k')
 set(pobs,'linew',1.5,'color',grey(3.5))
 
 % Delete the one you know barely works
-delete(psF0)
+%delete(psF0)
 
 % Do this so the reduction looks slightly better
 set(yl,'FontSize',12)
@@ -270,7 +270,7 @@ nolabels(ah(2:np),2)
 movev(ah,-.1)
 % If params isn't a structure, we're not in the right mindset
 if isstruct(params)
-  t=ostitle(ah,params,name); movev(t,.4)
+  t=ostitle(ah,params,name,length(thhats(:,1))); movev(t,.4)
 end
 
 try 
@@ -377,7 +377,7 @@ if xver==1
         longticks(ah)
         %seemax([ah(1) ah(2)],1)
         %seemax([ah(2) ah(3)],2)
-        titi=ostitle(ah,params,name); movev(titi,-2)
+        titi=ostitle(ah,params,name,length(thhats(:,1)); movev(titi,-2)
         try
             tt=supertit(ah(1:np),sprintf('%s\n%s%s',sprintf(answs,answ{:}),pm,...
                                          'one sigma uncertainty based on the ensemble'));
