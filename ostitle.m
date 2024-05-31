@@ -39,16 +39,15 @@ struct2var(params)
 
 % Conditions pertain to cases with and without the kiso parameter
 % present, which really should be recorded in the simulations
-% So these numbers are going to be off and we'll need another way to differentiate
-if length(fieldnames(params))>=9
+% So these numbers are going to be off and we'll need another way to
+% differentiate, maybe just give it a whirl
+try
   t=supertit(ah,sprintf(str9,ovall,mlest,...
       '\Delta',DEL(1),'\Delta',DEL(2),'kg m^{-3}',...
       z2/1e3,NyNx,dydx.*NyNx/1e3,blurs));
-elseif length(fieldnames(params))>=6
+catch
   t=supertit(ah,sprintf(str5,ovall,mlest,...
       NyNx,dydx.*NyNx/1e3,blurs));
-else
-  error('OSTITLE: Not the expected number of fixed parameters!')
 end
 
 
