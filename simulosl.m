@@ -79,7 +79,7 @@ function varargout=simulosl(th0,params,xver,varargin)
 % simulosl('demo5',th0,p) % A really poor space-domain covariance estimator
 % simulosl('demo6',th0,p) % A better space-domain covariance estimator
 % simulosl('demo7',th0,p) % Illustrates p.blurs=-1 versus p.blurs=Inf
-% simulosl('demo8'x) % Illustrates p.blurs=-1 versus p.blurs=Inf
+% simulosl('demo8') % Illustrates p.blurs=-1 versus p.blurs=Inf
 %
 % SEE ALSO:
 %
@@ -89,7 +89,7 @@ function varargout=simulosl(th0,params,xver,varargin)
 % Last modified by fjsimons-at-alum.mit.edu, 12/18/2023
 % Last modified by olwalbert-at-princeton.edu, 12/18/2023
 
-% Make a demo8 with Baig's example
+% Make a demo9 with Baig's example
 
 % Here is the true parameter vector and the only variable that gets used 
 defval('th0',[1e6 1.5 2e4]);
