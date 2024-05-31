@@ -96,7 +96,7 @@ elseif strcmp(v,'demo2')
     defp=p; clear p
     % Now proceed with a fresh copy
     p.mask=defp;
-    % Simulate using invariant embedding, no taper
+    % Simulate using circulant embedding, no taper
     p.quart=0; p.blurs=Inf; p.kiso=NaN; clc;
     % Something manageable without overdoing it
     p.NyNx=[188 233]+randi(20,[1 2]);
@@ -104,14 +104,14 @@ elseif strcmp(v,'demo2')
     % Here is one that has failed in the past
     p.NyNx=[201 241];
 
-    N=30;
+    N=60;
     for index=1:N
         clc; disp(sprintf('\n Simulating all fields \n'))
 
         % Define the parameters for the two fields
         th1=[1 1.25 20000];
         th2=[1 1.75 30000];
-        
+
         % Simulate first field
         [Hx,th1,p,k,Hk,Sb1]=simulosl(th1,p,1);
         % Simulate second field
@@ -123,6 +123,8 @@ elseif strcmp(v,'demo2')
         % Are any of them bad?
         if max(Sb1./Sbar1)>20;keyboard ;end
         if max(Sb2./Sbar2)>20;keyboard ;end
+        % Reset to the original value
+        p.blurs=Inf;
         
         % How much should the masked area occupy?
         scl=[];
@@ -180,6 +182,9 @@ elseif strcmp(v,'demo2')
 
         % Pause so you can watch live
         pause(2)
+
+        % Reset to the original value
+        p.blurs=Inf;
     end
     % And now look at the statistics of the recovery
     disp(sprintf('\nFirst partial | Second partial\n'))
@@ -188,11 +193,13 @@ elseif strcmp(v,'demo2')
     disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat4.*scl4 thhat5.*scl5]'))
     disp(sprintf('\nMixed whole\n'))
     %disp(sprintf('%8.0f %5.2f %6.0f\n',[thhat3.*scl3]'))
-    keyboard
-
+    
     % Then plot these things using MLEPLOS
     mleplos(thhat1,th1,[],[],[],[],[],p,[],[])
     mleplos(thhat2,th2,[],[],[],[],[],p,[],[])
+
+    % Save some output for later?
+    keyboard
 elseif strcmp(v,'demo3')
     % Saved by hand and plot at the end
     maskitdemo2_10012023
