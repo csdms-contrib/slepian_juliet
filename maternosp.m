@@ -69,6 +69,8 @@ switch blurs
         % Blurs IS the refinement parameter; make new wavenumber grid. Make the
         % spectral-spectral portion of the spectral matrix, convolve in two
         % dimensions, and then subsample onto the original target grid
+
+        % Only for the BOXCAR at this point
         [Sk,k]=bluros(maternos(knums(params,1),th),params,xver);
     else
         % Here is the alternative EXACT way of doing it, which does away
