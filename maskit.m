@@ -104,15 +104,15 @@ elseif strcmp(v,'demo2')
     % Here is one that has failed in the past
     p.NyNx=[201 241];
 
-    N=300;
+    N=30;
     for index=1:N
         clc; disp(sprintf('\n Simulating all fields \n'))
 
         % Simulate first field
-        th1=[1 1.5 20000];
+        th1=[1 1.25 20000];
         [Hx,th1,p,k,Hk,Sb1]=simulosl(th1,p,1);
         % Simulate second field by making a small change
-        th2=th1; th2(2)=2.5; th2(3)=30000;
+        th2=th1; th2(2)=1.75; th2(3)=30000;
         [Gx,th2,p,k,Hk,Sb2]=simulosl(th2,p,1);
 
         % Very explicit comparison like BLUROSY
@@ -127,7 +127,8 @@ elseif strcmp(v,'demo2')
         % Now do the masking and the merging
         [Hm,cr,I,Gm,HG]=maskit(Hx,p,scl,Gx);
 
-        save ICFrance p HG I cr th1 th2
+        % Save data for subsequent visualization 
+        % save ICFrance p HG I cr th1 th2
 
         % Make a visual for good measure
         clf
@@ -171,10 +172,10 @@ elseif strcmp(v,'demo2')
         pause(5); clc; disp(sprintf('\n Estimating second partial field \n'))
         [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,thini1,p,[],[],[],xver);
 
-        % Now recover the parameters of HG without knowing of the partition
-        %p.taper=0;
-        %pause(5); clc; disp(sprintf('\n Estimating whole mixed field \n'))
-        %[thhat3(index,:),~,~,scl3(index,:)]=mleosl(HG,[],p,[],[],[],xver);
+        % Now recover the parameters of the merged field without knowing of the partition
+        % p.taper=0;
+        % pause(5); clc; disp(sprintf('\n Estimating whole mixed field \n'))
+        % [thhat3(index,:),~,~,scl3(index,:)]=mleosl(HG,[],p,[],[],[],xver);
     end
     % And now look at the statistics of the recovery
     disp(sprintf('\nFirst partial | Second partial\n'))
