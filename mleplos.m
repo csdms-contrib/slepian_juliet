@@ -98,7 +98,9 @@ for ind=1:np
     % Error estimate based on the median numerical Hessian matrix near estimate
     stdavhs=real(sqrt(covavhs(ind,ind)));
   else
-    stdavhs=NaN;
+      stdavhs=NaN;
+      % If you have nothing maybe make it zero so the second plot still goes
+      stdavhs=0;
   end
   % Collect them all
   stdavhss(ind)=stdavhs;
@@ -307,7 +309,7 @@ if xver==1
     clf
     pcomb=nchoosek(1:np,2);
     [ah,ha]=krijetem(subnum(1,3));
-    
+
     % Scale everything
     mobss=mobss./sclth0;
     stdavhss=stdavhss./sclth0;
