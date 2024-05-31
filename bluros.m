@@ -2,7 +2,7 @@ function varargout=bluros(S,params,xver)
 % [Sbar,k,c2,Fejk]=BLUROS(S,params,xver)
 %
 % Blurring of a spectral matrix with the periodogram of a spatial windowing
-% function (for now only the boxcar, hence the Fejer kernel), in the
+% function (for now only the BOXCAR, hence the Fejer kernel), in the
 % approximate, discretized, convolutional manner. The wavenumber-dependent input
 % is given on a grid that was specified to be an integer refinement from an
 % original that remains the target. The result is obtained by subsampling (or
