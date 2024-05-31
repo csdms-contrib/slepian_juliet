@@ -14,8 +14,9 @@ function t=ostitle(ah,params,ovall,numsim)
 %
 % t           Title handle
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/13/2023
+% Last modified by fjsimons-at-alum.mit.edu, 05/30/2024
 
+% Defaults are empty characters
 defval('ovall','')
 defval('numsim','')
 
@@ -38,11 +39,12 @@ struct2var(params)
 
 % Conditions pertain to cases with and without the kiso parameter
 % present, which really should be recorded in the simulations
-if length(fieldnames(params))>=8
+% So these numbers are going to be off and we'll need another way to differentiate
+if length(fieldnames(params))>=9
   t=supertit(ah,sprintf(str9,ovall,mlest,...
       '\Delta',DEL(1),'\Delta',DEL(2),'kg m^{-3}',...
       z2/1e3,NyNx,dydx.*NyNx/1e3,blurs));
-elseif length(fieldnames(params))>=5
+elseif length(fieldnames(params))>=6
   t=supertit(ah,sprintf(str5,ovall,mlest,...
       NyNx,dydx.*NyNx/1e3,blurs));
 else
