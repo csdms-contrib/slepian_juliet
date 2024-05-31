@@ -57,8 +57,8 @@ function varargout=simulosl(th0,params,xver,varargin)
 % k        Wavenumber(s) suitable for the data sets returned [rad/m]
 % Hk       A complex matrix of Fourier-domain observations, namely
 %          final surface topography [m]
-% Sb       The theoretical spectral matrix used in this process (all but SGP),
-%          OR: the actual periodogram that you make from these data (using SGP)
+% Sb       The THEORETICAL spectral matrix used in this process (all but SGP),
+%          OR: the ACTUAL periodogram that you make from these data (using SGP)
 % Lb       The Cholesky decomposition of the spectral matrix which you
 %          might use to evaluate the fit later on, in which case you
 %          don't need any of the previous output
@@ -86,8 +86,8 @@ function varargout=simulosl(th0,params,xver,varargin)
 % MLEOSL, LOADING, SIMULOS, EGGERS1, EGGERS2, EGGERS4, etc
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
-% Last modified by fjsimons-at-alum.mit.edu, 12/18/2023
 % Last modified by olwalbert-at-princeton.edu, 12/18/2023
+% Last modified by fjsimons-at-alum.mit.edu, 05/30/2024
 
 % Make a demo9 with Baig's example
 
@@ -177,6 +177,11 @@ if ~isstr(th0)
       % This may have implications later on, that we choose to ignore now,
       % an example is if some of this output were to be passed onto LKOSL
     end
+
+    % Apply the explicit taper
+    if length(params.taper)~=1
+        Hx=Hx.*params.taper(:);
+    end
   else
     % Make the Matern covariance OBJECT as required - vectorized
     %  Cmn=@(h) maternosy(sqrt([h(:,1)*params.dydx(1)].^2+[h(:,2)*params.dydx(2)].^2),th0);
@@ -201,23 +206,28 @@ if ~isstr(th0)
         Hx=Hx.*params.taper(:);
     end
 
-    % Spectral-domain result, don't really need it except for BLUROSY('demo2')
-    Hk=tospec(Hx,params)/(2*pi);
-    if length(params.taper)>1
-        % Adjust for the taper size - same call as in MLEOSL
-        Hk=Hk/sqrt(sum(params.taper(:).^2))*sqrt(prod(params.NyNx));
+    % Spectral-domain result, don't really need it except for BLUROSY('demo2') and MASKIT('demo2')
+    if nargout>4
+        Hk=tospec(Hx,params)/(2*pi);
+        if length(params.taper)>1
+            % Adjust for the taper size - same call as in MLEOSL
+            Hk=Hk/sqrt(sum(params.taper(:).^2))*sqrt(prod(params.NyNx));
+        end
+        
+        % I suppose we could get an instance from Hk, if not an average
+        % Let's make Sb the periodogram to look at later? And forget about Lb.
+        Lb=deal(NaN);
+        
+        % Make the PERIODOGRAM
+        Sb=Hk.*conj(Hk);
+        hermcheck(reshape(Sb,params.NyNx));
     end
-
-    % I suppose we could get an instance from Hk, if not an average
-    % Let's make Sb the periodogram to look at later? And forget about Lb.
-    Lb=deal(NaN);
-
-    % Make the PERIODOGRAM
-    Sb=Hk.*conj(Hk);
-    hermcheck(reshape(Sb,params.NyNx));
   end
 
   % Return the output if requested
+  defval('Hk',[])
+  defval('Sb',[])
+  defval('Lb',[])
   defval('gane',[])
   defval('miy',[])
   varns={Hx,   th0,params,k,Hk,   Sb,Lb,gane,miy};
