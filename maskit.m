@@ -211,7 +211,7 @@ elseif strcmp(v,'demo2')
 
     % And now look at the statistics of the recovery
     str0='%8.2f %5.2f %6.0f';
-    str1=sprintf('%s %s\n',str0);
+    str1=sprintf('%s %s\n',str0,str0);
     str2=sprintf('%s\n',str0);
     disp(sprintf('\nFirst partial | Second partial\n'))
     disp(sprintf(str1,[thhat1.*scl1 thhat2.*scl2]'))
