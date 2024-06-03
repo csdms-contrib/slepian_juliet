@@ -267,15 +267,22 @@ elseif strcmp(y,'demo1')
     % Annotate 
     title(sprintf('p.NyNx = [%i %i]',p.NyNx))
     xlabel('wavenumber')
-    ylabel('MATERNOS vs FFT(MATERNOSY)')
-elseif strcmp(y,'demo1')
-    % th0 = [1 1 1]; p = []; p.NyNx = [256 256]; p.dydx = [1 1]; 
-% y = linspace(0,sqrt(prod(p.dydx))*sqrt(prod(p.NyNx)),1000);
-% dCyth1 = maternosy(y,th0,1,1); Cy = maternosy(y,th0,1);
-% figure(); hold on; plot(y,dCyth1,'Marker','o'); plot(y,Cy);
-% dCyth2 = maternosy(y,th0,1,2); 
-% figure(); hold on; plot(y,dCyth2,'Marker','o'); plot(y,Cy);
-% dCyth3 = maternosy(y,th0,1,3);
-% figure(); hold on; plot(y,dCyth3); plot(y,Cy);
-
+    ylabel('MATERNOS 2s FFT(MATERNOSY)')
+elseif strcmp(y,'demo2')
+    keyboard
+    clf
+    th0 = [1 1 1]; p = []; p.NyNx = [256 256]; p.dydx = [1 1]; 
+    y = linspace(0,sqrt(prod(p.dydx))*sqrt(prod(p.NyNx)),1000);
+    % Calculate Matern Covariance
+    Cy = maternosy(y,th0,1);
+    % Calculate Matern Covariance derivatives
+    subplot(131)
+    dCyth1 = maternosy(y,th0,1); 
+    plot(y,dCyth1,'Marker','o'); hold on ; plot(y,Cy); hold off
+    subplot(132)
+    dCyth2 = maternosy(y,th0,2); 
+    plot(y,dCyth2,'Marker','o'); hold on ; plot(y,Cy); hold off
+    subplot(133)
+    dCyth3 = maternosy(y,th0,3);
+    plot(y,dCyth3,'Marker','o'); hold on; plot(y,Cy); hold off
 end
