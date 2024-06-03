@@ -45,7 +45,7 @@ function varargout=maternosy(y,th,dth,meth)
 % straight calculation:
 % 
 % nu=[1/3 1/2 1 3/2 5/2 31/2]; th0(2)=nu(randi(length(nu))); th0(2)
-% Cy=maternosy(y,th0,1); Cy2=maternosy(y,th0,2); difer(Cy/(Cy(1))-Cy2/Cy2(1))
+% Cy=maternosy(y,th0,[],1); Cy2=maternosy(y,th0,[],2); difer(Cy/(Cy(1))-Cy2/Cy2(1))
 %
 % Calculate the infinite smoothness, Gaussian, squared exponential case:
 %
