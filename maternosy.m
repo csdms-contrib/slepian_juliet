@@ -14,7 +14,7 @@ function varargout=maternosy(y,th,meth,dth)
 %          nu    The second Matern parameter [differentiability]
 %          rh    The third Matern parameter [range in units]
 % meth     1 straight up calculation
-%          2 analytical simplification for th(2)=n+1/2 smoothness
+%          2 analytical simplification for special values of th(end-1)
 % dth      1, 2, or 3 specifies which element of th gets differentiated
 %
 % OUTPUT:
@@ -44,8 +44,8 @@ function varargout=maternosy(y,th,meth,dth)
 %
 % maternosy('demo1')
 %
-% Last modified by fjsimons-at-alum.mit.edu, 04/30/2024
-% Last modified by olwalbert-at-princeton.edu, 04/30/2024
+% Last modified by fjsimons-at-alum.mit.edu, 06/03/2024
+% Last modified by olwalbert-at-princeton.edu, 06/03/2024
 
 if ~isstr(y)
     % Defaults
