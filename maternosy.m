@@ -44,8 +44,8 @@ function varargout=maternosy(y,th,dth,meth)
 % Confirmation that the special case simplifications are equivalent to the
 % straight calculation:
 % 
-% nu=[1/3 1/2 1 3/2 5/2 31/2]; th0(2)=nu(randi(length(nu))); th0(2)
-% Cy=maternosy(y,th0,[],1); Cy2=maternosy(y,th0,[],2); difer(Cy/(Cy(1))-Cy2/Cy2(1))
+% nu=[1/3 1/2 1 3/2 5/2 31/2]; th0(2)=nu(randi(length(nu))); 
+% Cy=maternosy(y,th0,[],1); Cy2=maternosy(y,th0,[],2); diferm(Cy/(Cy(1)),Cy2/Cy2(1))
 %
 % Calculate the infinite smoothness, Gaussian, squared exponential case:
 %
@@ -53,14 +53,7 @@ function varargout=maternosy(y,th,dth,meth)
 %
 % Calculate and visualize the partial derivatives: 
 %
-% th0 = [1 1 1]; p = []; p.NyNx = [256 256]; p.dydx = [1 1]; 
-% y = linspace(0,sqrt(prod(p.dydx))*sqrt(prod(p.NyNx)),1000);
-% dCyth1 = maternosy(y,th0,1,1); Cy = maternosy(y,th0,1);
-% figure(); hold on; plot(y,dCyth1,'Marker','o'); plot(y,Cy);
-% dCyth2 = maternosy(y,th0,1,2); 
-% figure(); hold on; plot(y,dCyth2,'Marker','o'); plot(y,Cy);
-% dCyth3 = maternosy(y,th0,1,3);
-% figure(); hold on; plot(y,dCyth3); plot(y,Cy);
+% maternosy('demo2')
 %
 % Demo1 provides a visual comparison of the general output of MATERNOS and
 % MATERNOSY as Fourier pairs:
@@ -253,9 +246,9 @@ elseif strcmp(y,'demo1')
     y=[-floor(p.NyNx(1)/2):1:+floor(p.NyNx(1)/2)-1]*p.dydx(1);
     [X,Y]=meshgrid(x,y); yy=sqrt(X.^2+Y.^2);
     % Evaluate the Matern spectral covariance
-    Sbb=v2s(maternos(k,th,2),p);
+    Sbb=v2s(maternos(k,th,[],2),p);
     % Evaluate the Matern correlation
-    Cy=maternosy(yy,th,2); difer(Cy(dci(1),dci(2))-th(1))
+    Cy=maternosy(yy,th,[],2); difer(Cy(dci(1),dci(2))-th(1))
 
     % Fourier transform the correlation to check its relation to the covariance
     Skk=fftshift(v2s(tospace(Cy,p),p));
@@ -275,4 +268,14 @@ elseif strcmp(y,'demo1')
     title(sprintf('p.NyNx = [%i %i]',p.NyNx))
     xlabel('wavenumber')
     ylabel('MATERNOS vs FFT(MATERNOSY)')
+elseif strcmp(y,'demo1')
+    % th0 = [1 1 1]; p = []; p.NyNx = [256 256]; p.dydx = [1 1]; 
+% y = linspace(0,sqrt(prod(p.dydx))*sqrt(prod(p.NyNx)),1000);
+% dCyth1 = maternosy(y,th0,1,1); Cy = maternosy(y,th0,1);
+% figure(); hold on; plot(y,dCyth1,'Marker','o'); plot(y,Cy);
+% dCyth2 = maternosy(y,th0,1,2); 
+% figure(); hold on; plot(y,dCyth2,'Marker','o'); plot(y,Cy);
+% dCyth3 = maternosy(y,th0,1,3);
+% figure(); hold on; plot(y,dCyth3); plot(y,Cy);
+
 end
