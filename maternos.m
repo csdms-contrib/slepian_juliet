@@ -43,8 +43,8 @@ function varargout=maternos(k,th,dth,d,meth)
 % Confirmation that the special case simplifications are equivalent to the
 % straight calculation:
 %
-% nus=[1/3,1,1/2,3/2,5/2,7/2,15/2]; th=[1 nus(randi(length(nus),1)) 1]
-% Sk=maternos(k,th,[],2,1); Sk2=maternos(k,th,[],2,2); all(Sk==Sk2)
+% nus=[1/3,1,1/2,3/2,5/2,7/2,15/2]; th=[1 nus(randi(length(nus),1)) 1];
+% Sk=maternos(k,th,[],2,1); Sk2=maternos(k,th,[],2,2); diferm(Sk,Sk2)
 %
 % Calculate and visualize the partial derivatives: 
 %
@@ -71,8 +71,6 @@ switch d
  otherwise
   pd=gamma(nu+d/2)/gamma(nu);
 end
-
-keyboard
 
 % Calculate the spectral density?
 if isempty(dth)
