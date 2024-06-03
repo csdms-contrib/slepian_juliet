@@ -146,6 +146,8 @@ if ~isstr(y)
       if dth==1
           % The partial derivative of Cy with respect to the variance, dCyds2
           Cy=2^(1-nu)/gamma(nu)*argu.^nu.*besselk(nu,argu);
+          % Supply the smallest arguments
+          Cy(y==0)=1;
       elseif dth==2
           % The partial derivative of Cy with respect to the smoothness, 
           % dCydnu; the derivative of the gamma function is provided by Eq.
@@ -215,11 +217,18 @@ if ~isstr(y)
               (besselk(nu,argu).*(0.5+log(argu/2)-psi(nu))-...
               argu.^nu/(2*nu).*(argu.*besselk(nu-1,argu)+...
                                 nu*besselk(nu,argu)).*double(dKdnuo));
+          % Supply the smallest arguments
+          Cy(y==0)=0;
+          % From the asymptotic expansion of Kn for small z, differentiated in Mathematica
+          %Cy=2^(1-nu)*s2/gamma(nu)*argu.^nu.*gamma(nu)*(argu/2)^(-nu)/2;
+          %bla=-1/4*pi^nu*(sqrt(nu/rh*y)).^(-nu)*gamma(nu).*(1+log(nu)-2*log(pi*rh)+2*log(y)-2*psi(nu));
       elseif dth==3
           % The partial derivative of Cy with respect to the range, dCydrho;
           % simplification of the derivative of the Bessel term with respect
           % to argument is made through Eq. 3.71.3 of Watson (1962)
           Cy=(s2/rh)*2^(1-nu)/gamma(nu)*argu.^(nu+1).*besselk(nu-1,argu);
+          % Supply the smallest arguments
+          Cy(y==0)=0;
       else
           error('Not a valid partial derivative index. Ask for dth=1,2,or 3.')
       end
@@ -271,27 +280,49 @@ elseif strcmp(y,'demo1')
     ylabel('MATERNOS 2s FFT(MATERNOSY)')
 elseif strcmp(y,'demo2')
     clf
-    th0 = [1 1 10]; p = []; p.NyNx = [256 256]; p.dydx = [1 1]; 
-    y = linspace(0,sqrt(prod(p.dydx))*sqrt(prod(p.NyNx)),1000);
+    th0 = [1 2 27]; p = []; p.NyNx = [256 256]; p.dydx = [1 1];
+
+    y = linspace(0,sqrt(prod(p.dydx)*prod(p.NyNx)),1000);
+    xels=[0 min(6*pi*th0(3),max(y))];
+    xels=xels+[-1 1]*range(xels)/20;
+    
     % Calculate Matern Covariance
-    Cy = maternosy(y,th0,1);
-    labs={'\sigma^2','nu','rho'};
+    labs={'\sigma^2','\nu','\rho'};
     % Calculate Matern Covariance derivatives
     for index=1:3
-        subplot(2,3,index)
-        pc(index)=plot(y,Cy);
-        ylim([0 th0(1)]+[-1 -1]*th0(1)/20)
-        xlim([0 10*pi*th0(3)]+[-1 -1]*10*pi*th0(3)/20)
-        title(sprintf('%s = %g','\nu',th0(2)))
-        
-        subplot(2,3,index+3)
+        ah1(index)=subplot(2,3,index);
+        pc(index)=plot(y,maternosy(y,th0,1),'k','LineWidth',1); hold on
+        % Let's add a few neighbors
+
+        % Percentage perturbation in each of the three parameters 
+        pc1(index)=plot(y,maternosy(y,th0.*(1+rindeks(eye(3),index)/20)),'r');
+        pc2(index)=plot(y,maternosy(y,th0.*(1-rindeks(eye(3),index)/20)),'b'); hold off
+
+        ylim([0 th0(1)]+[-1 1]*th0(1)/20)
+        %        ylim([-0.1 0.1])
+        xlim(xels)
+        if index==2
+            title(sprintf('%s = %g  | %s = %g | %s = %g',...
+                          '\sigma^2',th0(1),'\nu',th0(2),'\rho',th0(3)))
+        end
+        grid on
+        ylabel('C(y)')
+        xlabel('y')
+                
+        ah2(index)=subplot(2,3,index+3);
         zdiff=maternosy(y,th0,index);
-        pd(index)=plot(y,zdiff);
-        keyboard
+        pd(index)=plot(y,zdiff,'k');
         ylim(halverange(zdiff,105,NaN))
 
-        xlim([0 10*pi*th0(3)]+[-1 -1]*10*pi*th0(3)/20)
-        title(labs{index})
+        % if index==2
+        %     hold on
+        %     plot([1 1]*pi*th0(3)/2/sqrt(th0(2)),ylim)
+        %     hold off
+        % end
+        grid on
+        ylabel(sprintf('dC(y)/d%s',labs{index}))
+        xlabel('y')
+        xlim(xels)
     end
-    keyboard
+    longticks([ah1 ah2],2)
 end
