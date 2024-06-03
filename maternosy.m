@@ -142,9 +142,9 @@ elseif strcmp(y,'demo1')
     y=[-floor(p.NyNx(1)/2):1:+floor(p.NyNx(1)/2)-1]*p.dydx(1);
     [X,Y]=meshgrid(x,y); yy=sqrt(X.^2+Y.^2);
     % Evaluate the Matern spectral covariance
-    Sbb=v2s(maternos(k,th,2),p);
+    Sbb=v2s(maternos(k,th),p);
     % Evaluate the Matern correlation
-    Cy=maternosy(yy,th,2); difer(Cy(dci(1),dci(2))-th(1))
+    Cy=maternosy(yy,th); difer(Cy(dci(1),dci(2))-th(1))
 
     % Fourier transform the correlation to check its relation to the covariance
     Skk=fftshift(v2s(tospace(Cy,p),p));
