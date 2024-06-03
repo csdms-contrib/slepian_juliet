@@ -210,10 +210,11 @@ if ~isstr(y)
                        % NaNs and Inf when [1 1.5 1]?
               figure();plot(y(1:end-50),dKdnuo(1:end-50))
           end
+          % Now put things together
           Cy=s2*2^(1-nu)/gamma(nu)*argu.^nu.*...
               (besselk(nu,argu).*(0.5+log(argu/2)-psi(nu))-...
               argu.^nu/(2*nu).*(argu.*besselk(nu-1,argu)+...
-              nu*besselk(nu,argu)).*dKdnuo); 
+                                nu*besselk(nu,argu)).*double(dKdnuo));
       elseif dth==3
           % The partial derivative of Cy with respect to the range, dCydrho;
           % simplification of the derivative of the Bessel term with respect
@@ -269,20 +270,28 @@ elseif strcmp(y,'demo1')
     xlabel('wavenumber')
     ylabel('MATERNOS 2s FFT(MATERNOSY)')
 elseif strcmp(y,'demo2')
-    keyboard
     clf
-    th0 = [1 1 1]; p = []; p.NyNx = [256 256]; p.dydx = [1 1]; 
+    th0 = [1 1 10]; p = []; p.NyNx = [256 256]; p.dydx = [1 1]; 
     y = linspace(0,sqrt(prod(p.dydx))*sqrt(prod(p.NyNx)),1000);
     % Calculate Matern Covariance
     Cy = maternosy(y,th0,1);
+    labs={'\sigma^2','nu','rho'};
     % Calculate Matern Covariance derivatives
-    subplot(131)
-    dCyth1 = maternosy(y,th0,1); 
-    plot(y,dCyth1,'Marker','o'); hold on ; plot(y,Cy); hold off
-    subplot(132)
-    dCyth2 = maternosy(y,th0,2); 
-    plot(y,dCyth2,'Marker','o'); hold on ; plot(y,Cy); hold off
-    subplot(133)
-    dCyth3 = maternosy(y,th0,3);
-    plot(y,dCyth3,'Marker','o'); hold on; plot(y,Cy); hold off
+    for index=1:3
+        subplot(2,3,index)
+        pc(index)=plot(y,Cy);
+        ylim([0 th0(1)]+[-1 -1]*th0(1)/20)
+        xlim([0 10*pi*th0(3)]+[-1 -1]*10*pi*th0(3)/20)
+        title(sprintf('%s = %g','\nu',th0(2)))
+        
+        subplot(2,3,index+3)
+        zdiff=maternosy(y,th0,index);
+        pd(index)=plot(y,zdiff);
+        keyboard
+        ylim(halverange(zdiff,105,NaN))
+
+        xlim([0 10*pi*th0(3)]+[-1 -1]*10*pi*th0(3)/20)
+        title(labs{index})
+    end
+    keyboard
 end
