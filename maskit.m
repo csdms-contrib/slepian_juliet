@@ -106,109 +106,124 @@ elseif strcmp(v,'demo2')
     
     % Do all the tests or not
     xver=0;
-
+    % Decide on the length of the pause between displays, if any, 
     if xver==1
         pz=2;
     else
         pz=0.1;
     end
 
-    % Number of processors, must agree with your machine
-    NumWorkers=8;
-    % Initialize the pool of workers
-    if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
-
     % Define the parameters for the two fields
     th1=[1.50 0.75 30000];
     th2=[1.90 2.25 10000];
 
-    % Needing to be very explicit in order for parallel computing
+    % Needing to be very explicit in order for parallel computing to work with in the loop
     p.dydx=[10000 10000];
     p.taper=0; p.nugget=0;
     
+    % Number of processors, must agree with your machine
+    NumWorkers=8;
     % Number of identical experimnets to run experiments
-    N=2*NumWorkers+1;
-    parfor index=1:N
-        clc; disp(sprintf('\n Simulating all fields \n'))
+    N=2*NumWorkers;
 
-        % Simulate first field
-        [Hx,~,~,k,Hk,Sb1]=simulosl(th1,p,1);
-        % Simulate second field
-        [Gx,~,~,k,Hk,Sb2]=simulosl(th2,p,1);
+    % Save some output for later? Make new filename hash from all relevant input
+    fname=hash([struct2array(orderfields(p)) th1 th2 N],'SHA-1');
+    
+    % You need to have an environmental variable file structure set up
+    fnams=fullfile(getenv('IFILES'),'HASHES',sprintf('%s_%s.mat','MASKIT',fname));
 
-        % This is confusing PARFOR but works with FOR
-        % if xver==1
-        %     % Very explicit comparison like BLUROSY
-        %     p.blurs=-1; Sbar1=blurosy(th1,p,1); 
-        %     p.blurs=-1; Sbar2=blurosy(th2,p,1);
-        %     % Are any of them bad?
-        %     if max(Sb1./Sbar1)>20;keyboard ;end
-        %     if max(Sb2./Sbar2)>20;keyboard ;end
-        %     % Reset to the original value
-        %     p.blurs=Inf;
-        % end
+    % Run the experiment anew
+    if  ~exist(fnams,'file')
+        % Initialize the pool of workers
+        if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
+        % Run the experiment!
+        parfor index=1:N
+            clc; disp(sprintf('\n Simulating all fields \n'))
 
-        % How much should the masked area occupy?
-        scl=[];
-        % Now do the masking and the merging
-        [Hm,cr,I,Gm,HG]=maskit(Hx,p,scl,Gx);
+            % Simulate first field
+            [Hx,~,~,k,Hk,Sb1]=simulosl(th1,p,1);
+            % Simulate second field
+            [Gx,~,~,k,Hk,Sb2]=simulosl(th2,p,1);
 
-        % This is confusing PARFOR but works with FOR
-        % if xver==1
-        %     % Make a visual for good measure
-        %     clf
-        %     ah(1)=subplot(221); plotit(Hx,p,cr,th1)
-        %     ah(3)=subplot(223); plotit(Gx,p,cr,th2)
-        %     ah(4)=subplot(224); plotit(HG,p,cr,[])
-        %     movev(ah(4),0.25)
-        % end
+            % This is confusing PARFOR but works with FOR
+            % if xver==1
+            %     % Very explicit comparison like BLUROSY
+            %     p.blurs=-1; Sbar1=blurosy(th1,p,1); 
+            %     p.blurs=-1; Sbar2=blurosy(th2,p,1);
+            %     % Are any of them bad?
+            %     if max(Sb1./Sbar1)>20;keyboard ;end
+            %     if max(Sb2./Sbar2)>20;keyboard ;end
+            %     % Reset to the original value
+            %     p.blurs=Inf;
+            % end
 
-        % So HG is the mixed field
-        v=Hm; w=Gm; vw=HG;
+            % How much should the masked area occupy?
+            scl=[];
+            % Now do the masking and the merging
+            [Hm,cr,I,Gm,HG]=maskit(Hx,p,scl,Gx);
 
-        % As appropriate you'll force the use of BLUROSY in MATERNOSP in LOGLIOSL in MLEOSL
-        % This is confusing PARFOR but works with FOR
-        %p.blurs=-1;
+            % This is confusing PARFOR but works with FOR
+            % if xver==1
+            %     % Make a visual for good measure
+            %     clf
+            %     ah(1)=subplot(221); plotit(Hx,p,cr,th1)
+            %     ah(3)=subplot(223); plotit(Gx,p,cr,th2)
+            %     ah(4)=subplot(224); plotit(HG,p,cr,[])
+            %     movev(ah(4),0.25)
+            % end
 
-        % Make a close initial guess?
-        thini1(index,:)=th1+(-1).^randi(2,[1 3]).*th1/1000;
-        thini2(index,:)=th2+(-1).^randi(2,[1 3]).*th2/1000;
+            % So HG is the mixed field
+            v=Hm; w=Gm; vw=HG;
 
-        % Recover the parameters of the full original fields without any masking
-        % The relabeling is to make PARFOR work, with FOR they could all just be p
-        p1=p; p1.taper=0;
-        pause(pz); clc; disp(sprintf('\n Estimating first whole field \n'))
-        [thhat4(index,:),~,~,scl4(index,:)]=mleosl(Hx,thini1(index,:),p1,[],[],[],xver);
-        pause(pz); clc ; disp(sprintf('\n Estimating second whole field \n'))
-        [thhat5(index,:),~,~,scl5(index,:)]=mleosl(Gx,thini2(index,:),p1,[],[],[],xver);
+            % As appropriate you'll force the use of BLUROSY in MATERNOSP in LOGLIOSL in MLEOSL
+            % This is confusing PARFOR but works with FOR
+            %p.blurs=-1;
 
-        % Now recover the parameters of the mixed field but only in the region I or ~I
-        % Perform the optimization on the complement which should look like the first field
-        % The relabeling is to make PARFOR work, with FOR they could all just be p
-        p2=p; p2.taper=~I;
-        pause(pz); clc; disp(sprintf('\n Estimating first partial field \n'))
-        [thhat1(index,:),~,~,scl1(index,:)]=mleosl(HG,thini1(index,:),p2,[],[],[],xver);
-        
-        % Now recover the parameters of the insert which should look like the second field
-        % The relabeling is to make PARFOR work, with FOR they could all just be p
-        p3=p; p3.taper=I;
-        pause(pz); clc; disp(sprintf('\n Estimating second partial field \n'))
-        [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,thini2(index,:),p3,[],[],[],xver);
+            % Make a close initial guess?
+            thini1(index,:)=th1+(-1).^randi(2,[1 3]).*th1/1000;
+            thini2(index,:)=th2+(-1).^randi(2,[1 3]).*th2/1000;
 
-        % Now recover the parameters of the merged field without knowing of the partition
-        % The relabeling is to make PARFOR work, with FOR they could all just be p
-        p4=p; p4.taper=0;
-        pause(pz); clc; disp(sprintf('\n Estimating whole mixed field \n'))
-        [thhat3(index,:),~,~,scl3(index,:)]=mleosl(HG,[],p4,[],[],[],xver);
+            % Recover the parameters of the full original fields without any masking
+            % The relabeling is to make PARFOR work, with FOR they could all just be p
+            p1=p; p1.taper=0;
+            pause(pz); clc; disp(sprintf('\n Estimating first whole field \n'))
+            [thhat4(index,:),~,~,scl4(index,:)]=mleosl(Hx,thini1(index,:),p1,[],[],[],xver);
+            pause(pz); clc ; disp(sprintf('\n Estimating second whole field \n'))
+            [thhat5(index,:),~,~,scl5(index,:)]=mleosl(Gx,thini2(index,:),p1,[],[],[],xver);
 
-        % Pause so you can watch live (big pause if xver==0)
-        pause(pz)
+            % Now recover the parameters of the mixed field but only in the region I or ~I
+            % Perform the optimization on the complement which should look like the first field
+            % The relabeling is to make PARFOR work, with FOR they could all just be p
+            p2=p; p2.taper=~I;
+            pause(pz); clc; disp(sprintf('\n Estimating first partial field \n'))
+            [thhat1(index,:),~,~,scl1(index,:)]=mleosl(HG,thini1(index,:),p2,[],[],[],xver);
+            
+            % Now recover the parameters of the insert which should look like the second field
+            % The relabeling is to make PARFOR work, with FOR they could all just be p
+            p3=p; p3.taper=I;
+            pause(pz); clc; disp(sprintf('\n Estimating second partial field \n'))
+            [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,thini2(index,:),p3,[],[],[],xver);
 
-        % This is unnecessary for PARFOR but works with FOR
-        % Reset to the original values
-        %p.blurs=Inf; p.taper=0;
+            % Now recover the parameters of the merged field without knowing of the partition
+            % The relabeling is to make PARFOR work, with FOR they could all just be p
+            p4=p; p4.taper=0;
+            pause(pz); clc; disp(sprintf('\n Estimating whole mixed field \n'))
+            [thhat3(index,:),~,~,scl3(index,:)]=mleosl(HG,[],p4,[],[],[],xver);
+
+            % Pause so you can watch live (big pause if xver==0)
+            pause(pz)
+
+            % This is unnecessary for PARFOR but works with FOR
+            % Reset to the original values
+            %p.blurs=Inf; p.taper=0;
+        end
+
+        % Save all the output
+        save(fnams,'th1','th2','p','thhat1','thhat2','scl1','scl2','thini1','thini2','N')
+    else
+        keyboard
     end
-
+    
     % With PARFOR none of the once-used are available out of the loop
     [v,cr,I,w,vw]=deal(NaN);
     
@@ -224,46 +239,14 @@ elseif strcmp(v,'demo2')
     disp(sprintf(str2,[thhat3.*scl3]'))
     
     % Then plot these things using MLEPLOS, remember second field is the inserted one
-    mleplos(thhat1.*scl1,th1,[],[],[],[],[],p,[],[])
-    mleplos(thhat2.*scl2,th2,[],[],[],[],[],p,[],[])
+    % Save the figures bjootifooly
+    figure(1)
+    mleplos(thhat1.*scl1,th1,[],[],[],[],[],p,'title',[])
+    figdisp(sprintf('%s_1',pref(fnams)),[],[],2)
 
-    % Save some output for later? Make new filename hash from all relevant input
-    fname=hash([struct2array(orderfields(p)) th1 th2 N],'SHA-1');
-    % Perhaps put in ~/PROGRAMS/MFILES/olhede4/Simulations
-    save(fname,'th1','th2','p','thhat1','thhat2','scl1','scl2','thini1','thini2','N')
-elseif strcmp(v,'demo3')
-    % Saved by hand and plot at the end
-    maskitdemo2_10012023
-    th1=[1e+06  2.5  20000];
-    th2=[1e+06  2.5  30000];
-    p.NyNx=[205 252];
-    p.dydx=[10000 10000];
-    p.blurs=Inf; p.kiso=NaN;
-    % The first partial contains the second field
-    mleplos(trimit(FirstPartialSecondPartial(:,1:3),97),th2,[],[],[],[],[],p,'MASKIT-10012023-I')
-    figure(1)
-    figdisp('maskitdemo2_10012023_Ia',[],[],2)    
     figure(2)
-    figdisp('maskitdemo2_10012023_Ib',[],[],2)
-    % The second partial contains the first field
-    mleplos(trimit(FirstPartialSecondPartial(:,4:6),97),th1,[],[],[],[],[],p,'MASKIT-10012023-II')
-    figure(1)
-    figdisp('maskitdemo2_10012023_IIa',[],[],2)   
-    figure(2)
-    figdisp('maskitdemo2_10012023_IIb',[],[],2)
-    
-    % The first whole
-    mleplos(trimit(FirstWholeSecondWhole(:,1:3),97),th1,[],[],[],[],[],p,'MASKIT-10012023-0')
-    figure(1)
-    figdisp('maskitdemo2_10012023_0a',[],[],2)    
-    figure(2)
-    figdisp('maskitdemo2_10012023_0b',[],[],2)
-    % The second partial contains the first field
-    mleplos(trimit(FirstWholeSecondWhole(:,4:6),97),th2,[],[],[],[],[],p,'MASKIT-10012023-00')
-    figure(1)
-    figdisp('maskitdemo2_10012023_00a',[],[],2)   
-    figure(2)
-    figdisp('maskitdemo2_10012023_00b',[],[],2)
+    mleplos(thhat2.*scl2,th2,[],[],[],[],[],p,'title',[])
+    figdisp(sprintf('%s_1',pref(fnams)),[],[],2)
 end
 
 % Variable output
