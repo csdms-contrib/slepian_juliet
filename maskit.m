@@ -119,15 +119,15 @@ elseif strcmp(v,'demo2')
     if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
 
     % Define the parameters for the two fields
-    th1=[1.5 1.25 30000];
-    th2=[1.9 1.75 10000];
+    th1=[1.50 0.75 30000];
+    th2=[1.90 2.25 10000];
 
     % Needing to be very explicit in order for parallel computing
     p.dydx=[10000 10000];
     p.taper=0; p.nugget=0;
     
     % Number of identical experimnets to run experiments
-    N=5*NumWorkers+1;
+    N=2*NumWorkers+1;
     parfor index=1:N
         clc; disp(sprintf('\n Simulating all fields \n'))
 
@@ -171,29 +171,29 @@ elseif strcmp(v,'demo2')
         %p.blurs=-1;
 
         % Make a close initial guess?
-        thini1=th1+(-1).^randi(2,[1 3]).*th1/1000;
-        thini2=th2+(-1).^randi(2,[1 3]).*th2/1000;
+        thini1(index,:)=th1+(-1).^randi(2,[1 3]).*th1/1000;
+        thini2(index,:)=th2+(-1).^randi(2,[1 3]).*th2/1000;
 
         % Recover the parameters of the full original fields without any masking
         % The relabeling is to make PARFOR work, with FOR they could all just be p
         p1=p; p1.taper=0;
         pause(pz); clc; disp(sprintf('\n Estimating first whole field \n'))
-        [thhat4(index,:),~,~,scl4(index,:)]=mleosl(Hx,thini1,p1,[],[],[],xver);
+        [thhat4(index,:),~,~,scl4(index,:)]=mleosl(Hx,thini1(index,:),p1,[],[],[],xver);
         pause(pz); clc ; disp(sprintf('\n Estimating second whole field \n'))
-        [thhat5(index,:),~,~,scl5(index,:)]=mleosl(Gx,thini2,p1,[],[],[],xver);
+        [thhat5(index,:),~,~,scl5(index,:)]=mleosl(Gx,thini2(index,:),p1,[],[],[],xver);
 
         % Now recover the parameters of the mixed field but only in the region I or ~I
         % Perform the optimization on the complement which should look like the first field
         % The relabeling is to make PARFOR work, with FOR they could all just be p
         p2=p; p2.taper=~I;
         pause(pz); clc; disp(sprintf('\n Estimating first partial field \n'))
-        [thhat1(index,:),~,~,scl1(index,:)]=mleosl(HG,thini1,p2,[],[],[],xver);
+        [thhat1(index,:),~,~,scl1(index,:)]=mleosl(HG,thini1(index,:),p2,[],[],[],xver);
         
         % Now recover the parameters of the insert which should look like the second field
         % The relabeling is to make PARFOR work, with FOR they could all just be p
         p3=p; p3.taper=I;
         pause(pz); clc; disp(sprintf('\n Estimating second partial field \n'))
-        [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,thini2,p3,[],[],[],xver);
+        [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,thini2(index,:),p3,[],[],[],xver);
 
         % Now recover the parameters of the merged field without knowing of the partition
         % The relabeling is to make PARFOR work, with FOR they could all just be p
@@ -209,6 +209,9 @@ elseif strcmp(v,'demo2')
         %p.blurs=Inf; p.taper=0;
     end
 
+    % With PARFOR none of the once-used are available out of the loop
+    [v,cr,I,w,vw]=deal(NaN);
+    
     % And now look at the statistics of the recovery
     str0='%8.2f %5.2f %6.0f';
     str1=sprintf('%s %s\n',str0,str0);
@@ -225,8 +228,9 @@ elseif strcmp(v,'demo2')
     mleplos(thhat2.*scl2,th2,[],[],[],[],[],p,[],[])
 
     % Save some output for later? Make new filename hash from all relevant input
-    fname=hash([struct2array(orderfields(p)) th1 th2 N randi(100)],'SHA-1');
-    save(fname,'th1','th2','p','thhat1','thhat2','scl1','scl2','N')
+    fname=hash([struct2array(orderfields(p)) th1 th2 N],'SHA-1');
+    % Perhaps put in ~/PROGRAMS/MFILES/olhede4/Simulations
+    save(fname,'th1','th2','p','thhat1','thhat2','scl1','scl2','thini1','thini2','N')
 elseif strcmp(v,'demo3')
     % Saved by hand and plot at the end
     maskitdemo2_10012023
