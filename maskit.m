@@ -244,7 +244,7 @@ elseif strcmp(v,'demo2')
 
     % Then plot the estimates using MLEPLOS, remember second field is the inserted one
     figure(1)
-    mleplos(thhat1.*scl1,th1,[],[],[],[],[],p,p.mask,[])
+    mleplos(thhat1.*scl1,th1,[],[],[],[],[],p,sprintf('anti %s',p.mask),[])
 
     figure(1)
     figdisp(sprintf('%s_2a',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
