@@ -31,9 +31,8 @@ function varargout=maskit(v,p,scl,w)
 % maskit('demo1','england') % 'amazon', 'orinoco', for geographical variability
 % maskit('demo2') % A geographical region merging two fields, with estimation
 % maskit('demo2','england') % 'amazon', 'orinoco', for geographical variability
-% maskit('demo3') % Plotting results of previous demo
 %
-% Last modified by fjsimons-at-alum.mit.edu, 05/31/2024
+% Last modified by fjsimons-at-alum.mit.edu, 06/04/2024
 
 % The default is the demo, for once
 defval('v','demo1')
@@ -124,7 +123,7 @@ elseif strcmp(v,'demo2')
     % Number of processors, must agree with your machine
     NumWorkers=8;
     % Number of identical experimnets to run experiments
-    N=2*NumWorkers;
+    N=10*NumWorkers;
 
     % Save some output for later? Make new filename hash from all relevant input
     fname=hash([struct2array(orderfields(p)) th1 th2 N],'SHA-1');
@@ -137,6 +136,7 @@ elseif strcmp(v,'demo2')
         % Initialize the pool of workers
         if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
         % Run the experiment!
+
         parfor index=1:N
             clc; disp(sprintf('\n Simulating all fields \n'))
 
@@ -145,32 +145,11 @@ elseif strcmp(v,'demo2')
             % Simulate second field
             [Gx,~,~,k,Hk,Sb2]=simulosl(th2,p,1);
 
-            % This is confusing PARFOR but works with FOR
-            % if xver==1
-            %     % Very explicit comparison like BLUROSY
-            %     p.blurs=-1; Sbar1=blurosy(th1,p,1); 
-            %     p.blurs=-1; Sbar2=blurosy(th2,p,1);
-            %     % Are any of them bad?
-            %     if max(Sb1./Sbar1)>20;keyboard ;end
-            %     if max(Sb2./Sbar2)>20;keyboard ;end
-            %     % Reset to the original value
-            %     p.blurs=Inf;
-            % end
-
             % How much should the masked area occupy?
             scl=[];
+            
             % Now do the masking and the merging
             [Hm,cr,I,Gm,HG]=maskit(Hx,p,scl,Gx);
-
-            % This is confusing PARFOR but works with FOR
-            % if xver==1
-            %     % Make a visual for good measure
-            %     clf
-            %     ah(1)=subplot(221); plotit(Hx,p,cr,th1)
-            %     ah(3)=subplot(223); plotit(Gx,p,cr,th2)
-            %     ah(4)=subplot(224); plotit(HG,p,cr,[])
-            %     movev(ah(4),0.25)
-            % end
 
             % So HG is the mixed field
             v=Hm; w=Gm; vw=HG;
@@ -218,16 +197,27 @@ elseif strcmp(v,'demo2')
             %p.blurs=Inf; p.taper=0;
         end
 
-        % Save all the output
-        save(fnams,'th1','th2','p','thhat1','thhat2','scl1','scl2','thini1','thini2','N')
+        % Save all the output that you'll need later
+        save(fnams,'th1','th2','p','thhat1','thhat2','scl1','scl2',...
+             'thhat3','scl3','thhat4','scl4','thhat5','scl5','thini1','thini2','N')
     else
-        keyboard
+        % Load all the saved output
+        load(fnams)
+
+        % This was confusing PARFOR so we took it out of the loop
+        if xver==1
+            % Very explicit comparison like BLUROSY
+            p.blurs=-1; Sbar1=blurosy(th1,p,1); 
+            p.blurs=-1; Sbar2=blurosy(th2,p,1);
+            % Are any of them real bad?
+            if max(Sb1./Sbar1)>20; warning('You will want to review this code') ; end
+            if max(Sb2./Sbar2)>20; warning('You will want to review this code') ; end
+            % Reset to the original value
+            p.blurs=Inf;
+        end
     end
-    
-    % With PARFOR none of the once-used are available out of the loop
-    [v,cr,I,w,vw]=deal(NaN);
-    
-    % And now look at the statistics of the recovery
+
+    % And now look at the statistics of the recovery on screen
     str0='%8.2f %5.2f %6.0f';
     str1=sprintf('%s %s\n',str0,str0);
     str2=sprintf('%s\n',str0);
@@ -238,15 +228,39 @@ elseif strcmp(v,'demo2')
     disp(sprintf('\nMixed whole\n'))
     disp(sprintf(str2,[thhat3.*scl3]'))
     
-    % Then plot these things using MLEPLOS, remember second field is the inserted one
     % Save the figures bjootifooly
-    figure(1)
-    mleplos(thhat1.*scl1,th1,[],[],[],[],[],p,'title',[])
-    figdisp(sprintf('%s_1',pref(fnams)),[],[],2)
+    % Make a visual for good measure
+    figure(3)
+    % Remake one sampled field just to make the visual
+    [Hx,~,~,~,~,Sb1]=simulosl(th1,p,1);
+    [Gx,~,~,~,~,Sb2]=simulosl(th2,p,1);
+    [~,cr,~,~,HG]=maskit(Hx,p,[],Gx);
 
+    ah(1)=subplot(221); plotit(Hx,p,cr,th1)
+    ah(3)=subplot(223); plotit(Gx,p,cr,th2)
+    ah(4)=subplot(224); plotit(HG,p,cr,[])
+    movev(ah(4),0.25)
+    figdisp(sprintf('%s_1',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
+
+    % Then plot the estimates using MLEPLOS, remember second field is the inserted one
+    figure(1)
+    mleplos(thhat1.*scl1,th1,[],[],[],[],[],p,p.mask,[])
+
+    figure(1)
+    figdisp(sprintf('%s_2a',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
     figure(2)
-    mleplos(thhat2.*scl2,th2,[],[],[],[],[],p,'title',[])
-    figdisp(sprintf('%s_1',pref(fnams)),[],[],2)
+    figdisp(sprintf('%s_2b',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
+
+    figure(1)
+    mleplos(thhat2.*scl2,th2,[],[],[],[],[],p,p.mask,[])
+    figure(1)
+    figdisp(sprintf('%s_3a',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
+    figure(2)
+    figdisp(sprintf('%s_3b',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
+
+    % With PARFOR none of the once-used are available out of the loop but in
+    % this demo2 you don't want any output anyway, so put in empties
+    [v,cr,I,w,vw]=deal(NaN);
 end
 
 % Variable output
