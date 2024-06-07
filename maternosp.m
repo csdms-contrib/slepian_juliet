@@ -34,7 +34,8 @@ function [Sk,k]=maternosp(th,params,xver)
 %
 % MATERNOS, MATERNOSY, MATERNPRC, KNUMS, BLUROS, BLUROSY, BLURCHECK
 %
-% Last modified by fjsimons-at-alum.mit.edu, 12/19/2023
+% Last modified by owalbert-at-princeton.edu, 06/07/2024
+% Last modified by fjsimons-at-alum.mit.edu, 06/07/2024
 
 % Default is to oververify it all
 defval('xver','1')
@@ -51,7 +52,7 @@ switch blurs
     % The unblurred-property wavenumber grid
     k=knums(params); k=k(:);
     % disp(sprintf('%s without blurring',upper(mfilename)))
-    Sk=maternos(k,th,d);
+    Sk=maternos(k,th,[],d);
   otherwise
     if isinf(blurs)
         error('You should be calling MATERNOSY, not MATERNOSP!')
@@ -71,7 +72,7 @@ switch blurs
         % dimensions, and then subsample onto the original target grid
 
         % Only for the BOXCAR at this point
-        [Sk,k]=bluros(maternos(knums(params,1),th),params,xver);
+        [Sk,k]=bluros(maternos(knums(params,1),th,[],d),params,xver);
     else
         % Here is the alternative EXACT way of doing it, which does away
         % with the approximate convolutional refinement procedure
