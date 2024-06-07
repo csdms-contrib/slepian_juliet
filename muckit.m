@@ -198,10 +198,10 @@ keyboard
     
     % And now look at the statistics of the recovery
     disp(sprintf('\nWhole | Speckled\n'))
-    disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat1.*scl1 thhat2.*scl2]'))
+    disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat3.*scl3 thhat1.*scl1]'))
 
     disp(sprintf('\nWhole | Anti-Speckled\n'))
-    disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat1.*scl1 thhat3.*scl3]'))
+    disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat3.*scl3 thhat2.*scl2]'))
 
     % Save the figures bjootifooly
     % Remake one sampled field just to make the visual
