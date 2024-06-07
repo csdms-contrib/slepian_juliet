@@ -100,8 +100,8 @@ elseif strcmp(v,'demo2')
     % Something manageable without overdoing it
     p.NyNx=[188 233]+randi(20,[1 2]);
     % Something larger without overdoing it, check weirdness
-    % Here is one that has failed in the past
-    p.NyNx=[201 241];
+    % If you want to generate the same hash you need to keep the same dimensions
+    p.NyNx=[196 243];
     
     % Do all the tests or not
     xver=0;
@@ -113,8 +113,8 @@ elseif strcmp(v,'demo2')
     end
 
     % Define the parameters for the two fields
-    th1=[1.50 0.75 30000];
-    th2=[1.90 2.25 10000];
+    th1=[1.15 1.15 23000];
+    th2=[2.90 2.75 11300];
 
     % Needing to be very explicit in order for parallel computing to work with in the loop
     p.dydx=[10000 10000];
@@ -123,7 +123,7 @@ elseif strcmp(v,'demo2')
     % Number of processors, must agree with your machine
     NumWorkers=8;
     % Number of identical experiments to run experiments
-    N=10*NumWorkers;
+    N=3*NumWorkers;
 
     % Save some output for later? Make new filename hash from all relevant input
     fname=hash([struct2array(orderfields(p)) th1 th2 N],'SHA-1');
