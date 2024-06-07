@@ -88,8 +88,8 @@ elseif strcmp(v,'demo2')
     % Something manageable without overdoing it
     p.NyNx=[188 233]+randi(20,[1 2]);
     % Something larger without overdoing it, check weirdness
-    % Here is one that has failed in the past
-    p.NyNx=[201 241];
+    % If you want to generate the same hash you need to keep the same dimensions
+    p.NyNx=[196 243];
 
     % Do all the tests or not
     xver=0;
@@ -110,7 +110,7 @@ elseif strcmp(v,'demo2')
     % Number of processors, must agree with your machine
     NumWorkers=8;
     % Number of identical experiments to run experiments
-    N=2*NumWorkers;
+    N=1*NumWorkers;
 
     % Save some output for later? Make new filename hash from all relevant input
     fname=hash([struct2array(orderfields(p)) th      N],'SHA-1');
@@ -119,19 +119,19 @@ elseif strcmp(v,'demo2')
     fnams=fullfile(getenv('IFILES'),'HASHES',sprintf('%s_%s.mat','MUCKIT',fname));
 
     % Run the experiment anew
-    if ~exist(fnams,'file')
+    if ~exist(fnams,'file') || 1==1
         % Initialize the pool of workers
         if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
 
         % Run the experiment!
-        parfor index=1:N
+        for index=1:N
             clc; disp(sprintf('\n Simulating the field \n'))
 
             % Simulate the field
             Hx=simulosl(th,p,1);
 
             % How much should the surviving area occupy?
-            scl=[];
+            scl=0.25;
 
             % Now do the masking and the merging
             [Hm,cr,I,scl,Ham]=muckit(Hx,p,scl);
@@ -148,37 +148,46 @@ elseif strcmp(v,'demo2')
 
             % Recover the parameters of the full original field without any mucking
             % The relabeling is to make PARFOR work, with FOR they could all just be p
-            p1=p; p1.taper=0;
-            pause(pz); clc; disp(sprintf('\n Estimating first whole field \n'))
-            [thhat3(index,:),~,~,scl3(index,:)]=mleosl(Hx,thini(index,:),p,[],[],[],xver);
+            %            p1=p; p1.taper=0; p1=rmfield(p1,'mask');
+            %            pause(pz); clc; disp(sprintf('\n Estimating first whole field \n'))
+            %            [thhat3(index,:),~,~,scl3(index,:)]=mleosl(Hx,thini(index,:),p1,[],[],[],xver);
 
-	    % % Explicitly check the likelihood? Fix later
-	    % disp(sprintf('\nLast check on likelihood at the initial guess\n'))
-	    % logliosl(knums(p),thini./scl1(index,:),scl1(index,:),p,tospec(Hx(:),p)/(2*pi));
-	    % disp(sprintf('\nLast check on likelihood at the truth\n'))
-	    % logliosl(knums(p),th1./scl1(index,:),scl1(index,:),p,tospec(Hx(:),p)/(2*pi));
-	    % % --> inside protect by looking at momx?? That's where it goes wrong
+            % if xver==1
+            %     % % Explicitly check the likelihood? Fix later
+	    %     disp(sprintf('\n Likelihood at the initial guess %g\n',...
+	    %                  logliosl(knums(p1),thini(index,:)./scl3(index,:),scl3(index,:),p1,...
+            %                           tospec(Hx(:),p1)/(2*pi))));
+	    %          disp(sprintf('\n Likelihood at the truth    %g\n',...
+	    %               logliosl(knums(p1),th./scl3(index,:),scl3(index,:),p1,...
+            %                        tospec(Hx(:),p1)/(2*pi))));
+	    %     % % --> inside protect by looking at momx?? That's where it goes wrong
+            % end
 
             % Now recover the parameters of the speckled field and its complement
             % The relabeling is to make PARFOR work, with FOR they could all just be p
-            p2=p; p2.taper=~I;
+            p2=p; p2.taper=~I; p2.mask='random';
             pause(pz); clc; disp(sprintf('\n Estimating first speckled field \n'))
-            [thhat1(index,:),~,~,scl1(index,:)]=mleosl(Hm,thini(index,:),p,[],[],[],xver);
+            [thhat1(index,:),~,~,scl1(index,:)]=mleosl(Hm,thini(index,:),p2,[],[],[],xver);
 
-	    % % Explicitly check the likelihood? Fix later
-	    % disp(sprintf('\nLast check on likelihood at the initial guess\n'))
-	    % logliosl(knums(p),thini./scl1(index,:),scl1(index,:),p,...
-	    %          tospec(p.taper(:).*Hx(:),p)/(2*pi)/sqrt(sum(p.taper(:).^2))*sqrt(prod(p.NyNx)),1);
-	    % disp(sprintf('\nLast check on likelihood at the truth\n'))
-	    % logliosl(knums(p),th1./scl1(index,:),scl1(index,:),p,...
-	    %          tospec(p.taper(:).*Hx(:),p)/(2*pi)/sqrt(sum(p.taper(:).^2))*sqrt(prod(p.NyNx)),1);
+            if xver==1
+	        % Explicitly check the likelihood? Fix later
+	             disp(sprintf('\n Likelihood at the initial guess %g\n',...
+	                          logliosl(knums(p2),thini./scl1(index,:),scl1(index,:),p2,...
+	                                   tospec(p2.taper(:).*Hx(:),p2)/(2*pi)/sqrt(sum(p2.taper(:).^2))*sqrt(prod(p2.NyNx)),1)));
+	                  disp(sprintf('\n Likelihood at the truth    %g\n',...
+	                               logliosl(knums(p2),th1./scl1(index,:),scl1(index,:),p2,...
+	                                        tospec(p2.taper(:).*Hx(:),p2)/(2*pi)/sqrt(sum(p2.taper(:).^2))*sqrt(prod(p2.NyNx)),1)));
+            end
 
+keyboard
+            
             % Now recover the parameters of the speckled field and its complement
             % The relabeling is to make PARFOR work, with FOR they could all just be p
-            p3=p; p3.taper=I;
+            p3=p; p3.taper=I; p3.mask='random';
             pause(pz); clc; disp(sprintf('\n Estimating anti-speckled field \n'))
             [thhat2(index,:),~,~,scl2(index,:)]=mleosl(Ham,thini(index,:),p3,[],[],[],xver);
             
+
             % Pause so you can watch live (big pause if xver==0)
             pause(pz)
 
@@ -215,8 +224,6 @@ elseif strcmp(v,'demo2')
     t=title(sprintf('%i %% surviving',round(100*scl)));
     movev(t,-p.NyNx(1)/20)
 
-keyboard
-    
     % Then plot these things using MLEPLOS
     figure(1)
     mleplos(thhat1.*scl1,th,[],[],[],[],[],p,'speckle')
