@@ -132,7 +132,7 @@ elseif strcmp(v,'demo2')
     fnams=fullfile(getenv('IFILES'),'HASHES',sprintf('%s_%s.mat','MASKIT',fname));
 
     % Run the experiment anew
-    if ~exist(fnams,'file')
+    if ~exist(fnams,'file') % || 1==1
         % Initialize the pool of workers
         if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
 
