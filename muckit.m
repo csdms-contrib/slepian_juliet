@@ -109,8 +109,8 @@ elseif strcmp(v,'demo2')
     
     % Number of processors, must agree with your machine
     NumWorkers=8;
-    % Number of identical experimnets to run experiments
-    N=NumWorkers;
+    % Number of identical experiments to run experiments
+    N=2*NumWorkers;
 
     % Save some output for later? Make new filename hash from all relevant input
     fname=hash([struct2array(orderfields(p)) th      N],'SHA-1');
@@ -194,8 +194,6 @@ elseif strcmp(v,'demo2')
         load(fnams)
     end
 
-keyboard
-    
     % And now look at the statistics of the recovery
     disp(sprintf('\nWhole | Speckled\n'))
     disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat3.*scl3 thhat1.*scl1]'))
@@ -206,7 +204,7 @@ keyboard
     % Save the figures bjootifooly
     % Remake one sampled field just to make the visual
     Hx=simulosl(th,p,1);
-    [Hm,cr,I,scl]=muckit(Hx,p,scl);
+    [Hm,cr,I,scl]=muckit(Hx,p,[]);
 
     % Make a visual for good measure
     figure(3)
@@ -217,8 +215,16 @@ keyboard
     t=title(sprintf('%i %% surviving',round(100*scl)));
     movev(t,-p.NyNx(1)/20)
 
+keyboard
+    
     % Then plot these things using MLEPLOS
-    mleplos(thhat1,th,[],[],[],[],[],p,'MUCKIT-demo2')
+    figure(1)
+    mleplos(thhat1.*scl1,th,[],[],[],[],[],p,'speckle')
+    figure(1)
+    figdisp(sprintf('%s_2a',pref(sprintf('%s_%s.mat','MUCKIT',fname))),[],[],2)
+    clf
+    figure(2)
+    figdisp(sprintf('%s_2b',pref(sprintf('%s_%s.mat','MUCKI',fname))),[],[],2)
 end
 
 % Variable output
