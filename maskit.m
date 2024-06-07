@@ -122,7 +122,7 @@ elseif strcmp(v,'demo2')
     
     % Number of processors, must agree with your machine
     NumWorkers=8;
-    % Number of identical experimnets to run experiments
+    % Number of identical experiments to run experiments
     N=10*NumWorkers;
 
     % Save some output for later? Make new filename hash from all relevant input
