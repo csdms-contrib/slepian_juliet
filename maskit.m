@@ -32,7 +32,7 @@ function varargout=maskit(v,p,scl,w)
 % maskit('demo2') % A geographical region merging two fields, with estimation
 % maskit('demo2','england') % 'amazon', 'orinoco', for geographical variability
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/04/2024
+% Last modified by fjsimons-at-alum.mit.edu, 06/07/2024
 
 % The default is the demo, for once
 defval('v','demo1')
@@ -132,18 +132,18 @@ elseif strcmp(v,'demo2')
     fnams=fullfile(getenv('IFILES'),'HASHES',sprintf('%s_%s.mat','MASKIT',fname));
 
     % Run the experiment anew
-    if  ~exist(fnams,'file')
+    if ~exist(fnams,'file')
         % Initialize the pool of workers
         if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
-        % Run the experiment!
 
+        % Run the experiment!
         parfor index=1:N
             clc; disp(sprintf('\n Simulating all fields \n'))
 
             % Simulate first field
-            [Hx,~,~,k,Hk,Sb1]=simulosl(th1,p,1);
+            Hx=simulosl(th1,p,1);
             % Simulate second field
-            [Gx,~,~,k,Hk,Sb2]=simulosl(th2,p,1);
+            Gx=simulosl(th2,p,1);
 
             % How much should the masked area occupy?
             scl=[];
@@ -156,7 +156,7 @@ elseif strcmp(v,'demo2')
 
             % As appropriate you'll force the use of BLUROSY in MATERNOSP in LOGLIOSL in MLEOSL
             % This is confusing PARFOR but works with FOR
-            %p.blurs=-1;
+            % p.blurs=-1;
 
             % Make a close initial guess?
             thini1(index,:)=th1+(-1).^randi(2,[1 3]).*th1/1000;
@@ -196,25 +196,12 @@ elseif strcmp(v,'demo2')
             % Reset to the original values
             %p.blurs=Inf; p.taper=0;
         end
-
-        % Save all the output that you'll need later
+        % Save all the output that you'll need later, may add more later
         save(fnams,'th1','th2','p','thhat1','thhat2','scl1','scl2',...
              'thhat3','scl3','thhat4','scl4','thhat5','scl5','thini1','thini2','N')
     else
         % Load all the saved output
         load(fnams)
-
-        % This was confusing PARFOR so we took it out of the loop
-        if xver==1
-            % Very explicit comparison like BLUROSY
-            p.blurs=-1; Sbar1=blurosy(th1,p,1); 
-            p.blurs=-1; Sbar2=blurosy(th2,p,1);
-            % Are any of them real bad?
-            if max(Sb1./Sbar1)>20; warning('You will want to review this code') ; end
-            if max(Sb2./Sbar2)>20; warning('You will want to review this code') ; end
-            % Reset to the original value
-            p.blurs=Inf;
-        end
     end
 
     % And now look at the statistics of the recovery on screen
@@ -229,13 +216,26 @@ elseif strcmp(v,'demo2')
     disp(sprintf(str2,[thhat3.*scl3]'))
     
     % Save the figures bjootifooly
-    % Make a visual for good measure
-    figure(3)
     % Remake one sampled field just to make the visual
     [Hx,~,~,~,~,Sb1]=simulosl(th1,p,1);
     [Gx,~,~,~,~,Sb2]=simulosl(th2,p,1);
     [~,cr,~,~,HG]=maskit(Hx,p,[],Gx);
 
+    % This was confusing PARFOR so we took it out of the loop
+    if xver==1
+        % Very explicit comparison like BLUROSY
+        p.blurs=-1; Sbar1=blurosy(th1,p,1); 
+        p.blurs=-1; Sbar2=blurosy(th2,p,1);
+        % Are any of them real bad?
+        if max(Sb1./Sbar1)>20; warning('You will want to review this code') ; end
+        if max(Sb2./Sbar2)>20; warning('You will want to review this code') ; end
+        % Reset to the original value
+        p.blurs=Inf;
+    end
+    
+    % Make a visual for good measure
+    figure(3)
+    clf
     ah(1)=subplot(221); plotit(Hx,p,cr,th1)
     ah(3)=subplot(223); plotit(Gx,p,cr,th2)
     ah(4)=subplot(224); plotit(HG,p,cr,[])
@@ -243,14 +243,16 @@ elseif strcmp(v,'demo2')
     figdisp(sprintf('%s_1',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
 
     % Then plot the estimates using MLEPLOS, remember second field is the inserted one
+    % So this is the anti region
     figure(1)
     mleplos(thhat1.*scl1,th1,[],[],[],[],[],p,sprintf('anti %s',p.mask),[])
-
     figure(1)
     figdisp(sprintf('%s_2a',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
+    clf
     figure(2)
     figdisp(sprintf('%s_2b',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
-
+    clf
+    % An this is the selected region
     figure(1)
     mleplos(thhat2.*scl2,th2,[],[],[],[],[],p,p.mask,[])
     figure(1)
