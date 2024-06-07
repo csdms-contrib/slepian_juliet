@@ -68,7 +68,7 @@ defval('scl',ones(size(th)))
 th=th.*scl;
 
 if any(th<0)
-    % I had previously build the protection that the three Matern parameters
+    % I had previously built the protection that the three Matern parameters
     % should be positive by mirroring using % th([1 2 3])=abs(th([1 2 3]));
     % Thereby messing with the iteration path while sticking to FMINUNC instead
     % of FMINCON with positivity constraints. This often sent the smoothness
@@ -108,7 +108,7 @@ if xver==0
   % Do it all at once, don't save the wavenumber-dependent entities
   % Eq. (A52) in doi: 10.1093/gji/ggt056
   L=-mean(-log(S(ksel))-Xk(ksel));
-  Lk=NaN;
+  Lk=NaN;  
 elseif xver==1 || xver==2
   % Do save the wavenumber-dependent entities
   % FJS Will need to stick the deselected wavenumbers back in!
