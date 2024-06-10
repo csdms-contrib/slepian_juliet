@@ -1,6 +1,6 @@
-function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
+function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver)
 % [thhat,covFHh,lpars,scl,thini,params,Hk,k]=...
-%          MLEOSL(Hx,thini,params,algo,bounds,aguess,xver)
+%          MLEOSL(Hx,thini,params,algo,bounds,aguess,infinv,xver)
 %
 % Maximum-likelihood estimation for univariate Gaussian
 % multidimensional fields with isotropic Matern covariance
@@ -36,15 +36,16 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %           simulations for demo purposes, and on which "thini" will be
 %           based if that was left blank. If "aguess" is blank, there is
 %           a default. If "thini" is set, there is no need for "aguess"
-% xver      0 Minimal output, no extra verification steps
-%           1 Conduct extra verification steps
-%           2 Only minimize the log-likelihood function for parameters 
+% ifinv     ordered inversion flags for [s2 nu rho], e.g. [1 0 1]
+%           only minimizes the log-likelihood function for parameters 
 %             th(1:end-2) and th(end), and conduct extra verification steps; 
 %             smoothness parameter, nu=th(end-1), is fixed to the value 
 %             provided in thini, either directly or as default; this has 
 %             the effect of speeding up the estimation procedure but may 
 %             not be appropriate in the case of real data where smoothness
 %             of the random field realized by Hx remains unknown
+% xver      0 Minimal output, no extra verification steps
+%           1 Conduct extra verification steps
 %
 % OUTPUT:
 %
@@ -99,8 +100,8 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,xver)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by olwalbert-at-princeton.edu, 12/19/2023
-% Last modified by fjsimons-at-alum.mit.edu, 05/31/2024
+% Last modified by olwalbert-at-princeton.edu, 06/10/2024
+% Last modified by fjsimons-at-alum.mit.edu, 06/10/2024
 
 if ~isstr(Hx)
   defval('algo','unc')
@@ -144,7 +145,7 @@ if ~isstr(Hx)
   % Unless you supply an initial value, construct one from "aguess" by perturbation
   nperturb=0.25;
   % So not all the initialization points are the same!!
-  if xver==2
+  if ifinv==[1 0 1]
     defval('thini',[abs((1+nperturb)*randn(size(aguess(1:end-2))).*aguess(1:end-2)),...
         aguess(end-1), abs((1+nperturb)*randn(size(aguess(end))).*aguess(end))])
   else
@@ -227,7 +228,7 @@ if ~isstr(Hx)
   % The number of unique entries in an np*np symmetric matrix
   npp=np*(np+1)/2;
 
-  if (xver==1 || xver==2) && blurs>-1 && blurs<2 
+  if xver==1 && blurs>-1 && blurs<2 
     % Using the analytical gradient in the optimization is not generally a good
     % idea but if the likelihoods aren't blurred, you can set this option to
     % 'on' and then let MATLAB verify that the numerical calculations match
@@ -249,7 +250,7 @@ if ~isstr(Hx)
     switch algo
      case 'unc'
       % disp('Using FMINUNC for unconstrained optimization of LOGLIOSL')
-       if xver==2
+       if ifinv==[1 0 1]
            % we will only optimize for the variance and range parameters and
            % will take the set value of nu from thini
            t0=clock;
@@ -292,7 +293,7 @@ if ~isstr(Hx)
                   '\nHit the wall on differentiability... trying again %i/%i\n',...
                   nwi,nwh))
           end
-          if xver==2
+          if ininv==[1 0 1]
               % Only optimize for variance and range, fix value of nu given by
               % thini
               lb=bounds{5}./scl;lb=[lb(1) lb(3)];
@@ -375,7 +376,7 @@ if ~isstr(Hx)
   % Covariance from FMINUNC/FMINCON's numerical scaled Hessian NEAR estimate
   covh=inv(hes./matscl)/df;
   
-  if (xver==1 || xver==2) & verLessThan('matlab','8.4.0')
+  if xver==1 & verLessThan('matlab','8.4.0')
     % Try variable-precision arithmetic?
     vh=sym('vh',[np np]);
     for index=1:prod(size(vh))
@@ -400,7 +401,7 @@ if ~isstr(Hx)
   % Analytical calculations of the gradient and the Hessian poorly represent
   % the blurring (though it's much better than not trying at all), and thus,
   % are expected to be close to numerical results only without blurring
-  if xver==1 || xver==2
+  if xver==1
     % Analytic (poorly blurred) gradient, scaled for numerical comparison
     gros=gammiosl(k,thhat.*scl,params,Hk,xver).*scl(:);
 
@@ -456,7 +457,7 @@ if ~isstr(Hx)
   disp(sprintf(sprintf('%s : %s ',str0,str2),...
 	       'Estimated theta',thhat.*scl.*shats))
   disp(' ')
-  if xver==0 || xver==1 || xver==2
+  if xver==0 || xver==1
     disp(sprintf('%8.1fs per %i iterations or %5.1fs per %i function counts',...
                  ts/oput.iterations*100,100,ts/oput.funcCount*1000,1000))
     disp(sprintf('%s\n',repmat('_',119,1)))
