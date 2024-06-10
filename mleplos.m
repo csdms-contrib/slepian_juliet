@@ -404,11 +404,11 @@ if xver==1
                                          'one sigma uncertainty based on the ensemble'));
             movev(tt,-7)
         end
-        if ifinv==[1 0 1]
-            delete(ah([1 3]))
-        end
     end
-end    
+    if ifinv==[1 0 1]
+        delete(ah([1 3]))
+    end
+end 
 
 % Output
 varns={ah,ha,yl,xl,tl};
