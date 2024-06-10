@@ -154,6 +154,16 @@ elseif strcmp(v,'demo2')
             % Make a close initial guess?
             thini(index,:)=th+(-1).^randi(2,[1 3]).*th/1000;
 
+            % Don't perturb the thini for the one you don't want to move; could
+            % have also have stuck in th          into the aguess slot of
+            % MLEOSL, whence they would be appropriately (or not) perturbed
+            if opt.ifinv==[1 0 1]
+                % This didn't work
+                %thini(index,2)=th(2);
+                % But this did
+                thini(index,:)=th+(-1).^randi(2,[1 3]).*[th(1) 0 th(3)]/1000;
+            end
+
             % Recover the parameters of the full original field without any mucking
             % The relabeling is to make PARFOR work, with FOR they could all just be p
             p1=p; p1.taper=0; p1=rmfield(p1,'mask');
