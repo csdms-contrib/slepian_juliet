@@ -1,5 +1,5 @@
-function varargout=maskit(v,p,scl,w)
-% [v,cr,I,w,vw]=MASKIT(v,p,scl,w)
+function varargout=maskit(v,p,scl,w,opt)
+% [v,cr,I,w,vw]=MASKIT(v,p,scl,w,opt)
 %
 % Arbitrary masking of a gridded spatial field
 %
@@ -15,6 +15,9 @@ function varargout=maskit(v,p,scl,w)
 %         inequality at maximum always leaves one pixel rim; and
 %         not being used if an actual mask is input instead of a name
 % w       A second vector that is the unwrapping of a second matrix
+% opt     A field structure for optimization flags:
+%           algo   the optimization algorithm
+%           ifinv  ordered inversion flags for [s2 nu rho], e.g. [1 0 1] 
 %
 % OUTPUT:
 %
@@ -32,10 +35,13 @@ function varargout=maskit(v,p,scl,w)
 % maskit('demo2') % A geographical region merging two fields, with estimation
 % maskit('demo2','england') % 'amazon', 'orinoco', for geographical variability
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/07/2024
+% Last modified by owalbert-princeton.edu, 06/10/2024
+% Last modified by fjsimons-at-alum.mit.edu, 06/10/2024
 
 % The default is the demo, for once
 defval('v','demo1')
+fields={'algo','ifinv'};
+defstruct('opt',fields,{'unc',[1 1 1]});
 
 if ~isstr(v)
     % Get the mask by name
@@ -93,6 +99,9 @@ elseif strcmp(v,'demo2')
     % Capture the second input
     defval('p','france')
     defp=p; clear p
+    % Capture the fifth input
+    defval('opt',[])
+    
     % Now proceed with a fresh copy
     p.mask=defp;
     % Simulate using circulant embedding, no taper
@@ -101,8 +110,8 @@ elseif strcmp(v,'demo2')
     p.NyNx=[188 233]+randi(20,[1 2]);
     % Something larger without overdoing it, check weirdness
     % If you want to generate the same hash you need to keep the same dimensions
-    p.NyNx=[196 243];
-    
+    %    p.NyNx=[196 243];
+
     % Do all the tests or not
     xver=0;
     % Decide on the length of the pause between displays, if any, 
@@ -123,10 +132,10 @@ elseif strcmp(v,'demo2')
     % Number of processors, must agree with your machine
     NumWorkers=8;
     % Number of identical experiments to run experiments
-    N=3*NumWorkers;
+    N=2*NumWorkers;
 
     % Save some output for later? Make new filename hash from all relevant input
-    fname=hash([struct2array(orderfields(p)) th1 th2 N],'SHA-1');
+    fname=hash([struct2array(orderfields(p)) struct2array(orderfields(opt)) th1 th2 N],'SHA-1');
     
     % You need to have an environmental variable file structure set up
     fnams=fullfile(getenv('IFILES'),'HASHES',sprintf('%s_%s.mat','MASKIT',fname));
@@ -166,28 +175,28 @@ elseif strcmp(v,'demo2')
             % The relabeling is to make PARFOR work, with FOR they could all just be p
             p1=p; p1.taper=0;
             pause(pz); clc; disp(sprintf('\n Estimating first whole field \n'))
-            [thhat4(index,:),~,~,scl4(index,:)]=mleosl(Hx,thini1(index,:),p1,[],[],[],xver);
+            [thhat4(index,:),~,~,scl4(index,:)]=mleosl(Hx,thini1(index,:),p1,opt.algo,[],[],opt.ifinv,xver);
             pause(pz); clc ; disp(sprintf('\n Estimating second whole field \n'))
-            [thhat5(index,:),~,~,scl5(index,:)]=mleosl(Gx,thini2(index,:),p1,[],[],[],xver);
+            [thhat5(index,:),~,~,scl5(index,:)]=mleosl(Gx,thini2(index,:),p1,opt.algo,[],[],opt.ifinv,xver);
 
             % Now recover the parameters of the mixed field but only in the region I or ~I
             % Perform the optimization on the complement which should look like the first field
             % The relabeling is to make PARFOR work, with FOR they could all just be p
             p2=p; p2.taper=~I;
             pause(pz); clc; disp(sprintf('\n Estimating first partial field \n'))
-            [thhat1(index,:),~,~,scl1(index,:)]=mleosl(HG,thini1(index,:),p2,[],[],[],xver);
+            [thhat1(index,:),~,~,scl1(index,:)]=mleosl(HG,thini1(index,:),p2,opt.algo,[],[],opt.ifinv,xver);
             
             % Now recover the parameters of the insert which should look like the second field
             % The relabeling is to make PARFOR work, with FOR they could all just be p
             p3=p; p3.taper=I;
             pause(pz); clc; disp(sprintf('\n Estimating second partial field \n'))
-            [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,thini2(index,:),p3,[],[],[],xver);
+            [thhat2(index,:),~,~,scl2(index,:)]=mleosl(HG,thini2(index,:),p3,opt.algo,[],[],opt.ifinv,xver);
 
             % Now recover the parameters of the merged field without knowing of the partition
             % The relabeling is to make PARFOR work, with FOR they could all just be p
             p4=p; p4.taper=0;
             pause(pz); clc; disp(sprintf('\n Estimating whole mixed field \n'))
-            [thhat3(index,:),~,~,scl3(index,:)]=mleosl(HG,[],p4,[],[],[],xver);
+            [thhat3(index,:),~,~,scl3(index,:)]=mleosl(HG,[],             p4,opt.algo,[],[],opt.ifinv,xver);
 
             % Pause so you can watch live (big pause if xver==0)
             pause(pz)
