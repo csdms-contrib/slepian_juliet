@@ -40,8 +40,7 @@ function varargout=maskit(v,p,scl,w,opt)
 
 % The default is the demo, for once
 defval('v','demo1')
-fields={'algo','ifinv'};
-defstruct('opt',fields,{'unc',[1 1 1]});
+defstruct('opt',{'algo','ifinv'},{'unc',[1 1 1]});
 
 if ~isstr(v)
     % Get the mask by name
@@ -100,7 +99,9 @@ elseif strcmp(v,'demo2')
     defval('p','france')
     defp=p; clear p
     % Capture the fifth input
-    defval('opt',[])
+    defstruct('opt',{'algo','ifinv'},{[],[]});
+
+opt.ifinv=[1 0 1]
     
     % Now proceed with a fresh copy
     p.mask=defp;
@@ -111,6 +112,7 @@ elseif strcmp(v,'demo2')
     % Something larger without overdoing it, check weirdness
     % If you want to generate the same hash you need to keep the same dimensions
     %    p.NyNx=[196 243];
+    p.NyNx=[193 247];
 
     % Do all the tests or not
     xver=0;
@@ -145,6 +147,8 @@ elseif strcmp(v,'demo2')
         % Initialize the pool of workers
         if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
 
+        % Should we preallocate?
+        
         % Run the experiment!
         parfor index=1:N
             clc; disp(sprintf('\n Simulating all fields \n'))
@@ -171,6 +175,18 @@ elseif strcmp(v,'demo2')
             thini1(index,:)=th1+(-1).^randi(2,[1 3]).*th1/1000;
             thini2(index,:)=th2+(-1).^randi(2,[1 3]).*th2/1000;
 
+            % Don't perturb the thini for the one you don't want to move; could
+            % have also have stuck in th1 and th2 into the aguess slot of
+            % MLEOSL, whence they would be appropriately (or not) perturbed
+            if opt.ifinv==[1 0 1]
+                % This didn't work
+                %thini1(index,2)=th1(2);
+                %thini2(index,2)=th2(2);
+                % But this did
+                thini1(index,:)=th1+(-1).^randi(2,[1 3]).*[th1(1) 0 th1(3)]/1000;
+                thini2(index,:)=th2+(-1).^randi(2,[1 3]).*[th2(1) 0 th2(3)]/1000;
+            end
+            
             % Recover the parameters of the full original fields without any masking
             % The relabeling is to make PARFOR work, with FOR they could all just be p
             p1=p; p1.taper=0;
@@ -196,7 +212,8 @@ elseif strcmp(v,'demo2')
             % The relabeling is to make PARFOR work, with FOR they could all just be p
             p4=p; p4.taper=0;
             pause(pz); clc; disp(sprintf('\n Estimating whole mixed field \n'))
-            [thhat3(index,:),~,~,scl3(index,:)]=mleosl(HG,[],             p4,opt.algo,[],[],opt.ifinv,xver);
+            % Force the inversion of all parameters in this particular case 
+            [thhat3(index,:),~,~,scl3(index,:)]=mleosl(HG,[],             p4,opt.algo,[],[],[1 1 1],xver);
 
             % Pause so you can watch live (big pause if xver==0)
             pause(pz)
@@ -254,7 +271,7 @@ elseif strcmp(v,'demo2')
     % Then plot the estimates using MLEPLOS, remember second field is the inserted one
     % So this is the anti region
     figure(1)
-    mleplos(thhat1.*scl1,th1,[],[],[],[],[],p,sprintf('anti %s',p.mask),[])
+    mleplos(thhat1.*scl1,th1,[],[],[],[],[],p,sprintf('anti %s',p.mask),[],opt.ifinv)
     figure(1)
     figdisp(sprintf('%s_2a',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
     clf
@@ -263,7 +280,7 @@ elseif strcmp(v,'demo2')
     clf
     % An this is the selected region
     figure(1)
-    mleplos(thhat2.*scl2,th2,[],[],[],[],[],p,p.mask,[])
+    mleplos(thhat2.*scl2,th2,[],[],[],[],[],p,p.mask,[],opt.ifinv)
     figure(1)
     figdisp(sprintf('%s_3a',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
     figure(2)
