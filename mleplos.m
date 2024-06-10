@@ -1,5 +1,5 @@
-function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpix)
-% MLEPLOS(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpix)
+function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpix,ifinv)
+% MLEPLOS(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpix,ifinv)
 %
 % Graphical statistical evaluation of the maximum-likelihood inversion
 % results from the suite MLEOS, MLEROS, MLEROS0, MLEOSL. Displays
@@ -26,6 +26,7 @@ function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpi
 % params     The structure with the fixed parameters from the experiment
 % name       A name string for the title
 % thpix      The example estimate, randomly picked up
+% ifinv     ordered inversion flags for [s2 nu rho], e.g. [1 0 1]
 %
 % OUTPUT:
 %
@@ -35,7 +36,8 @@ function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpi
 %
 % This only gets used in MLEOS/MLEROS/MLEROS0/MLEOSL thus far, their 'demo2'
 %
-% Last modified by fjsimons-at-alum.mit.edu, 05/30/2024
+% Last modified by olwalbert-at-princeton.edu, 06/10/2024
+% Last modified by fjsimons-at-alum.mit.edu, 06/10/2024
 
 defval('xver',1)
 
@@ -118,7 +120,11 @@ for ind=1:np
   axes(ah(ind))
   % The "kernel density estimate"
   % Second input was a different default which we lowered
-  [a,bdens,c]=kde(thhats(:,ind),2^8);
+  try
+      [a,bdens,c]=kde(thhats(:,ind),2^8);
+  catch
+      a=Inf;
+  end
   if isinf(a) || any(bdens<-1e-10) || size(thhats,1)<50
     % If it's funky use the good old histogram
     [bdens,c]=hist(thhats(:,ind),max(size(thhats,1)/3,3));
@@ -130,6 +136,8 @@ for ind=1:np
                  upper(mfilename),sum(bdens)*indeks(diff(c),1)))
     disp(' ')
   end
+
+  % Note that there are changes that wreck this in 2023b (?)
   
   % Now plot it using a scale factor to remove the units from the y axis
   thhis(ind)=bar(c,sobs*bdens,1);
@@ -138,7 +146,10 @@ for ind=1:np
   stats=mobs+nstats*sobs;
   % What is the percentage captured within the range?
   nrx=20; nry=15;
-  set(ah(ind),'XLim',stats([1 end]),'XTick',stats,'XTickLabel',nstats)
+
+  try
+      set(ah(ind),'XLim',stats([1 end]),'XTick',stats,'XTickLabel',nstats)
+  end
 
   % Truth and range based on stdF0
   hold on
@@ -196,8 +207,10 @@ for ind=1:np
   delete(get(ah(ind+np),'Title'));
   delete(get(ah(ind+np),'XLabel'));
   % Label the sample values
-  set(ah(ind+np),'YLim',stats([1 end]),'YTick',stats,...		       
-		'YTickLabel',round(rondo*stats/sclth0(ind))/rondo);
+  try
+      set(ah(ind+np),'YLim',stats([1 end]),'YTick',stats,...		       
+	 'YTickLabel',round(rondo*stats/sclth0(ind))/rondo);
+  end
   hold on
   % Plot the sample mean and two standard deviations
   %e(ind)=plot(xlim,[mobs mobs],'-','Color',grey);
@@ -302,6 +315,10 @@ end
 
 if np>3; movev(tt,-4); else; movev(tt,-3.5); end
 
+if ifinv==[1 0 1]
+    delete(ah([2 5]))
+end
+
 % Make basic x-y plots of the parameters
 % FJS SHOULD CALL THIS MLETHPLOS
 if xver==1
@@ -354,8 +371,10 @@ if xver==1
 	       'ytick',round(rondo*[th0(p2)+vstats*sobss(p2)])/rondo)
         end
         axis square;  grid on
-        xlim(th0(p1)+tstats*sobss(p1))
-        ylim(th0(p2)+tstats*sobss(p2))
+        try
+            xlim(th0(p1)+tstats*sobss(p1))
+            ylim(th0(p2)+tstats*sobss(p2))
+        end
         % Color mix
         cmix=[0 0 0]; cmix([p1 p2])=1/2;
         set([p(ind) m(ind)],'MarkerFaceColor',cmix,'MarkerEdgeColor',cmix,'MarkerSize',2)
@@ -384,6 +403,9 @@ if xver==1
             tt=supertit(ah(1:np),sprintf('%s\n%s%s',sprintf(answs,answ{:}),pm,...
                                          'one sigma uncertainty based on the ensemble'));
             movev(tt,-7)
+        end
+        if ifinv==[1 0 1]
+            delete(ah([1 3]))
         end
     end
 end    
