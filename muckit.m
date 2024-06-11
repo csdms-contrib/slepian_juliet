@@ -63,9 +63,11 @@ if ~isstr(v)
     end
     w=v;
     % Apply the muck to the field
-    v(~I(:))=0;
+    v(~I(:))=NaN;
     % Apply the antimuck to the field
-    w(~~I(:))=0;
+    w(~~I(:))=NaN;
+    % Note that you must not feed fields with NaN into MLEOSL - the taper I will
+    % take of the selectivity
 elseif strcmp(v,'demo1')
     % Capture the second input
     defval('p','random')
