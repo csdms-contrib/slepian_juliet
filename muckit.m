@@ -140,7 +140,7 @@ elseif strcmp(v,'demo2')
         if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
 
         % Run the experiment!
-        for index=1:N
+        parfor index=1:N
             clc; disp(sprintf('\n Simulating the field \n'))
 
             % Simulate the field
@@ -179,14 +179,14 @@ elseif strcmp(v,'demo2')
             [thhat3(index,:),~,~,scl3(index,:)]=mleosl(Hx,thini1(index,:),p1,opt.algo,[],[],opt.ifinv,xver);
             
             if xver==1
-                % % Explicitly check the likelihood? Fix later
+                % Explicitly check the likelihood? Fix later
 	        disp(sprintf('\n Likelihood at the initial guess %g\n',...
 	                     logliosl(knums(p1),thini1(index,:)./scl3(index,:),scl3(index,:),p1,...
                                       tospec(Hx(:),p1)/(2*pi))));
 	        disp(sprintf('\n Likelihood at the truth    %g\n',...
 	                     logliosl(knums(p1),th1./scl3(index,:),scl3(index,:),p1,...
                                       tospec(Hx(:),p1)/(2*pi))));
-	        % % --> inside protect by looking at momx?? That's where it goes wrong
+	         % --> inside protect by looking at momx?? That's where it goes wrong
             end
 
             % Now recover the parameters of the speckled field and its complement
@@ -198,7 +198,7 @@ elseif strcmp(v,'demo2')
             if xver==1
 	        % Explicitly check the likelihood? Fix later
 	        disp(sprintf('\n Likelihood at the initial guess %g\n',...
-	                     logliosl(knums(p2),thini1./scl1(index,:),scl1(index,:),p2,...
+	                     logliosl(knums(p2),thini1(index,:)./scl1(index,:),scl1(index,:),p2,...
 	                              tospec(p2.taper(:).*Hx(:),p2)/(2*pi)/sqrt(sum(p2.taper(:).^2))*sqrt(prod(p2.NyNx)),1)));
 	        disp(sprintf('\n Likelihood at the truth    %g\n',...
 	                     logliosl(knums(p2),th1./scl1(index,:),scl1(index,:),p2,...
