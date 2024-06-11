@@ -205,14 +205,14 @@ elseif strcmp(v,'demo2')
             pause(pz); clc ; disp(sprintf('\n Estimating second whole field \n'))
             [thhat5(index,:),~,~,scl5(index,:)]=mleosl(Gx,thini2(index,:),p1,opt.algo,[],[],opt.ifinv,xver);
 
-            % Now recover the parameters of the mixed field but only in the region I or ~I
-            % Perform the optimization on the complement which should look like the first field
+            % Now recover the parameters of the mixed field but only in the region ~I
+            % Perform the optimization on the complement which should look like the FIRST field
             % The relabeling is to make PARFOR work, with FOR they could all just be p
             p2=p; p2.taper=~I;
             pause(pz); clc; disp(sprintf('\n Estimating first partial field \n'))
             [thhat1(index,:),~,~,scl1(index,:)]=mleosl(HG,thini1(index,:),p2,opt.algo,[],[],opt.ifinv,xver);
             
-            % Now recover the parameters of the insert which should look like the second field
+            % Now recover the parameters of the insert which should look like the SECOND field
             % The relabeling is to make PARFOR work, with FOR they could all just be p
             p3=p; p3.taper=I;
             pause(pz); clc; disp(sprintf('\n Estimating second partial field \n'))
@@ -279,7 +279,7 @@ elseif strcmp(v,'demo2')
     figdisp(sprintf('%s_1',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
 
     % Then plot the estimates using MLEPLOS, remember second field is the inserted one
-    % So this is the anti region
+    % So this is the ANTI region
     figure(1)
     mleplos(thhat1.*scl1,th1,[],[],[],[],[],p,sprintf('anti %s',p.mask),[],opt.ifinv)
     figure(1)
@@ -288,7 +288,7 @@ elseif strcmp(v,'demo2')
     figure(2)
     figdisp(sprintf('%s_2b',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
     clf
-    % An this is the selected region
+    % And this is the SELECTED region
     figure(1)
     mleplos(thhat2.*scl2,th2,[],[],[],[],[],p,p.mask,[],opt.ifinv)
     pause(1)
