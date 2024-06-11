@@ -79,7 +79,6 @@ elseif strcmp(v,'demo1')
     % Capture the third input, default is none, which defaults inside
     defval('scl',[])
     [Hm,I,~,scl,cr]=muckit(Hx,p,scl);
-
     clf
     ah(1)=subplot(121); plotit(Hx,p,cr,th)
     ah(2)=subplot(122); plotit(Hm,p,cr,[])
