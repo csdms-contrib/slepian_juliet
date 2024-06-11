@@ -84,13 +84,17 @@ elseif strcmp(v,'demo1')
     ah(2)=subplot(122); plotit(Hm,p,cr,[])
     t=title(sprintf('%i %% surviving',round(100*scl)));
     movev(t,-p.NyNx(1)/20)
-    v=Hm; [w,vw]=deal(NaN);
+    % Create right type of output even though there is non
+    v=Hm; w=NaN;
 elseif strcmp(v,'demo2')
     % Capture the second input
     defval('p','random')
     defp=p; clear p
     % Capture the fourth input
     defstruct('opt',{'algo','ifinv'},{[],[]});
+
+    % Change the below if you like
+    opt.ifinv=[1 1 1];
 
     % Now proceed with a fresh copy
     p.mask=defp;
@@ -148,8 +152,8 @@ elseif strcmp(v,'demo2')
             % Now do the masking and the merging
             [Hm,I,Ham,scl,cr]=muckit(Hx,p,scl);
 
-            % So HG is the mucked-up field
-            v=Hm;
+            % So Ham is the anti-mucked-up field
+            v=Hm; w=Ham;
 
             % As appropriate you'll force the use of BLUROSY in MATERNOSP in LOGLIOSL in MLEOSL
             % This is confusing PARFOR but works with FOR
@@ -251,6 +255,10 @@ elseif strcmp(v,'demo2')
     clf
     figure(2)
     figdisp(sprintf('%s_2b',pref(sprintf('%s_%s.mat','MUCKIT',fname))),[],[],2)
+
+    % With PARFOR none of the once-used are available out of the loop but in
+    % this demo2 you don't want any output anyway, so put in empties
+    [v,I,w,scl,cr]=deal(NaN);
 end
 
 % Variable output
