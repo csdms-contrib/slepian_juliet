@@ -317,8 +317,8 @@ elseif strcmp(v,'demo3')
 
     % Make a visual for good measure
     clf
-    ah(1)=subplot(221); plotit(v,p,cr,'v')
-    ah(3)=subplot(223); plotit(w,p,cr,'w')
+    ah(1)=subplot(221); plotit(v,p,cr,sprintf('%i %% v',round(100*scl)))
+    ah(3)=subplot(223); plotit(w,p,cr,sprintf('%i %% w',round(100*scl)))
     ah(4)=subplot(224); plotit(vw,p,cr,'vw')
     movev(ah(4),0.25)
 end
