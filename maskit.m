@@ -94,7 +94,9 @@ elseif strcmp(v,'demo1')
     p.mask=defp;
     p.quart=0; p.blurs=Inf; p.kiso=NaN; clc; 
     [Hx,th,p]=simulosl([],p,1);
-    [Hm,I,~,~,scl,cr]=maskit(Hx,p);
+    % Capture the third input, default is none, which defaults inside
+    defval('scl',[])
+    [Hm,I,~,~,scl,cr]=maskit(Hx,p,scl);
     clf
     subplot(121); plotit(Hx,p,cr,th)
     subplot(122); plotit(Hm,p,cr,[])
