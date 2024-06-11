@@ -170,7 +170,6 @@ elseif strcmp(th,'demo2')
     % density. We welcome variability around it, as this is in line with
     % the uncorrelated-wavenumber approximation of the debiased Whittle
     % approach, but we do fear systematic offsets.
-    defval('params',[188 233]+randi(20,[1 2]))
 
     % Number of iterations
     defval('xver',100);
@@ -178,17 +177,23 @@ elseif strcmp(th,'demo2')
     defval('method','efs')
     % Type of taper, e.g. boxcar, France, Ukraine
     defval('tsto',1)
+    % Field size 
+    defval('params',[188 233]+randi(20,[1 2]))
     
+    % BEGIN Figure for boxcar paper
+    params=[33 33]*2;
+    % Some Matern paramters
+    th=[1 2.5 1e3];
+    % Some number of iterations
+    xver=100;
+    % Taper type
+    tsto=1;
+    % END Figure for boxcar paper
+
     % Some combinations - SIMULOSL
     p.NyNx=[params(1) params(2)];
     p.dydx=1e3*[1 1];
-    % Some Matern paramters
-    th=1e6*[1 0.0000015 0.002]; 
 
-    % Try
-    th(2)=Inf
-    to be continued
-    XXX
     % Compare the average periodogram with the blurred spectral density
 
     % What kind of a test are we running? Boxcar, or France/Ukraine?
@@ -196,6 +201,7 @@ elseif strcmp(th,'demo2')
       case 1
         % Boxcar is 0 or 1 or ones
         p.taper=1;
+        p.mask='boxcar';
         % The mask parameter is irrelevant, though it might be the anti-taper
       case 2
         % Here's another one
@@ -209,7 +215,7 @@ elseif strcmp(th,'demo2')
         % Generate "mask" only, never mind what the data will be
         [~,~,I]=maskit(rand(p.NyNx),p);
         % Keep the mask as a taper or the taper as mask, for illustration only
-        p.taper=~I;
+        p.taper=I;
     end
     
     % Calculate expected periodogram, i.e. the appropriately blurred likelihood
@@ -220,23 +226,6 @@ elseif strcmp(th,'demo2')
     % Then for what comes next, to simulate data using SGP, force p.blurs=Inf
     p.blurs=Inf;
 
-    % First figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    figure(1)
-    clf
-    [ah,ha,H]=krijetem(subnum(2,3));
-    
-    % The spatial domain taper
-    axes(ah(4))
-    if length(p.taper)==1; p.taper=ones(p.NyNx); end
-    imagesc(p.taper); axis image
-    t(4)=title('taper');
-
-    % The expectation of the periodogram
-    axes(ah(3))
-    imagesc(log10(v2s(Sbar,p))); axis image
-    t(3)=title(sprintf('%s [%g %g %g] | expectation',...
-                       '\theta =',th./[1 1 sqrt(prod(p.dydx))]));
-    
     % One random one from the sequence will be shown
     randix=randi(xver);
     
@@ -247,16 +236,11 @@ elseif strcmp(th,'demo2')
         % Simulate sequentially, collect the expected periodogram, and
         % make the average periodogram
         [Hx,th0,p,k,Hk,Sb,Lb,gane,miy]=simulosl(th,p);
-        % Are none of them bad?
-        if max(Sb./Sbar)>20;keyboard ;end
+        % Are none of them really bad?
+        if max(Sb./Sbar)>20; warning('ratio seems bad') ; end
         if index==randix;
-            axes(ah(1))
-            imagefnan([1 1],p.NyNx([2 1]),v2s(Hx,p),[],halverange(Hx,75)); axis image ij
-            t(1)=title(sprintf('Realization # %i',randix));
-            
-            axes(ah(2))
-            imagesc(log10(v2s(Sb,p))); axis image
-            t(2)=title(sprintf('Realization # %i',randix));
+            % Keep the special ones for plotting later
+            Hxx=Hx; Sbx=Sb;
             % This is the special one that we shall plot later on
             Xk=Sb./Sbar; varibal='X';
         end
@@ -269,7 +253,34 @@ elseif strcmp(th,'demo2')
     end 
     % Mean ratio over the realizations
     Sbb=Sbb/xver;
+    % Number of standard deviations for the axis limits and color bars
+    nsig=2;
 
+    % First figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    figure(1)
+    clf
+    [ah,ha,H]=krijetem(subnum(2,3));
+
+    axes(ah(1))
+    imagefnan([1 1],p.NyNx([2 1]),v2s(Hxx,p),[],th(1)*[-3 3]); axis image ij
+    t(1)=title(sprintf('field # %i',randix));
+    
+    axes(ah(2))
+    imagesc(log10(v2s(Sbx,p))); axis image
+    t(2)=title(sprintf('periodogram # %i',randix));
+
+    % The spatial domain taper
+    axes(ah(4))
+    if length(p.taper)==1; p.taper=ones(p.NyNx); end
+    imagesc(p.taper); axis image
+    t(4)=title('taper');
+
+    % The expectation of the periodogram
+    axes(ah(3))
+    imagesc(log10(v2s(Sbar,p))); axis image
+    t(3)=title(sprintf('expectation | %s [%g %g %gx]',...
+                       '\theta =',th./[1 1 sqrt(prod(p.dydx))]));
+    
     % Then compare with the thing coming out of BLUROSY
     axes(ah(6))
     imagesc(log10(v2s(Sbb,p))); axis image
@@ -280,7 +291,7 @@ elseif strcmp(th,'demo2')
     t(5)=title(sprintf('(aver / expec), m %4.2f, s %4.2f',...
                        m(end),s(end)));
     try
-        set(ah(5),'clim',m(end)+[-1 1]*2*s(end))
+        set(ah(5),'clim',m(end)+[-1 1]*nsig*s(end))
     end
     
     % Clean that sh*t up
@@ -296,7 +307,7 @@ elseif strcmp(th,'demo2')
     % serre(H,1,'across')
     serre(H',0.5,'down')
     movev(t,-p.NyNx(1)/20)
-    figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i',p.NyNx,xver),[],2)
+    figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i-%3.3i_fld',p.NyNx,tsto,xver),[],2)
 
     % Second figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     figure(2)
@@ -312,8 +323,8 @@ elseif strcmp(th,'demo2')
     cax=[0 3*df];
     ly=p.NyNx(1);
     lx=p.NyNx(2);
-    ylis=[0.5 ly/2 ly+0.5];
-    xlis=[0.5 lx/2 lx+0.5];
+    ylis=unique([1 dci(2) p.NyNx(2)]);
+    xlis=unique([1 dci(1) p.NyNx(1)]);
     cborien='vert';
 
     axes(ah(1))
@@ -370,7 +381,7 @@ elseif strcmp(th,'demo2')
     yl(2)=ylabel(sprintf('observed 2%s',varibal));
     set(gca,'xtick',xlls,'ytick',xlls)
 
-    allg=~isinf(Xk);sum(allg);
+    allg=~isinf(Xk); sum(allg);
 
     % Test for departure of chi-squaredness via the "magic" parameter which
     % This is the same as what comes out of LOGLIOSL etc
@@ -386,50 +397,59 @@ elseif strcmp(th,'demo2')
     movev(t(2),xll(2)/40)
     
     axes(ah(3))
-    imagefnan([xlis(1) xlis(end)],[xlis(end) xlis(1)],...
+    imagefnan([xlis(1) ylis(end)],[xlis(end) ylis(1)],...
               v2s(Xk,p),'gray',cax,[],1); axis image square
-    set(ah(3),'xtick',xlis,'XtickLabel',[-lx/2 0 lx/2],...
-	  'ytick',xlis,'YtickLabel',[-ly/2 0 ly/2])
+    set(ah(3),'xtick',xlis,'XtickLabel',[-1 0 1],...
+	  'ytick',ylis,'YtickLabel',[-1 0 1])
     longticks(ah(3))
-    xl(3)=xlabel('wavenumber index'); 
-    yl(3)=ylabel('wavenumber index'); 
+    xl(3)=xlabel('relative wavenumber'); 
+    yl(3)=ylabel('relative wavenumber');
+    t(3)=title(sprintf('%s | %i x %i | %s = [%g %g %gx]',p.mask,p.NyNx,'\theta',...
+                       th./[1 1 sqrt(prod(p.dydx))]));
+    movev(t(3),ylis(end)/20)
     delete(ah([4:6]))
     % Cosmetics from EGGERS6
     axes(ah(3))
     [cb,xcb]=addcb(cborien,cax,cax,'gray',df,1);
     axes(cb)
-    moveh(cb,.002*lx)
     set(xcb,'string',xstr)
     set(cb,'YAxisLocation','right')
     set(cb,'position',...
-       [getpos(cb,1) getpos(ah(3),2) getpos(cb,3) getpos(ah(3),4)])
-    shrink(cb,0.97,1.01)
-    
+           [getpos(ah(3),1)+getpos(ah(3),3)*1.1 getpos(ah(3),2) getpos(cb,3) getpos(ah(3),4)])
+    shrink(cb,1,1.15)
+
+    % Control all axes and font sizes at the same time
     set(ah(1:3),'FontSize',8)
     set(t,'FontSize',8-1)
 
-    figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i_chi',p.NyNx,xver),[],2)
+    figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i-%3.3i_chi',p.NyNx,tsto,xver),[],2)
 
     % Third figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     figure(3)
     clf
-    H=errorbar(1:xver,m,-2*s,2*s);
+    H=errorbar(1:xver,m,-nsig*s,nsig*s);
     try
-        set(getkids(H,1),'LineWidth',2)
+        set(getkids(H,1),'LineWidth',0.5)
         set(getkids(H,2),'Color',grey); 
     catch
-        H.LineWidth=1;
+        H.LineWidth=0.5;
         H.Color=grey;
     end
     longticks(gca,2)
-    axis tight; grid on; xlabel('Sample size'); 
-    ylabel('Ratio of average to expected periodogram')
+    axis tight; grid on; xlabel('sample size'); 
+    ylabel(sprintf('average / expected periodogram | %i sigma',nsig))
+    xlim([0 xver+1])
     set(gca,'xtick',[1 10:10:xver])
-    shrink(gca,1,1.1)
-    ylim([min(m-s*2)*1.1 max(m+2*s)*1.1])
-    title(sprintf('%i x %i | %s = [%g %g %g]',p.NyNx,'\theta',...
-                  th./[1 1 sqrt(prod(p.dydx))]))
-    figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i-%3.3i',p.NyNx,1,xver),[],2)
+    shrink(gca,1,1.5)
+    ylim([min(m-s*2) max(m+2*s)]*1.1)
+
+    hold on
+    plot(1:xver,m,'LineWidth',1,'Color','b')
+    hold off
+    tt=title(sprintf('%s | %i x %i | %s = [%g %g %gx]',p.mask,p.NyNx,'\theta',...
+                     th./[1 1 sqrt(prod(p.dydx))]));
+    movev(tt,range(ylim)/30)
+    figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i-%3.3i_std',p.NyNx,tsto,xver),[],2)
 elseif strcmp(th,'demo3')
     % Simulate some random data with default p.blurs=Inf and p.taper=0
     [H,th,p]=simulosl;
