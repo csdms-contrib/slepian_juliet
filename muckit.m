@@ -235,21 +235,21 @@ elseif strcmp(v,'demo2')
 
     % Save the figures bjootifooly
     % Remake one sampled field just to make the visual
-    Hx=simulosl(th,p,1);
+    Hx=simulosl(th1,p,1);
     [Hm,cr,I,scl]=muckit(Hx,p,[]);
 
     % Make a visual for good measure
     figure(3)
     clf
-    ah(1)=subplot(121); plotit(Hx,p,[],th)
+    ah(1)=subplot(121); plotit(Hx,p,[],th1)
     xlabel('Original field')
-    ah(2)=subplot(122); plotit(Hm,p,[],th); 
+    ah(2)=subplot(122); plotit(Hm,p,[],th1); 
     t=title(sprintf('%i %% surviving',round(100*scl)));
     movev(t,-p.NyNx(1)/20)
 
     % Then plot these things using MLEPLOS
     figure(1)
-    mleplos(thhat1.*scl1,th,[],[],[],[],[],p,'speckle')
+    mleplos(thhat1.*scl1,th1,[],[],[],[],[],p,'speckle')
     figure(1)
     figdisp(sprintf('%s_2a',pref(sprintf('%s_%s.mat','MUCKIT',fname))),[],[],2)
     clf
