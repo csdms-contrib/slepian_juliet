@@ -84,6 +84,8 @@ if ~isstr(v)
     end
     % Apply the mask to the first field
     v(~I(:))=NaN;
+    % Note that you must not feed fields with NaN into MLEOSL - the taper I will
+    % take of the selectivity
 elseif strcmp(v,'demo1')
     % Capture the second input
     defval('p','france')
