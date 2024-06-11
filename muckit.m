@@ -227,11 +227,14 @@ elseif strcmp(v,'demo2')
     end
 
     % And now look at the statistics of the recovery
+    str0='%8.2f %5.2f %6.0f';
+    str1=sprintf('%s %s\n',str0,str0);
+    str2=sprintf('%s\n',str0);
     disp(sprintf('\nWhole | Speckled\n'))
-    disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat3.*scl3 thhat1.*scl1]'))
+    disp(sprintf(str1,[thhat3.*scl3 thhat1.*scl1]'))
 
     disp(sprintf('\nWhole | Anti-Speckled\n'))
-    disp(sprintf('%8.0f %5.2f %6.0f  %8.0f %5.2f %6.0f\n',[thhat3.*scl3 thhat2.*scl2]'))
+    disp(sprintf(str2,[thhat3.*scl3 thhat2.*scl2]'))
 
     % Save the figures bjootifooly
     % Remake one sampled field just to make the visual
@@ -249,7 +252,7 @@ elseif strcmp(v,'demo2')
 
     % Then plot these things using MLEPLOS
     figure(1)
-    mleplos(thhat1.*scl1,th1,[],[],[],[],[],p,'speckle')
+    mleplos(thhat1.*scl1,th1,[],[],[],[],[],p,'speckle',[],opt.ifinv)
     figure(1)
     figdisp(sprintf('%s_2a',pref(sprintf('%s_%s.mat','MUCKIT',fname))),[],[],2)
     clf
