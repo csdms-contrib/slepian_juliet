@@ -29,6 +29,7 @@ function varargout=muckit(v,p,scl,opt)
 % muckit('demo1') % A uniformly random masking a single field
 % muckit('demo1',[],rand) % for a different percentage of survivors
 % muckit('demo2'); % To do a serious of mock muck inversions
+% maskit('demo3',[],rand) % Illustrating the nomenclature
 %
 % Last modified by owalbert-princeton.edu, 06/11/2024
 % Last modified by fjsimons-at-alum.mit.edu, 06/11/2024
@@ -104,7 +105,7 @@ elseif strcmp(v,'demo2')
     p.NyNx=[188 233]+randi(20,[1 2]);
     % Something larger without overdoing it, check weirdness
     % If you want to generate the same hash you need to keep the same dimensions
-    p.NyNx=[196 243];
+    % p.NyNx=[196 243];
 
     % Do all the tests or not
     xver=0;
@@ -262,6 +263,24 @@ elseif strcmp(v,'demo2')
     % With PARFOR none of the once-used are available out of the loop but in
     % this demo2 you don't want any output anyway, so put in empties
     [v,I,w,scl,cr]=deal(NaN);
+elseif strcmp(v,'demo3')
+    th1=[1.15 1.15 23000];
+    p.mask='random';
+    % Something manageable without overdoing it
+    p.NyNx=[188 233]+randi(20,[1 2]);
+    % Capture the third input, default is none, which defaults inside
+    defval('scl',[])
+
+    % Remake one sampled field just to make the visual
+    [Hx,~,p,~,~,Sb1]=simulosl(th1,p);
+    [v,I,w,scl,cr]=muckit(Hx,p,scl);
+
+    % Make a visual for good measure
+    clf
+    ah(1)=subplot(221); plotit(v,p,cr,sprintf('%i %% speckle',round(100*scl)))
+    ah(3)=subplot(223); plotit(w,p,cr,sprintf('%i %% antispeckle',round(100*(1-scl))))
+    ah(4)=subplot(224); plotit(Hx,p,cr,'original')
+    movev(ah(4),0.25)
 end
 
 % Variable output
@@ -274,7 +293,11 @@ imagefnan([1 1],p.NyNx([2 1]),v2s(v,p),[],halverange(v,80,NaN)); axis ij image
 
 xticks([1 round(p.NyNx(2)/2) p.NyNx(2)]); yticks([1 round(p.NyNx(1)/2) p.NyNx(1)])
 if ~isempty(th)
-    t=title(sprintf('%i x %i | %s = [%g %g %gx]',p.NyNx(1),p.NyNx(2),'\theta',...
-                    th./[1 1 sqrt(prod(p.dydx))]));
+    if isstr(th)
+        t=title(th);
+    else
+        t=title(sprintf('%i x %i | %s = [%g %g %gx]',p.NyNx(1),p.NyNx(2),'\theta',...
+                        th./[1 1 sqrt(prod(p.dydx))]));
+    end
     movev(t,-p.NyNx(1)/20)
 end
