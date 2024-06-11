@@ -100,6 +100,7 @@ elseif strcmp(v,'demo1')
     clf
     subplot(121); plotit(Hx,p,cr,th)
     subplot(122); plotit(Hm,p,cr,[])
+    % Create right type of output
     v=Hm; [w,vw]=deal(NaN);
 elseif strcmp(v,'demo2')
     % Capture the second input
@@ -107,7 +108,7 @@ elseif strcmp(v,'demo2')
     defp=p; clear p
     % Capture the fifth input
     defstruct('opt',{'algo','ifinv'},{[],[]});
-
+    % Change the below if you like
     opt.ifinv=[1 1 1];
     
     % Now proceed with a fresh copy
