@@ -1,7 +1,7 @@
 function varargout=maskit(v,p,scl,w,opt)
-% [v,cr,I,w,vw]=MASKIT(v,p,scl,w,opt)
+% [v,I,w,vw,scl,cr]=MASKIT(v,p,scl,w,opt)
 %
-% Arbitrary masking of a gridded spatial field
+% Arbitrary masking of a gridded spatial field.
 %
 % INPUT:
 %
@@ -10,22 +10,23 @@ function varargout=maskit(v,p,scl,w,opt)
 %           NyNx  number of samples in the y and x directions
 %           mask an index matrix with a mask, OR:
 %                 a region name that will be scaled to fit
-% scl     A scale between 0 and 1 with the occupying center fraction
-%         of the domain enclosed by the input curve; due to strict
+% scl     A scale between 0 and 1 with the fractional area that the
+%         bounding box of the domain occupies; due to strict
 %         inequality at maximum always leaves one pixel rim; and
 %         not being used if an actual mask is input instead of a name
 % w       A second vector that is the unwrapping of a second matrix
-% opt     A field structure for optimization flags:
+% opt     (Only for demo2) A field structure for optimization flags:
 %           algo   the optimization algorithm
 %           ifinv  ordered inversion flags for [s2 nu rho], e.g. [1 0 1] 
 %
 % OUTPUT:
 %
-% v       The first input but everything outside the mask set to NaN
-% cr      The colum,row index coordinates of the masking curve
+% v       The first input with the samples inside I retained, rest set to NaN
 % I       The mask, unrolled into a vector, note, this is an "anti-mask"
 % w       The second input but everything outside the mask set to NaN
 % vw      The merged field, second field w sucked into the masked first field v
+% scl     A scale [0 to 1] expressing the non-missing data fraction
+% cr      The colum,row index coordinates of the masking curve
 %
 % EXAMPLE:
 %
@@ -36,8 +37,8 @@ function varargout=maskit(v,p,scl,w,opt)
 % maskit('demo2','england') % 'amazon', 'orinoco', for geographical variability
 % maskit('demo3') % Illustrating the nomenclature
 %
-% Last modified by owalbert-princeton.edu, 06/10/2024
-% Last modified by fjsimons-at-alum.mit.edu, 06/10/2024
+% Last modified by owalbert-princeton.edu, 06/11/2024
+% Last modified by fjsimons-at-alum.mit.edu, 06/11/2024
 
 % The default is the demo, for once
 defval('v','demo1')
@@ -48,12 +49,13 @@ if ~isstr(v)
     if isstr(p.mask)
         XY=eval(p.mask);
 
-        % Default scale is 80% of the area
+        % Scale indicates survivorship (in symmetry with MUCKIT)
+        % Default scale so bounding-box-area-proportionality is scl
         defval('scl',0.8)
-        
+
         % Scale the mask, remember for the curve the Y goes up, for the image, down
-        cr(:,1)=          scale(XY(:,1),[1 p.NyNx(2)]+[1 -1]*(1-scl)/2*(p.NyNx(2)-1));
-        cr(:,2)=p.NyNx(1)-scale(XY(:,2),[1 p.NyNx(1)]+[1 -1]*(1-scl)/2*(p.NyNx(1)-1))+1;
+        cr(:,1)=          scale(XY(:,1),[1 p.NyNx(2)]+[1 -1]*(1-sqrt(scl))/2*(p.NyNx(2)-1));
+        cr(:,2)=p.NyNx(1)-scale(XY(:,2),[1 p.NyNx(1)]+[1 -1]*(1-sqrt(scl))/2*(p.NyNx(1)-1))+1;
         
         % The underlying image grid
         [X,Y]=meshgrid(1:p.NyNx(2),1:p.NyNx(1));
@@ -90,7 +92,7 @@ elseif strcmp(v,'demo1')
     p.mask=defp;
     p.quart=0; p.blurs=Inf; p.kiso=NaN; clc; 
     [Hx,th,p]=simulosl([],p,1);
-    [Hm,cr,I]=maskit(Hx,p);
+    [Hm,I,~,~,scl,cr]=maskit(Hx,p);
     clf
     subplot(121); plotit(Hx,p,cr,th)
     subplot(122); plotit(Hm,p,cr,[])
@@ -102,7 +104,7 @@ elseif strcmp(v,'demo2')
     % Capture the fifth input
     defstruct('opt',{'algo','ifinv'},{[],[]});
 
-opt.ifinv=[1 0 1]
+    opt.ifinv=[1 1 1];
     
     % Now proceed with a fresh copy
     p.mask=defp;
@@ -113,7 +115,8 @@ opt.ifinv=[1 0 1]
     % Something larger without overdoing it, check weirdness
     % If you want to generate the same hash you need to keep the same dimensions
     %    p.NyNx=[196 243];
-    p.NyNx=[193 247];
+    % p.NyNx=[193 247];
+    p.NyNx=[193 236];
 
     % Do all the tests or not
     xver=0;
@@ -135,7 +138,7 @@ opt.ifinv=[1 0 1]
     % Number of processors, must agree with your machine
     NumWorkers=8;
     % Number of identical experiments to run experiments
-    N=3*NumWorkers;
+    N=1*NumWorkers;
 
     % Save some output for later? Make new filename hash from all relevant input
     fname=hash([struct2array(orderfields(p)) struct2array(orderfields(opt)) th1 th2 N],'SHA-1');
@@ -160,10 +163,11 @@ opt.ifinv=[1 0 1]
             Gx=simulosl(th2,p,1);
 
             % How much should the masked area occupy?
+            % Don't SET this here or PARFOR won't work
             scl=[];
             
             % Now do the masking and the merging
-            [Hm,cr,I,Gm,HG]=maskit(Hx,p,scl,Gx);
+            [Hm,I,Gm,HG,scl,cr]=maskit(Hx,p,scl,Gx);
 
             % So HG is the mixed field
             v=Hm; w=Gm; vw=HG;
@@ -246,7 +250,7 @@ opt.ifinv=[1 0 1]
     % Remake one sampled field just to make the visual
     [Hx,~,~,~,~,Sb1]=simulosl(th1,p,1);
     [Gx,~,~,~,~,Sb2]=simulosl(th2,p,1);
-    [~,cr,~,~,HG]=maskit(Hx,p,[],Gx);
+    [~,~,~,HG,scl,cr]=maskit(Hx,p,[],Gx);
 
     % This was confusing PARFOR so we took it out of the loop
     if xver==1
@@ -282,14 +286,16 @@ opt.ifinv=[1 0 1]
     % An this is the selected region
     figure(1)
     mleplos(thhat2.*scl2,th2,[],[],[],[],[],p,p.mask,[],opt.ifinv)
+    pause(1)
     figure(1)
     figdisp(sprintf('%s_3a',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
+    clf
     figure(2)
     figdisp(sprintf('%s_3b',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
 
     % With PARFOR none of the once-used are available out of the loop but in
     % this demo2 you don't want any output anyway, so put in empties
-    [v,cr,I,w,vw]=deal(NaN);
+    [v,I,w,vw,scl,cr]=deal(NaN);
 elseif strcmp(v,'demo3')
     th1=[1.15 1.15 23000];
     th2=[2.90 2.75 11300];
@@ -298,7 +304,7 @@ elseif strcmp(v,'demo3')
     % Remake one sampled field just to make the visualLast modified by fjsi
     [Hx,~,p,~,~,Sb1]=simulosl(th1,p);
     [Gx,~,~,~,~,Sb2]=simulosl(th2,p);
-    [v,cr,I,w,vw]=maskit(Hx,p,[],Gx);
+    [v,I,w,vw,scl,cr]=maskit(Hx,p,[],Gx);
 
     % Make a visual for good measure
     clf
@@ -309,7 +315,7 @@ elseif strcmp(v,'demo3')
 end
 
 % Variable output
-varns={v,cr,I,w,vw};
+varns={v,I,w,vw,scl,cr};
 varargout=varns(1:nargout);
 
 function plotit(v,p,cr,th)
