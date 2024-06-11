@@ -35,7 +35,7 @@ function varargout=muckit(v,p,scl,opt)
 
 % The default is the demo, for once
 defval('v','demo1')
-defstruct('opt',{'algo','ifinv'},{'con',[1 0 1]});
+defstruct('opt',{'algo','ifinv'},{'unc',[1 1 1]});
 
 if ~isstr(v)
     % Get the muck by name? Let's play "mikado"?
@@ -93,9 +93,6 @@ elseif strcmp(v,'demo2')
     % Capture the fourth input
     defstruct('opt',{'algo','ifinv'},{[],[]});
 
-    opt.algo='unc'
-    opt.ifinv=[1 1 1]
-    
     % Now proceed with a fresh copy
     p.mask=defp;
     % Simulate using circulant embedding, no taper
