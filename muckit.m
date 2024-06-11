@@ -1,5 +1,5 @@
 function varargout=muckit(v,p,scl,opt)
-% [v,cr,I,scl,w]=MUCKIT(v,p,scl)
+% [v,I,w,scl,cr]=MUCKIT(v,p,scl,opt)
 %
 % Makes randomly mucked up speckled indicatrix tapers.
 %
@@ -17,21 +17,21 @@ function varargout=muckit(v,p,scl,opt)
 %
 % OUTPUT:
 %
-% v       The mucked up-output matrix, unrolled into a vector
-% cr      The colum,row index coordinates of the bounding curve
+% v       The first input with the samples in I retained, rest set to NaN
 % I       The mask, unrolled into a vector, note, this is an "anti-mask"
-% scl     A scale [0 to 1] expressing the non-missing data fraction%
 % w       The antimucked-up output matrix, unrolled into a vector
+% scl     A scale [0 to 1] expressing the non-missing data fraction
+% cr      The colum,row index coordinates of the bounding curve
 %
 % EXAMPLE:
 %
-% [~,~,I]=muckit('demo1','random',0.8); % To get a quick muck to look at
-% muckit('demo1') % A geographical region masking a single field
+% [~,I]=muckit('demo1','random',0.8); % To get a quick muck to look at
+% muckit('demo1') % A uniformly random masking a single field
 % muckit('demo1',[],rand) % for a different percentage of survivors
 % muckit('demo2'); % To do a serious of mock muck inversions
 %
-% Last modified by owalbert-princeton.edu, 06/10/2024
-% Last modified by fjsimons-at-alum.mit.edu, 06/10/2024
+% Last modified by owalbert-princeton.edu, 06/11/2024
+% Last modified by fjsimons-at-alum.mit.edu, 06/11/2024
 
 % The default is the demo, for once
 defval('v','demo1')
@@ -42,6 +42,7 @@ if ~isstr(v)
     if isstr(p.mask)
 
         % Scale indicates survivorship (in symmetry with MASKIT)
+        % Default scale so bounding-box-area-proportionality is scl
         defval('scl',0.9)
 
 	if strcmp(p.mask,'random')
@@ -75,7 +76,8 @@ elseif strcmp(v,'demo1')
     [Hx,th,p]=simulosl([],p,1);
     % Capture the third input, default is none, which defaults inside
     defval('scl',[])
-    [Hm,cr,I,scl]=muckit(Hx,p,scl);
+    [Hm,I,~,scl,cr]=muckit(Hx,p,scl);
+
     clf
     ah(1)=subplot(121); plotit(Hx,p,cr,th)
     ah(2)=subplot(122); plotit(Hm,p,cr,[])
@@ -88,6 +90,9 @@ elseif strcmp(v,'demo2')
     defp=p; clear p
     % Capture the fourth input
     defstruct('opt',{'algo','ifinv'},{[],[]});
+
+    opt.algo='unc'
+    opt.ifinv=[1 1 1]
     
     % Now proceed with a fresh copy
     p.mask=defp;
@@ -109,7 +114,7 @@ elseif strcmp(v,'demo2')
     end
 
     % Define the parameters for the field
-    th=[1.50 0.75 30000];
+    th1=[1.50 0.5 30000];
 
     % Needing to be very explicit in order for parallel computing to work with in the loop
     p.dydx=[10000 10000];
@@ -121,28 +126,29 @@ elseif strcmp(v,'demo2')
     N=1*NumWorkers;
 
     % Save some output for later? Make new filename hash from all relevant input
-    fname=hash([struct2array(orderfields(p))  struct2array(orderfields(opt)) th      N],'SHA-1');
+    fname=hash([struct2array(orderfields(p)) struct2array(orderfields(opt)) th1     N],'SHA-1');
     
     % You need to have an environmental variable file structure set up
     fnams=fullfile(getenv('IFILES'),'HASHES',sprintf('%s_%s.mat','MUCKIT',fname));
 
     % Run the experiment anew
-    if ~exist(fnams,'file') || 1==1
+    if ~exist(fnams,'file') % || 1==1
         % Initialize the pool of workers
-       % if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
+        if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
 
         % Run the experiment!
         for index=1:N
             clc; disp(sprintf('\n Simulating the field \n'))
 
             % Simulate the field
-            Hx=simulosl(th,p,1);
+            Hx=simulosl(th1,p,1);
 
             % How much should the surviving area occupy?
-            scl=0.25;
+            % Don't SET this here or PARFOR won't work
+            scl=[];
 
             % Now do the masking and the merging
-            [Hm,cr,I,scl,Ham]=muckit(Hx,p,scl);
+            [Hm,I,Ham,scl,cr]=muckit(Hx,p,scl);
 
             % So HG is the mucked-up field
             v=Hm;
@@ -150,9 +156,8 @@ elseif strcmp(v,'demo2')
             % As appropriate you'll force the use of BLUROSY in MATERNOSP in LOGLIOSL in MLEOSL
             % This is confusing PARFOR but works with FOR
             % p.blurs=-1;
-
             % Make a close initial guess?
-            thini(index,:)=th+(-1).^randi(2,[1 3]).*th/1000;
+            thini1(index,:)=th1+(-1).^randi(2,[1 3]).*th1/1000;
 
             % Don't perturb the thini for the one you don't want to move; could
             % have also have stuck in th          into the aguess slot of
@@ -161,49 +166,47 @@ elseif strcmp(v,'demo2')
                 % This didn't work
                 %thini(index,2)=th(2);
                 % But this did
-                thini(index,:)=th+(-1).^randi(2,[1 3]).*[th(1) 0 th(3)]/1000;
+                thini1(index,:)=th1+(-1).^randi(2,[1 3]).*[th1(1) 0 th1(3)]/1000;
             end
 
             % Recover the parameters of the full original field without any mucking
             % The relabeling is to make PARFOR work, with FOR they could all just be p
             p1=p; p1.taper=0; p1=rmfield(p1,'mask');
             pause(pz); clc; disp(sprintf('\n Estimating first whole field \n'))
-            [thhat3(index,:),~,~,scl3(index,:)]=mleosl(Hx,thini(index,:),p1,opt.algo,[],[],opt.ifinv,xver);
+            [thhat3(index,:),~,~,scl3(index,:)]=mleosl(Hx,thini1(index,:),p1,opt.algo,[],[],opt.ifinv,xver);
             
             if xver==1
                 % % Explicitly check the likelihood? Fix later
 	        disp(sprintf('\n Likelihood at the initial guess %g\n',...
-	                     logliosl(knums(p1),thini(index,:)./scl3(index,:),scl3(index,:),p1,...
+	                     logliosl(knums(p1),thini1(index,:)./scl3(index,:),scl3(index,:),p1,...
                                       tospec(Hx(:),p1)/(2*pi))));
 	        disp(sprintf('\n Likelihood at the truth    %g\n',...
-	                     logliosl(knums(p1),th./scl3(index,:),scl3(index,:),p1,...
+	                     logliosl(knums(p1),th1./scl3(index,:),scl3(index,:),p1,...
                                       tospec(Hx(:),p1)/(2*pi))));
 	        % % --> inside protect by looking at momx?? That's where it goes wrong
             end
 
             % Now recover the parameters of the speckled field and its complement
             % The relabeling is to make PARFOR work, with FOR they could all just be p
-            p2=p; p2.taper=~I; p2.mask='random';
+            p2=p; p2.taper=I; p2.mask='random';
             pause(pz); clc; disp(sprintf('\n Estimating first speckled field \n'))
-            [thhat1(index,:),~,~,scl1(index,:)]=mleosl(Hm,thini(index,:),p2,opt.algo,[],[],opt.ifinv,xver);
+            [thhat1(index,:),~,~,scl1(index,:)]=mleosl(Hx,thini1(index,:),p2,opt.algo,[],[],opt.ifinv,xver);
 
             if xver==1
 	        % Explicitly check the likelihood? Fix later
 	        disp(sprintf('\n Likelihood at the initial guess %g\n',...
-	                     logliosl(knums(p2),thini./scl1(index,:),scl1(index,:),p2,...
+	                     logliosl(knums(p2),thini1./scl1(index,:),scl1(index,:),p2,...
 	                              tospec(p2.taper(:).*Hx(:),p2)/(2*pi)/sqrt(sum(p2.taper(:).^2))*sqrt(prod(p2.NyNx)),1)));
 	        disp(sprintf('\n Likelihood at the truth    %g\n',...
-	                     logliosl(knums(p2),th./scl1(index,:),scl1(index,:),p2,...
+	                     logliosl(knums(p2),th1./scl1(index,:),scl1(index,:),p2,...
 	                              tospec(p2.taper(:).*Hx(:),p2)/(2*pi)/sqrt(sum(p2.taper(:).^2))*sqrt(prod(p2.NyNx)),1)));
             end
 
-            keyboard
-            
             % Now recover the parameters of the speckled field and its complement
             % The relabeling is to make PARFOR work, with FOR they could all just be p
-            p3=p; p3.taper=I; p3.mask='random';
+            p3=p; p3.taper=~I; p3.mask='random';
             pause(pz); clc; disp(sprintf('\n Estimating anti-speckled field \n'))
-            [thhat2(index,:),~,~,scl2(index,:)]=mleosl(Ham,thini(index,:),p3,opt.algo,[],[],opt.ifinv,xver);
+            [thhat2(index,:),~,~,scl2(index,:)]=mleosl(Hx,thini1(index,:),p3,opt.algo,[],[],opt.ifinv,xver);
             
             % Pause so you can watch live (big pause if xver==0)
             pause(pz)
@@ -213,8 +216,8 @@ elseif strcmp(v,'demo2')
             %p.blurs=Inf; p.taper=0;
         end
         % Save all the output that you'll need later, may add more later
-        save(fnams,'th',      'p','thhat1','thhat2','scl1','scl2',...
-             'thhat3','scl3',                                'thini'         ,'N')
+        save(fnams,'th1',      'p','thhat1','thhat2','scl1','scl2',...
+             'thhat3','scl3',                                'thini1'         ,'N')
              
     else
         % Load all the saved output
@@ -249,11 +252,11 @@ elseif strcmp(v,'demo2')
     figdisp(sprintf('%s_2a',pref(sprintf('%s_%s.mat','MUCKIT',fname))),[],[],2)
     clf
     figure(2)
-    figdisp(sprintf('%s_2b',pref(sprintf('%s_%s.mat','MUCKI',fname))),[],[],2)
+    figdisp(sprintf('%s_2b',pref(sprintf('%s_%s.mat','MUCKIT',fname))),[],[],2)
 end
 
 % Variable output
-varns={v,cr,I,scl,w};
+varns={v,I,w,scl,cr};
 varargout=varns(1:nargout);
 
 function plotit(v,p,cr,th)
