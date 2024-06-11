@@ -100,7 +100,7 @@ elseif strcmp(v,'demo1')
     clf
     subplot(121); plotit(Hx,p,cr,th)
     subplot(122); plotit(Hm,p,cr,[])
-    % Create right type of output
+    % Create right type of output even though there is non
     v=Hm; [w,vw]=deal(NaN);
 elseif strcmp(v,'demo2')
     % Capture the second input
