@@ -35,7 +35,7 @@ function varargout=maskit(v,p,scl,w,opt)
 % maskit('demo1','england') % 'amazon', 'orinoco', for geographical variability
 % maskit('demo2') % A geographical region merging two fields, with estimation
 % maskit('demo2','england') % 'amazon', 'orinoco', for geographical variability
-% maskit('demo3') % Illustrating the nomenclature
+% maskit('demo3',[],rand) % Illustrating the nomenclature
 %
 % Last modified by owalbert-princeton.edu, 06/11/2024
 % Last modified by fjsimons-at-alum.mit.edu, 06/11/2024
@@ -98,8 +98,8 @@ elseif strcmp(v,'demo1')
     defval('scl',[])
     [Hm,I,~,~,scl,cr]=maskit(Hx,p,scl);
     clf
-    subplot(121); plotit(Hx,p,cr,th)
-    subplot(122); plotit(Hm,p,cr,[])
+    ah(1)=subplot(121); plotit(Hx,p,cr,th)
+    ah(2)=subplot(122); plotit(Hm,p,cr,[])
     % Create right type of output even though there is non
     v=Hm; [w,vw]=deal(NaN);
 elseif strcmp(v,'demo2')
@@ -305,11 +305,15 @@ elseif strcmp(v,'demo3')
     th1=[1.15 1.15 23000];
     th2=[2.90 2.75 11300];
     p.mask='france';
+    % Something manageable without overdoing it
+    p.NyNx=[188 233]+randi(20,[1 2]);
+    % Capture the third input, default is none, which defaults inside
+    defval('scl',[])
     
-    % Remake one sampled field just to make the visualLast modified by fjsi
+    % Remake one sampled field just to make the visual
     [Hx,~,p,~,~,Sb1]=simulosl(th1,p);
     [Gx,~,~,~,~,Sb2]=simulosl(th2,p);
-    [v,I,w,vw,scl,cr]=maskit(Hx,p,[],Gx);
+    [v,I,w,vw,scl,cr]=maskit(Hx,p,scl,Gx);
 
     % Make a visual for good measure
     clf
