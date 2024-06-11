@@ -179,7 +179,7 @@ elseif strcmp(v,'demo2')
             [thhat3(index,:),~,~,scl3(index,:)]=mleosl(Hx,thini1(index,:),p1,opt.algo,[],[],opt.ifinv,xver);
             
             if xver==1
-                % Explicitly check the likelihood? Fix later
+                % Explicitly check the likelihood?
 	        disp(sprintf('\n Likelihood at the initial guess %g\n',...
 	                     logliosl(knums(p1),thini1(index,:)./scl3(index,:),scl3(index,:),p1,...
                                       tospec(Hx(:),p1)/(2*pi))));
@@ -189,14 +189,14 @@ elseif strcmp(v,'demo2')
 	         % --> inside protect by looking at momx?? That's where it goes wrong
             end
 
-            % Now recover the parameters of the speckled field and its complement
+            % Now recover the parameters of the speckled field
             % The relabeling is to make PARFOR work, with FOR they could all just be p
             p2=p; p2.taper=I; p2.mask='random';
             pause(pz); clc; disp(sprintf('\n Estimating first speckled field \n'))
             [thhat1(index,:),~,~,scl1(index,:)]=mleosl(Hx,thini1(index,:),p2,opt.algo,[],[],opt.ifinv,xver);
 
             if xver==1
-	        % Explicitly check the likelihood? Fix later
+	        % Explicitly check the likelihood?
 	        disp(sprintf('\n Likelihood at the initial guess %g\n',...
 	                     logliosl(knums(p2),thini1(index,:)./scl1(index,:),scl1(index,:),p2,...
 	                              tospec(p2.taper(:).*Hx(:),p2)/(2*pi)/sqrt(sum(p2.taper(:).^2))*sqrt(prod(p2.NyNx)),1)));
@@ -205,7 +205,7 @@ elseif strcmp(v,'demo2')
 	                              tospec(p2.taper(:).*Hx(:),p2)/(2*pi)/sqrt(sum(p2.taper(:).^2))*sqrt(prod(p2.NyNx)),1)));
             end
 
-            % Now recover the parameters of the speckled field and its complement
+            % Now recover the parameters of the complement to the speckled field
             % The relabeling is to make PARFOR work, with FOR they could all just be p
             p3=p; p3.taper=~I; p3.mask='random';
             pause(pz); clc; disp(sprintf('\n Estimating anti-speckled field \n'))
@@ -252,6 +252,7 @@ elseif strcmp(v,'demo2')
     movev(t,-p.NyNx(1)/20)
 
     % Then plot these things using MLEPLOS
+    % So this is the region of speckles
     figure(1)
     mleplos(thhat1.*scl1,th1,[],[],[],[],[],p,'speckle',[],opt.ifinv)
     figure(1)
@@ -259,6 +260,15 @@ elseif strcmp(v,'demo2')
     clf
     figure(2)
     figdisp(sprintf('%s_2b',pref(sprintf('%s_%s.mat','MUCKIT',fname))),[],[],2)
+    clf
+    % And this is the antispeckled region
+    figure(1)
+    mleplos(thhat2.*scl2,th2,[],[],[],[],[],p,'speckle',[],opt.ifinv)
+    figure(1)
+    figdisp(sprintf('%s_3a',pref(sprintf('%s_%s.mat','MUCKIT',fname))),[],[],2)
+    clf
+    figure(2)
+    figdisp(sprintf('%s_3b',pref(sprintf('%s_%s.mat','MUCKIT',fname))),[],[],2)
 
     % With PARFOR none of the once-used are available out of the loop but in
     % this demo2 you don't want any output anyway, so put in empties
