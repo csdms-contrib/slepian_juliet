@@ -64,8 +64,8 @@ function varargout=blurosy(th,params,xver,method,tsto,dth)
 % BLUROSY('demo3') % should produce no output
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 04/30/2024
 % Last modified by olwalbert-at-princeton.edu, 04/30/2024
+% Last modified by fjsimons-at-alum.mit.edu, 06/10/2024
 
 if ~isstr(th)
     if params.blurs>=0 & ~isinf(params.blurs)
@@ -171,7 +171,6 @@ elseif strcmp(th,'demo2')
     % the uncorrelated-wavenumber approximation of the debiased Whittle
     % approach, but we do fear systematic offsets.
     defval('params',[188 233]+randi(20,[1 2]))
-    %params=[201 241];
 
     % Number of iterations
     defval('xver',100);
@@ -189,7 +188,7 @@ elseif strcmp(th,'demo2')
     % Try
     th(2)=Inf
     to be continued
-    
+    XXX
     % Compare the average periodogram with the blurred spectral density
 
     % What kind of a test are we running? Boxcar, or France/Ukraine?
