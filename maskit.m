@@ -21,11 +21,11 @@ function varargout=maskit(v,p,scl,w,opt)
 %
 % OUTPUT:
 %
-% v       The masked output matrix, unrolled into a vector
+% v       The first input but everything outside the mask set to NaN
 % cr      The colum,row index coordinates of the masking curve
 % I       The mask, unrolled into a vector, note, this is an "anti-mask"
-% w       The second masked output matrix, unrolled into a vector
-% vw      The merged field, second field w sucked into first field v
+% w       The second input but everything outside the mask set to NaN
+% vw      The merged field, second field w sucked into the masked first field v
 %
 % EXAMPLE:
 %
@@ -34,6 +34,7 @@ function varargout=maskit(v,p,scl,w,opt)
 % maskit('demo1','england') % 'amazon', 'orinoco', for geographical variability
 % maskit('demo2') % A geographical region merging two fields, with estimation
 % maskit('demo2','england') % 'amazon', 'orinoco', for geographical variability
+% maskit('demo3') % Illustrating the nomenclature
 %
 % Last modified by owalbert-princeton.edu, 06/10/2024
 % Last modified by fjsimons-at-alum.mit.edu, 06/10/2024
@@ -134,7 +135,7 @@ opt.ifinv=[1 0 1]
     % Number of processors, must agree with your machine
     NumWorkers=8;
     % Number of identical experiments to run experiments
-    N=2*NumWorkers;
+    N=3*NumWorkers;
 
     % Save some output for later? Make new filename hash from all relevant input
     fname=hash([struct2array(orderfields(p)) struct2array(orderfields(opt)) th1 th2 N],'SHA-1');
@@ -289,6 +290,22 @@ opt.ifinv=[1 0 1]
     % With PARFOR none of the once-used are available out of the loop but in
     % this demo2 you don't want any output anyway, so put in empties
     [v,cr,I,w,vw]=deal(NaN);
+elseif strcmp(v,'demo3')
+    th1=[1.15 1.15 23000];
+    th2=[2.90 2.75 11300];
+    p.mask='france';
+    
+    % Remake one sampled field just to make the visualLast modified by fjsi
+    [Hx,~,p,~,~,Sb1]=simulosl(th1,p);
+    [Gx,~,~,~,~,Sb2]=simulosl(th2,p);
+    [v,cr,I,w,vw]=maskit(Hx,p,[],Gx);
+
+    % Make a visual for good measure
+    clf
+    ah(1)=subplot(221); plotit(v,p,cr,'v')
+    ah(3)=subplot(223); plotit(w,p,cr,'w')
+    ah(4)=subplot(224); plotit(vw,p,cr,'vw')
+    movev(ah(4),0.25)
 end
 
 % Variable output
@@ -301,7 +318,11 @@ imagefnan([1 1],p.NyNx([2 1]),v2s(v,p),[],halverange(v,80,NaN)); axis ij image
 hold on; twoplot(cr,'Color','k'); hold off; longticks; grid on
 xticks([1 round(p.NyNx(2)/2) p.NyNx(2)]); yticks([1 round(p.NyNx(1)/2) p.NyNx(1)])
 if ~isempty(th)
-    t=title(sprintf('%i x %i | %s = [%g %g %gx]',p.NyNx(1),p.NyNx(2),'\theta',...
-                    th./[1 1 sqrt(prod(p.dydx))]));
+    if isstr(th)
+        t=title(th);
+    else
+        t=title(sprintf('%i x %i | %s = [%g %g %gx]',p.NyNx(1),p.NyNx(2),'\theta',...
+                        th./[1 1 sqrt(prod(p.dydx))]));
+    end
     movev(t,-p.NyNx(1)/20)
 end
