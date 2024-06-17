@@ -1,8 +1,9 @@
 function varargout=blurosy(th,params,xver,method,tsto,dth)
-% [Sbar,k,tyy,Cyy]=blurosy(th,params,xver,method,tsto,dth)
+% [SbarordSbardth,k,tyy,CyyordCyydth]=blurosy(th,params,xver,method,tsto,dth)
 %
-% Wavenumber blurring of a univariate Matern spectral density with the
-% periodogram of a spatial taper. The result is the expected periodogram.
+% Wavenumber blurring of a univariate Matern spectral density (or its spectral
+% derivative) with the periodogram of a spatial taper. The result is the expected
+% periodogram (or a term that enters the variance calculation).
 %
 % Exact, fast, explicit way, no convolutional grid refinement (unlike BLUROS).
 % Also unlike BLUROS, this IS a stand-alone code: it is not blurring an input
@@ -38,12 +39,12 @@ function varargout=blurosy(th,params,xver,method,tsto,dth)
 %
 % OUTPUT:
 %
-% Sbar    The blurred spectral matrix, with the unwrapped requested dimension
-%         as identified by the input 'params' (wrap with V2S)
-% k       The wavenumber matrix (the norm of the wave vectors), unwrapped
-% tyy     The autocorrelation of the spatial taper... which you 
-%         may never need explicitly, used in SIMULOSL and LOGLIOSL
-% Cyy     The modified Matern correlation, may never need it explicitly
+% SbarordSbardth    The blurred spectral matrix or its derivative, with the unwrapped 
+%                   requested dimension as identified by the input 'params' (wrap with V2S)
+% k                 The wavenumber matrix (the norm of the wave vectors), unwrapped
+% tyy               The autocorrelation of the spatial taper... which you 
+%                   may never need explicitly, used in SIMULOSL and LOGLIOSL
+% CyyordCyydth      The equivalent modified Matern correlation, may never need it explicitly
 %
 % SEE ALSO:
 %
@@ -64,8 +65,8 @@ function varargout=blurosy(th,params,xver,method,tsto,dth)
 % BLUROSY('demo3') % should produce no output
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by olwalbert-at-princeton.edu, 04/30/2024
-% Last modified by fjsimons-at-alum.mit.edu, 06/10/2024
+% Last modified by olwalbert-at-princeton.edu, 06/17/2024
+% Last modified by fjsimons-at-alum.mit.edu, 06/17/2024
 
 if ~isstr(th)
     if params.blurs>=0 & ~isinf(params.blurs)
@@ -181,7 +182,7 @@ elseif strcmp(th,'demo2')
     defval('params',[188 233]+randi(20,[1 2]))
     
     % BEGIN Figure for boxcar paper
-    params=[33 33]*2;
+    params=[33 33]*3;
     % Some Matern paramters
     th=[1 2.5 1e3];
     % Some number of iterations
