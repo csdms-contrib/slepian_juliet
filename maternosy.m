@@ -22,11 +22,11 @@ function varargout=maternosy(y,th,dth,meth)
 %
 % OUTPUT:
 %
-% Cy       The spatial Matern covariance at all the requested lags, possibly
-%          calculated using the Abramowitz & Stegun (1965) simplifications to
-%          the Bessel function for half-integer values of nu, the infinite limit
-%          of nu, OR returns the DERIVATIVE in the dth element of th, to feed 
-%          into BLUROSY
+%  CyordCydth   The spatial Matern covariance at all the requested lags, possibly
+%               calculated using the Abramowitz & Stegun (1965) simplifications to
+%               the Bessel function for half-integer values of nu, the infinite limit
+%               of nu, OR returns the DERIVATIVE in the dth element of th, to feed 
+%               into BLUROSY
 %
 % SEE ALSO:
 %
@@ -60,8 +60,8 @@ function varargout=maternosy(y,th,dth,meth)
 %
 % maternosy('demo1')
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/03/2024
-% Last modified by olwalbert-at-princeton.edu, 06/03/2024
+% Last modified by fjsimons-at-alum.mit.edu, 06/17/2024
+% Last modified by olwalbert-at-princeton.edu, 06/17/2024
 
 if ~isstr(y)
   % Defaults
