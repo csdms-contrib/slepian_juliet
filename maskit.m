@@ -30,14 +30,14 @@ function varargout=maskit(v,p,scl,w,opt)
 %
 % EXAMPLE:
 %
-% [~,~,I]=maskit('demo1'); % To get a quick mask to look at
+% [~,I]=maskit('demo1'); % To get a quick mask to look at
 % maskit('demo1') % A geographical region masking a single field
 % maskit('demo1','england') % 'amazon', 'orinoco', for geographical variability
 % maskit('demo2') % A geographical region merging two fields, with estimation
 % maskit('demo2','england') % 'amazon', 'orinoco', for geographical variability
 % maskit('demo3',[],rand) % Illustrating the nomenclature
 %
-% Last modified by owalbert-princeton.edu, 06/11/2024
+% Last modified by owalbert-princeton.edu, 09/03/2024
 % Last modified by fjsimons-at-alum.mit.edu, 06/11/2024
 
 % The default is the demo, for once
@@ -78,8 +78,10 @@ if ~isstr(v)
         if nargout>4
             % Construct a new field with the SECOND field inside the mask and the FIRST outside
             vw=nan(size(v));
-            vw(I(:)) =w(I(:));
-            vw(~I(:))=v(~I(:));
+            % avoid complaints about indices needing to
+            %  be logicals in the case mask uses zeros
+            vw(~~I(:))=w(~~I(:));
+            vw(~I(:)) =v(~I(:));
         end
     end
     % Apply the mask to the first field
