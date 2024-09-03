@@ -1,4 +1,4 @@
-function [fids,fmts,fmti]=osopen(np)
+function [fids,fmts,fmti]=osopen(np,datum)
 % [fids,fmts,fmti]=OSOPEN(np,npp)
 %
 % Opens ALL FOUR diagnostic files for writing by the suite of programs
@@ -10,6 +10,7 @@ function [fids,fmts,fmti]=osopen(np)
 % INPUT:
 %
 % np     The number of parameters to solve for (e.g. 3, 5 or 6)
+% datum  Specify the date in the title of a suite of diagnostic files
 %
 % OUTPUT:
 %
@@ -21,7 +22,11 @@ function [fids,fmts,fmti]=osopen(np)
 %
 % OSLOAD, OSRDIAG (with which it needs to match!)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
+% Last modified by olwalbert-at-princeton.edu, 09/03/2024
+% Last modified by fjsimons-at-alum.mit.edu, 09/03/2024
+
+% File name suffix
+defval('datum',date)
 
 % Who called? Work this into the filenames
 [~,n]=star69;
@@ -31,24 +36,24 @@ npp=np*(np+1)/2;
 
 % Ouput files, in parallel might be a jumble
 % The thruth and the theoretical covariances
-fids(1)=fopen(sprintf('%s_thzro_%s',n,date),'w');
+fids(1)=fopen(sprintf('%s_thzro_%s',n,datum),'w');
 % The estimates
-fids(2)=fopen(sprintf('%s_thhat_%s',n,date),'a+');
+fids(2)=fopen(sprintf('%s_thhat_%s',n,datum),'a+');
 % The initial guesses
-fids(3)=fopen(sprintf('%s_thini_%s',n,date),'a+');
+fids(3)=fopen(sprintf('%s_thini_%s',n,datum),'a+');
 % The collected optimization diagnostics, replicated some above
-fids(4)=fopen(sprintf('%s_diagn_%s',n,date),'a+');
+fids(4)=fopen(sprintf('%s_diagn_%s',n,datum),'a+');
 
 % Output formatting for the estimation parameters
 if np==3
   %                           s2    nu    rho
-  fmts{1}=[                   '%9.3e %6.3f %6.0f\n'];
+  fmts{1}=[                   '%9.3e %6.3f %6.3f\n'];
 elseif np==5
   %                D    f2    s2    nu    rho
-  fmts{1}=[      '%12.6e %6.3f %9.3e %6.3f %6.0f\n'];
+  fmts{1}=[      '%12.6e %6.3f %9.3e %6.3f %6.3f\n'];
 elseif np==6
   %         D    f2      r    s2    nu    rho
-  fmts{1}=['%12.6e %6.3f %6.3f %9.3e %6.3f %6.0f\n'];
+  fmts{1}=['%12.6e %6.3f %6.3f %9.3e %6.3f %6.3f\n'];
 end
 
 % Output formatting for the simulation parameters
