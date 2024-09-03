@@ -23,7 +23,7 @@ function g=gammiosl(k,th,params,Hk,xver)
 %          NOTE: It's not going to be a great derivative unless you could
 %          change MAOSL also. Still, the order of magnitude will be OK.
 % Hk       A complex matrix of Fourier-domain observations
-% xver     Excessive verification [0, 1 or 2, which also compute g(k)]
+% xver     Excessive verification [0 or 1, which also computes g(k)]
 %
 % OUTPUT:
 %
@@ -38,7 +38,8 @@ function g=gammiosl(k,th,params,Hk,xver)
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 % 
-% Last modified by fjsimons-at-alum.mit.edu, 12/19/2023
+% Last modified by olwalbert-at-princeton.edu, 09/03/2024
+% Last modified by fjsimons-at-alum.mit.edu, 09/03/2024
 
 % params.blurs=Inf can only refer to spatial-domain generation and at
 % this point we are already in the spectral domain; reset not returned
@@ -76,7 +77,7 @@ if xver==0
     % Eq. (A53) in doi: 10.1093/gji/ggt056
     g(ind)=-nanmean(-mth{ind}.*[1-Xk]);
   end
-elseif xver==1 || xver==2
+elseif xver==1 
   % Initialize; no cell since all of them depend on the wave vectors
   gk=nan(lk,np);
   % Do save the wavenumber-dependent entities
