@@ -1,8 +1,8 @@
 function [F,covF,cF]=fishiosl(k,th,xver,params)
 % [F,covF,cF]=FISHIOSL(k,th,xver,params)
 %
-% Calculates the entries in the Fisher matrix of Olhede & Simons (2013) for
-% the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN model, after
+% Calculates the entries in the Fisher matrix of Olhede & Simons (2013, eq. 133)
+% for the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN model, after
 % wavenumber averaging. No blurring is possible here, since no data are
 % involved and we work with analytical expressions for the derivatives, see
 % LOGLIOSL. Zero-wavenumber excluded. No scaling asked or applied.
@@ -14,7 +14,7 @@ function [F,covF,cF]=fishiosl(k,th,xver,params)
 %          th(1)=s2   The first Matern parameter [variance in unit^2]
 %          th(2)=nu   The second Matern parameter [differentiability]
 %          th(3)=rho  The third Matern parameter [range in m]
-% xver     Excessive verification [0, 1 or 2, which also compute F(k)]
+% xver     Excessive verification [0 or 1, which also computes F(k)]
 % params   Attempt at bringing blurring in under the radar
 %
 % OUTPUT:
@@ -73,7 +73,7 @@ if xver==0
     % Attempt to do this otherwise for variance calculation
     % FJS cFb(ind)=indeks(bsxfun(@times,mth{i(ind)},mth{j(ind)}'),':').*W(~~kz);
   end
-elseif xver==1 || xver==2
+elseif xver==1
   % Initialize; some of them depend on the wave vectors, some don't
   cFk=cellnan([npp 1],[1 repmat(lk,1,5)],repmat(1,1,6));
   % Do save the wavenumber-dependent entities
