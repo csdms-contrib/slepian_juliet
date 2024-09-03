@@ -1,5 +1,5 @@
-function [answ,answs]=osansw(th0,covX,E,v)
-% [answ,answs]=OSANSW(th0,covX,E,v)
+function [answ,answs,pm]=osansw(th0,covX,E,v)
+% [answ,answs,pm]=OSANSW(th0,covX,E,v)
 %
 % Constructs some reporting strings for MLEOS, MLEROS, MLEROS, MLEOSL, 
 % thus for correlated and uncorrelated loading scenarios as well as the
@@ -16,10 +16,12 @@ function [answ,answs]=osansw(th0,covX,E,v)
 %
 % answ       A cell with the "answers" if you will
 % answs      Appropriate formatting strings for a plot title
+% pm         The plusminus sign
 %
 % SEE ALSO: OSDISP, DTOTE
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/25/2018
+% Last modified by fjsimons-at-alum.mit.edu, 10/23/2023
+% Last modified by olwalbert-at-princeton.edu, 08/15/2024
 
 defval('th0',[])
 defval('covX',[])
@@ -59,9 +61,9 @@ if ~isempty(E) && ~isempty(v)
 end
   
 % Some common strings
-s2s='%s^2 = %6.0f %s %6.0f';
+s2s='%s^2 = %6.2f %s %6.2f';
 nus='%s = %4.2f %s %4.2f';
-rhs='%s = %i %s %i';
+rhs='%s = %6.2f %s %6.2f';
 
 if length(th0)==3
   % Single-field analysis (MLEOSL etc)
