@@ -27,7 +27,7 @@ function [L,g,H,momx,vr,Lk]=logliosl(k,th,scl,params,Hk,xver)
 %                 OR an appropriately sized taper with proper values 
 %                 (1 is yes and 0 is no and everything in between)
 % Hk       A [prod(params.NyNx)*1]-column of complex Fourier-domain observations
-% xver     Excessive verification [0, 1 or 2, which also compute L(k)]
+% xver     Excessive verification [0 or 1, which also computes L(k)]
 %
 % OUTPUT:
 %
@@ -51,7 +51,8 @@ function [L,g,H,momx,vr,Lk]=logliosl(k,th,scl,params,Hk,xver)
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by fjsimons-at-alum.mit.edu, 12/18/2023
+% Last modified by olwalbert-princeton.edu, 09/03/2024
+% Last modified by fjsimons-at-alum.mit.edu, 09/03/2024
 
 % Make sure that this does render LKOSL obsolete
 
@@ -81,8 +82,7 @@ end
 
 % We need the (blurred) power spectrum and its ratio to the observations
 [S,kk]=maternosp(th,params,xver);
-
-if xver==1 || xver==2
+if xver==1
     % Quick look? Save before wavenumber culling
     sa=v2s(hformos(S,Hk,[],xver),params);
     %imagesc(sa); axis image
@@ -108,8 +108,8 @@ if xver==0
   % Do it all at once, don't save the wavenumber-dependent entities
   % Eq. (A52) in doi: 10.1093/gji/ggt056
   L=-mean(-log(S(ksel))-Xk(ksel));
-  Lk=NaN;  
-elseif xver==1 || xver==2
+  Lk=NaN;
+elseif xver==1
   % Do save the wavenumber-dependent entities
   % FJS Will need to stick the deselected wavenumbers back in!
   % Maybe here make them NaN, that have been deselected
@@ -150,7 +150,7 @@ if nargout>=5
   vr=8/sum(~isnan(Xk(ksel)));
 end
 
-if xver==1 || xver==2
+if xver==1 
     % Print the trajectory, seems like one element at a time gets changed
     %    disp(sprintf('Current theta: %8.3g %8.3g %8.3g | likelihood: %12.8f',th,L))
 end
