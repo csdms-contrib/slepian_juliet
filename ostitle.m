@@ -15,6 +15,7 @@ function t=ostitle(ah,params,ovall,numsim)
 % t           Title handle
 %
 % Last modified by fjsimons-at-alum.mit.edu, 05/30/2024
+% Last modified by olwalbert-at-princeton.edu, 08/15/2024
 
 % Defaults are empty characters
 defval('ovall','')
@@ -27,11 +28,11 @@ else
 end
 
 if ~isempty(ovall)
-  str9='%s\n\n%s %s_1 = %i ; %s_2 = %i %s ; z_2 = %i km ; %ix%i grid ; %ix%i km ; blur %i';
-  str5='%s\n\n%s ; %ix%i grid ; %ix%i km ; blur %i';
+  str9='%s\n\n%s %s_1 = %i ; %s_2 = %i %s ; z_2 = %i km ; %ix%i grid ; %gx%g km ; blur %i';
+  str5='%s\n\n%s ; %ix%i grid ; %gx%g km ; blur %i';
 else
-  str9='%s%swith %s_1 = %i ; %s_2 = %i %s\n z_2 = %i km ; %ix%i grid ; %ix%i km ; blur %i';
-  str5='%s%swith %ix%i grid ; %ix%i km ; blur %i';
+  str9='%s%swith %s_1 = %i ; %s_2 = %i %s\n z_2 = %i km ; %ix%i grid ; %gx%g km ; blur %i';
+  str5='%s%swith %ix%i grid ; %gx%g km ; blur %i';
 end
 
 % Move away from numbered to named access to the params...
@@ -49,7 +50,3 @@ catch
   t=supertit(ah,sprintf(str5,ovall,mlest,...
       NyNx,dydx.*NyNx/1e3,blurs));
 end
-
-
-
-
