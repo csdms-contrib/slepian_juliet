@@ -19,8 +19,8 @@ function varargout=mAosl(k,th,xver)
 % mththp   The second-partials parameters for GAMMIOSL, HESSIOSL, as a cell
 % A        The "A" matrices for GAMMIOSL, HESSIOSL, as a cell
 %
-% Last modified by fjsimons-at-alum.mit.edu, 09/03/2024
-% Last modified by olwalbert-at-princeton.edu, 09/03/2024
+% Last modified by fjsimons-at-alum.mit.edu, 10/21/2024
+% Last modified by olwalbert-at-princeton.edu, 10/21/2024
 
 % Extra verification?
 defval('xver',1)
@@ -30,38 +30,68 @@ s2=th(1);
 nu=th(2);
 rh=th(3);
 
-% Auxilliary variable
-avark=4*nu/pi^2/rh^2+k(:).^2;
+if nu==Inf
+    % When we are considering the special case of the limit of the spectral
+    % density as nu approaches infinity, we must calculate the first and second
+    % derivatives from the limit of the spectral density
+    % ms2
+    mth{1}=1/s2;
+    % mnu 
+    mth{2}=0;
+    % for d-dimensions, mth{3} = d/rh - pi^2*rh*k(:).^2/2
+    % mrh for 2-dimensions
+    mth{3}=2/rh-pi^2*rh*k(:).^2/2;
+    
+    if nargout>1
+        % dms2/ds2
+        mththp{1}=-1/s2^2;
+        % dmnu/dnu
+        mththp{2}=0;
+        % for d-dimensions, mththp{3} = -d/rh^2-pi^2*k(:).^2/2
+        % dmrh/drh for 2-dimensions
+        mththp{3}=-2/rh^2 - pi^2*k(:).^2/2;
+        % Cross-terms
+        mththp{4}=0;
+        mththp{5}=0;
+        % dmrhdnu or dmnudrh
+        mththp{6}=0;
+    else
+        mththp=NaN;
+    end
+else
+    % Auxiliary variable
+    avark=4*nu/pi^2/rh^2+k(:).^2;
 
-% The "means", which still depend on the wavenumbers, sometimes
-% The first derivatives of the logarithmic spectral density
-% Eq. (A25) in doi: 10.1093/gji/ggt056
-mth{1}=1/s2;
-% Eq. (A26) in doi: 10.1093/gji/ggt056
-mth{2}=(nu+1)/nu+log(4*nu/pi^2/rh^2)...
-       -4*(nu+1)/pi^2/rh^2./avark-log(avark);
-% Eq. (A27) in doi: 10.1093/gji/ggt056
-mth{3}=-2*nu/rh+8*nu/rh*(nu+1)/pi^2/rh^2./avark;
+    % The "means", which still depend on the wavenumbers, sometimes
+    % The first derivatives of the logarithmic spectral density
+    % Eq. (A25) in doi: 10.1093/gji/ggt056
+    mth{1}=1/s2;
+    % Eq. (A26) in doi: 10.1093/gji/ggt056
+    mth{2}=(nu+1)/nu+log(4*nu/pi^2/rh^2)...
+           -4*(nu+1)/pi^2/rh^2./avark-log(avark);
+    % Eq. (A27) in doi: 10.1093/gji/ggt056
+    mth{3}=-2*nu/rh+8*nu/rh*(nu+1)/pi^2/rh^2./avark;
 
-if nargout>1
-  % The second derivatives of the logarithmic spectral density
-  vpiro=4/pi^2/rh^2;
-  avark=nu*vpiro+k(:).^2;
-  % Here is the matrix of derivatives of m, diagonals first, checked with 
-  % syms s2 nu rh k avark vpiro pi
-  % Checked dms2/ds2
-  mththp{1}=-1/s2^2;
-  % Checked dmnu/dnu
-  mththp{2}=2/nu-(nu+1)/nu^2-2*vpiro./avark+(nu+1)*vpiro^2./avark.^2;
-  % Checked dmrh/drh
-  mththp{3}=2*nu*(1-3*(nu+1)*vpiro./avark+2*nu*(nu+1)*vpiro^2./avark.^2)/rh^2;
-  % Here the cross-terms, which are verifiably symmetric
-  mththp{4}=0;
-  mththp{5}=0;
-  % This I've done twice to check the symmetry, checked dmrhdnu or dmnudrh
-  mththp{6}=2/rh*(-1+[2*nu+1]*vpiro./avark-nu*[nu+1]*vpiro^2./avark.^2);
-else 
-  mththp=NaN;
+    if nargout>1
+        % The second derivatives of the logarithmic spectral density
+        vpiro=4/pi^2/rh^2;
+        avark=nu*vpiro+k(:).^2;
+        % Here is the matrix of derivatives of m, diagonals first, checked with 
+        % syms s2 nu rh k avark vpiro pi
+        % Checked dms2/ds2
+        mththp{1}=-1/s2^2;
+        % Checked dmnu/dnu
+        mththp{2}=2/nu-(nu+1)/nu^2-2*vpiro./avark+(nu+1)*vpiro^2./avark.^2;
+        % Checked dmrh/drh
+        mththp{3}=2*nu*(1-3*(nu+1)*vpiro./avark+2*nu*(nu+1)*vpiro^2./avark.^2)/rh^2;
+        % Here the cross-terms, which are verifiably symmetric
+        mththp{4}=0;
+        mththp{5}=0;
+        % This I've done twice to check the symmetry, checked dmrhdnu or dmnudrh
+        mththp{6}=2/rh*(-1+[2*nu+1]*vpiro./avark-nu*[nu+1]*vpiro^2./avark.^2);
+    else 
+        mththp=NaN;
+    end
 end
 
 % Full output and extra verification
@@ -75,12 +105,17 @@ if nargout>2 || xver==1
   % Eq. (A28) in doi: 10.1093/gji/ggt056
   A{1}=-repmat(mth{1},lk,3);
   % Eq. (A29) in doi: 10.1093/gji/ggt056
-  A{2}=-repmat(mth{2},1,3);  
+  if nu==Inf
+    A{2}=-repmat(mth{2},lk,3);
+  else
+      A{2}=-repmat(mth{2},1,3);
+  end
   % Eq. (A30) in doi: 10.1093/gji/ggt056
   A{3}=-repmat(mth{3},1,3);
 
   % Verification mode
-  if xver==1
+  if xver==1 % && nu~=Inf
+    % Excluding the Inf case, may need to revisit TRACECHECK
     % In this univariate case, we have some rather simple forms
     % In the bivariate case, these are the nonzero lower-triangular
     % entries of a matrix that is another's Cholesky decomposition
