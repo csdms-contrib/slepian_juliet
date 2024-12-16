@@ -154,7 +154,80 @@ if ~isstr(Hx)
 
   % The parameters used in the simulation for demos, or upon which to base "thini"
   % Check Vanmarcke 1st edition for suggestions on initial rho, very important
-  defval('aguess',[nanvar(Hx) 2.0 sqrt(prod(dydx.*NyNx))/pi/2/20]);
+
+  % An alternative guessing approach                                            
+  altguess=0;                                                                   
+  if altguess                                                                   
+      disp('in development: altguess=1; flag off when done')
+      % Approximate variance parameter (e.g., eq 32 of Methodology paper)       
+      s2guess=nanvar(Hx);                                                       
+      % We can estimate the range parameter from the analytical definition of 
+      % the spectral density (Eq. 72 of S&O 2013), the empirical periodogram at
+      % the origin, and our guess for s2
+      [k,~,~,kxv,kyv]=knums(params);%,1);
+
+      % For an idealized situation where we know th0 (e.g., used for testing)
+      % th0=[1e6 1.5 2e4];
+      % Sk=v2s(maternos(k(:),th0));
+      % prdgrm=Sk;
+
+      % For the empirical periodogram (consider the taper or not?)
+      % Hk2=v2s(abs(tospec(Tx(:).*Hx(:,1),params)/(2*pi)).^2,params);
+      Hk2=v2s(abs(tospec(Hx(:,1),params)/(2*pi)).^2,params);
+      prdgrm=Hk2;
+
+      % At the origin
+      S0=prdgrm(~k(:));                                                         
+
+      % Assuming a 2-dimensional field     
+      rhoguess=2*sqrt(S0/(s2guess*pi));                                        
+                                                                                
+      % Selection of initial nu value inspired by Sykulski et al 2019 Biometrika
+      % (doi:10.1093/biomet/asy071) where initialization values for spectral 
+      % parameters of a correlation structure are determined via ordinary least
+      % squares for 1-D data. I attempted to find slope of best-fit plane for a 
+      % quadrant of the 2-D periodogram with OLS and SVD, but the results were 
+      % poor. Instead, finding the slope of the radial average allows for an OK 
+      % guess, with the exception of a dependency on rho that would not have
+      % have been a challenge in the Biometrika paper based on their analytical 
+      % parameterization. For now, scaling nuguess by the scaling predicted for
+      % the range seems sufficient enough to get the inversion ticking, which is
+      % all we are after anyway.
+      rhscl=max(1,10.^round(log10(abs(rhoguess))));
+      % Assemble a vector of low wavenumbers where the slope of the radial
+      % average is near-constant; the current range was selected by eye from 
+      % the commented out plotting routine below
+      prdgrm(k>max(abs(kxv)))=NaN;
+      [~,rav]=radavg(prdgrm);
+      [~,kav]=radavg(k);
+      K=length(kav);                                                             
+      rkmin=max(4,floor(K*0.05));
+      rkmax=2*rkmin;                                      
+      ktrm=kav(rkmin:rkmax);
+      rtrm=rav(rkmin:rkmax);  
+
+      % Least squares for slope parameter
+      G = [ones(prod(size(rtrm)),1) ktrm];
+      b=inv(G'*G)*G'*rtrm(:); 
+      bscl=10.^(round(mean(log10(rtrm))));
+      nuguess=max(0.5,-1/2*real(b(2)/2/bscl/rhscl));
+
+      % LS with log of perturbed data; doesn't perform as well
+      % Glog = [ones(prod(size(rtrm)),1) log(ktrm)];
+      % blog=inv(Glog'*Glog)*Glog'*log(rtrm(:)); 
+      % nuguesslog=max(0.5,-1/2*real(blog(2)/2)) 
+
+      % Plot the periodogram and the traces we select to see how well our
+      % radial average and its linear fit approximate the periodogram
+      % figure();imagesc(prdgrm);
+      % figure();plot(kav,rav);hold on;plot(ktrm,rtrm)
+      % plot([kav(rkmin) kav(rkmin)],[1e-20 max(rtrm)],...
+      %      [kav(rkmax) kav(rkmax)],[1e-20 max(rtrm)]);
+      % plot(ktrm,b(1)+b(2)*ktrm)
+      defval('aguess',[s2guess nuguess rhoguess]);
+  else
+      defval('aguess',[nanvar(Hx) 2.0 sqrt(prod(dydx.*NyNx))/pi/2/20]);
+    end
 
   % Scale the parameters by this factor; fix it unless "thini" is supplied
   defval('scl',10.^round(log10(abs(aguess))));
@@ -632,16 +705,16 @@ elseif strcmp(Hx,'demo1')
   defval('bounds',[])
   % If there is no preference, then that's OK, it gets taken care of
   algo=bounds; clear bounds
-  % The SIXTH argument, after the demo id
+  % What datum? The SIXTH argument, after the demo id
   defval('aguess',[])
   % If there is no preference, then that's OK, it gets taken care of
   bounds=aguess; clear aguess
-  % The SEVENTH argument, after the demo id
+  % The EIGHT argument, after the demo id
   defval('xver',[])
   % If there is no preference, then that's OK, it gets taken care of
   aguess=xver; clear xver
 
-  % You can't stick in an EIGHTH argument so you'll have to default 
+  % You can't stick in a NINTH argument so you'll have to default 
   defval('xver',0)
 
   % What you make of all of that if there hasn't been a number specified
@@ -651,7 +724,7 @@ elseif strcmp(Hx,'demo1')
   np=3;
   
   % Open 'thzro', 'thini', 'thhat' and 'diagn' files and return format strings
-  [fids,fmts,fmti]=osopen(np);
+  [fids,fmts,fmti]=osopen(np,datum);
 
   % Do it!
   good=0; 
@@ -666,10 +739,14 @@ elseif strcmp(Hx,'demo1')
     % Check the dimensions of space and spectrum are right
     difer(length(Hx)-length(k(:)),[],[],NaN)
 
+    % If we are working within either the squared exponential case or a fixed nu
+    % case, we will use the provided 'aguess' within our batch calculuations;
+    % otherwise, we will take the provided 'th0' as 'aguess'. 
+    if isinf(th0(2)); th1=aguess; elseif ifinv==[1 0 1]; th1=aguess; else; th1=th0; end
     % Form the maximum-likelihood estimate, pass on the params, use th0
     % as the basis for the perturbed initial values. Remember hes is scaled.
     t0=clock;
-    [thhat,covFHh,lpars,scl,thini,p,Hk,k]=mleosl(Hx,[],p,algo,[],th0,xver);
+    [thhat,covFHh,lpars,scl,thini,p,Hk,k]=mleosl(Hx,[],p,algo,[],th1,ifinv,xver);
     ts=etime(clock,t0);
 
     % Initialize the THZRO file... note that the bounds may change
@@ -782,8 +859,8 @@ elseif strcmp(Hx,'demo2')
   clf
 
   % We feed it various things and it calculates a bunch more
-  [ah,ha]=mleplos(thhats,th0,covF0,covavhs,covXpix,[],[],p, ...
-                  sprintf('MLEOSL-%s',datum),thpix);
+  [ah,ha]=mleplos(thhats,th0,covF0,covavhs,covXpix,[],[],p,...
+                  sprintf('MLEOSL-%s',datum),thpix,ifinv);
   
   % Return some output, how about just the empirically observed
   % means and covariance matrix of the estimates, and the number of
