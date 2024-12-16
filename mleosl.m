@@ -302,7 +302,7 @@ if ~isstr(Hx)
              grdInf=[grd(1:end-2) grd(end)]'; 
              hesInf=[hes(1:end-2,1:end-2) hes(1:end-2,end);...
                      hes(  end,  1:end-2) hes(  end,  end)];
-             end
+           end
        else
            t0=clock;
            [thhat,logli,eflag,oput,grd,hes]=...
@@ -405,7 +405,60 @@ if ~isstr(Hx)
         warning('Solution hugs the bound for NU, perhaps uncomfortably')
       end
       ts=etime(clock,t0);
-     case 'klose'
+     case 'dsm'
+         % FMINSEARCH minimizes LOGLIOSL objective function according to the 
+         % Nelder-Mead simplex algorithm by first generating a simplex with n+1
+         % vertices about the n-dimensional thini, and then iteratively 
+         % modifying the simplex through reflection, expansion, and contraction
+         % of function value-ordered vertices; must satisfy both the function
+         % tolerance and step tolerance stopping criteria to exit. This is a 
+         % gradient-free solver so convergence to local minimum not guaranteed. 
+         % FMINSEARCH was used by the Biometrika 2019 publication 
+         % doi:10.1093/biomet/asy071
+         if any(ifinv~=[1 1 1])
+           % We want to optimize for only the parameters requested, taking the
+           % value of thini for fixed parameters
+           % Put the non-inverted-for parameters up front
+           [~,tmpidx]=sort(ifinv);
+           % But remember how to put them back in order for later
+           [~,invidx]=sort(tmpidx);
+
+           t0=clock;
+           options=[];
+           [thhat,logli,eflag,oput]=...
+             fminsearch(@(theta) logliosl(k,indeks([thini(~ifinv) theta],invidx),...
+                       scl,params,Hk,xver),...
+                       thini(~~ifinv),options);
+           ts=etime(clock,t0);
+           % The estimate of theta should include all three parameters, whether
+           % we fixed or optimized for them
+           thhat=indeks([thini(~ifinv) thhat],invidx);
+        else
+           t0=clock;
+           options=[];
+           [thhat,logli,eflag,oput]=...
+	           fminsearch(@(theta) logliosl(k,theta,scl,params,Hk,xver),...
+		           thini,options);
+           ts=etime(clock,t0);
+        end
+        % While FMINSEARCH is gradient-free, we might still want to know
+        % what these values are at the estimate. Let's find the numerical
+        % gradient and Hessian at the parameter estimate following our
+        % approach for doing so in the fixed parameter case for FMINUNC
+        derivopts=optimset('MaxIter',0,'MaxFunEvals',0,'Display','off');
+        
+        [~,~,~,~,grd,hes]=...
+            fminunc(@(theta) logliosl(k,theta,scl,params,Hk,0),...
+                    thhat,derivopts);
+        % In the special case of nu->Inf, we will retain a slice of grd and 
+        % hes to avoid singularities when we later calculate the numerical 
+        % covariance approximations
+        if isinf(thini(end-1))
+            grdInf=[grd(1:end-2) grd(end)]'; 
+            hesInf=[hes(1:end-2,1:end-2) hes(1:end-2,end);...
+                    hes(  end,  1:end-2) hes(  end,  end)];
+        end
+      case 'klose'
        % Simply a "closing" run to return the options
        lpars{6}=options;
        lpars{7}=bounds;
@@ -425,7 +478,7 @@ if ~isstr(Hx)
   % negative rho - which only appears in the square in MATERNOS. But if
   % we're going to calculate (approximately blurred) analytical
   % gradients and Hessians (even using exact blurring of the spectral
-  % densities) we are going to be using MATERNOSY, which will complain...
+  % densities), we are going to be using MATERNOSY, which will complain...
   if thhat(1)<0
     error(sprintf('%s Negative variance',upper(mfilename)))
   end
@@ -442,8 +495,13 @@ if ~isstr(Hx)
 
   % Watch out for singularity or scaling warnings, they are prone to pop up
 
-  % Covariance from FMINUNC/FMINCON's numerical scaled Hessian NEAR estimate
-  covh=inv(hes./matscl)/df;
+  % Covariance from FMINUNC/FMINCON's numerical scaled Hessian AT/NEAR estimate,
+  % taking special care for the special case of nu->Inf
+  if isinf(thini(end-1)) && ifinv(end-1)==0
+      covh=inv(hesInf./matsclInf)/df;
+  else
+      covh=inv(hes./matscl)/df;
+  end
   
   if xver==1 & verLessThan('matlab','8.4.0')
     % Try variable-precision arithmetic?
