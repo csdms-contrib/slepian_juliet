@@ -1,6 +1,6 @@
 function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver)
 % [thhat,covFHh,lpars,scl,thini,params,Hk,k]=...
-%          MLEOSL(Hx,thini,params,algo,bounds,aguess,infinv,xver)
+%          MLEOSL(Hx,thini,params,algo,bounds,aguess,ifinv,xver)
 %
 % Maximum-likelihood estimation for univariate Gaussian
 % multidimensional fields with isotropic Matern covariance
@@ -9,43 +9,41 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver)
 %
 % INPUT:
 %
-% Hx       Real-valued column vector of unwrapped spatial-domain quantities 
-% thini    An unscaled starting guess for the parameter vector with elements:
-%          [          s2 nu rho], see SIMULOSL. If you leave this value
-%          blank, then you will work from the perturbed "aguess" 
-% params   A parameter structure with constants assumed known, see SIMULOSL
-%          [dydx NyNx blurs kiso] in the units of 
-%          m (2x), "nothing" (3x), rad/m, "nothing", namely, in order:
-%          blurs 0 No wavenumber blurring
-%                1 No wavenumber blurring, effectively
-%                N Fejer convolutional  BLUROS  on an N-times refined grid
-%               -1 Fejer multiplicative BLUROSY using exact procedure
-%              Inf Error -> Only for SIMULOSL to use SGP invariant embedding
-%          kiso   wavenumber beyond which we are not considering the likelihood
-%          quart 1 quadruple, then QUARTER the spatial size
-%                0 size as is, watch for periodic correlation behavior
-%          taper 0 there is no taper near of far, same as 1
-%                1 it's a unit taper, implicitly, same as 0
-%                OR an appropriately sized taper with proper values 
-%                   (1 is yes and 0 is no and everything in between)
-% algo     'unc' uses FMINUNC for unconstrained optimization
-%          'con' uses FMINCON with positivity constraints [default]
-%          'klose' simply closes out a run that got stuck [defaulted when needed ]
-% bounds    A cell array with those positivity constraints [defaulted]
-% aguess    A parameter vector [s2 nu rho] that will be used in
-%           simulations for demo purposes, and on which "thini" will be
-%           based if that was left blank. If "aguess" is blank, there is
-%           a default. If "thini" is set, there is no need for "aguess"
-% ifinv     ordered inversion flags for [s2 nu rho], e.g. [1 0 1]
-%           only minimizes the log-likelihood function for parameters 
-%             th(1:end-2) and th(end), and conduct extra verification steps; 
-%             smoothness parameter, nu=th(end-1), is fixed to the value 
-%             provided in thini, either directly or as default; this has 
-%             the effect of speeding up the estimation procedure but may 
-%             not be appropriate in the case of real data where smoothness
-%             of the random field realized by Hx remains unknown
-% xver      0 Minimal output, no extra verification steps
-%           1 Conduct extra verification steps
+% Hx      Real-valued column vector of unwrapped spatial-domain quantities 
+% thini   An unscaled starting guess for the parameter vector with elements:
+%         [          s2 nu rho], see SIMULOSL. If you leave this value
+%         blank, then you will work from the perturbed "aguess" 
+% params  A parameter structure with constants assumed known, see SIMULOSL
+%         [dydx NyNx blurs kiso] in the units of 
+%         m (2x), "nothing" (3x), rad/m, namely, in order:
+%         blurs 0 No wavenumber blurring
+%               1 No wavenumber blurring, effectively
+%               N Fejer convolutional  BLUROS  on an N-times refined grid
+%              -1 Fejer multiplicative BLUROSY using exact procedure
+%             Inf Error -> Only for SIMULOSL to use SGP invariant embedding
+%         kiso   wavenumber beyond which we are not considering the likelihood
+%         quart 1 quadruple, then QUARTER the spatial size
+%               0 size as is, watch for periodic correlation behavior
+%         taper 0 there is no taper near of far, same as 1
+%               1 it's a unit taper, implicitly, same as 0
+%               OR an appropriately sized taper with proper values 
+%                  (1 is yes and 0 is no and everything in between)
+% algo    'unc' uses FMINUNC for unconstrained optimization [default]
+%         'con' uses FMINCON with positivity constraints
+%         'dsm' uses FMINSEARCH for downhill simplex method, derivative-free
+%         'klose' simply closes out a run that got stuck [defaulted when needed]
+% bounds   A cell array with those positivity constraints [defaulted]
+% aguess   A parameter vector [s2 nu rho] that will be used in
+%          simulations for demo purposes, and on which "thini" will be
+%          based if that was left blank. If "aguess" is blank, there is
+%          a default. If "thini" is set, there is no need for "aguess"
+% ifinv    ordered inversion flags for [s2 nu rho], e.g., [1 0 1]:
+%          only minimizes the log-likelihood for the 1-flagged parameters, with  
+%          the 0-flagged fixed to the value provided in thini, directly or as default;
+%          this has the effect of speeding up the estimation procedure but may
+%          not be appropriate in the case of real data with various unknowns
+% xver     0 Minimal output, no extra verification steps
+%          1 Conduct extra verification steps
 %
 % OUTPUT:
 %
@@ -81,9 +79,16 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver)
 % EXAMPLE:
 %
 % p.quart=0; p.blurs=Inf; p.kiso=NaN; clc; [Hx,th,p]=simulosl([],p,1);
-% p.blurs=-1; mleosl(Hx,[],p,[],[],[],1);
+% p.blurs=-1; mleosl(Hx,[],p,[],[],[],[],1);
 %
 % You can stick in partial structures, e.g. only specifying params.kiso
+%
+% Fix any of the parameters to aguess by setting ordered value of ifinv to 0 
+% mleosl(Hx,[],p,[],[],[],[1 0 0],1)
+%
+% Invert for the squared exponential case for nu fixed to Inf 
+% Hx=simulosl([1e6 Inf 1e4],p,1);
+% mleosl(Hx,[],p,[],[],[1e6 Inf 1e4],[1 0 1],1)
 %
 % Perform a series of N simulations centered on th0 with different p's
 % mleosl('demo1',N,th,p)
@@ -98,10 +103,18 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver)
 % mleosl('demo5',th,p) % This should be as good as
 % blurosy('demo2',p.NyNx,[],[],1) % for the same th
 %
+% Estimation of one realization for 3-parameter and 2-parameter optimization
+% mleosl('demo6')
+%
+% Demo series for a fixed parameter
+% mleosl('demo1',N,th,p,[],[],th,[1 0 1]);
+% mleosl('demo2',date,[],[],[],[],[1 0 1]);
+% mleosl('demo4',date,[],[],[],[],[1 0 1]);
+%
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by olwalbert-at-princeton.edu, 06/10/2024
-% Last modified by fjsimons-at-alum.mit.edu, 06/10/2024
+% Last modified by fjsimons-at-alum.mit.edu, 12/16/2024
+% Last modified by olwalbert-at-princeton.edu, 12/16/2024
 
 if ~isstr(Hx)
   defval('algo','unc')
@@ -115,14 +128,14 @@ if ~isstr(Hx)
   % Supply the needed parameters, keep the givens, extract to variables
   fields={               'dydx','NyNx','blurs','kiso','quart','taper'};
   defstruct('params',fields,...
-	    {                      [20 20]*1e3,sqrt(length(Hx))*[1 1],-1,NaN,0,1});
+	    {                      [20 20]*1e3,sqrt(length(Hx))*[1 1],-1,NaN,0,0});
   struct2var(params)
 
   % You cannot call MLEOSL with params.blurs=Inf, since that's for
   % SIMULOSL only, we reset for the inversion only inside LOGLIOSL
 
   % These bounds are physically motivated...
-  if strcmp(algo,'con')
+  if strcmp(algo,'con') || strcmp(algo,'dsm')
     % Parameters for FMINCON in case that's what's being used, which is recommended
     defval('bounds',{[],[],... % Linear inequalities
                      [],[],... % Linear equalities
@@ -136,22 +149,21 @@ if ~isstr(Hx)
   % Being extra careful or not?
   defval('xver',1)
 
+  % Invert for [s2 nu rh]?
+  defval('ifinv',[1 1 1])
+
   % The parameters used in the simulation for demos, or upon which to base "thini"
   % Check Vanmarcke 1st edition for suggestions on initial rho, very important
-  defval('aguess',[nanvar(Hx) 1.5 sqrt(prod(dydx.*NyNx))/pi/2/20]);
+  defval('aguess',[nanvar(Hx) 2.0 sqrt(prod(dydx.*NyNx))/pi/2/20]);
+
   % Scale the parameters by this factor; fix it unless "thini" is supplied
   defval('scl',10.^round(log10(abs(aguess))));
 
   % Unless you supply an initial value, construct one from "aguess" by perturbation
   nperturb=0.25;
   % So not all the initialization points are the same!!
-  if ifinv==[1 0 1]
-    defval('thini',[abs((1+nperturb)*randn(size(aguess(1:end-2))).*aguess(1:end-2)),...
-        aguess(end-1), abs((1+nperturb)*randn(size(aguess(end))).*aguess(end))])
-  else
-    defval('thini',abs((1+nperturb*randn(size(aguess))).*aguess))
-  end
-  % If you brought in your own initial guess, need an appropriate new scale
+  defval('thini',abs((1+nperturb*randn(size(aguess)).*ifinv).*aguess))
+  % If you brought in your own initial guess, you need an appropriate new scale
   if ~isempty(inputname(2)) || any(aguess~=thini)
     scl=10.^round(log10(abs(thini)));
     disp(sprintf(sprintf('\n%s : %s ',str0,repmat(str1,size(scl))),...
@@ -166,9 +178,11 @@ if ~isstr(Hx)
                  'Upper bounds',bounds{6}))
   end
 
-  % Now scale so the minimization doesn't get into trouble
+  % Now apply the scale so the minimization doesn't get into trouble; for the 
+  % special case of nu->Inf, we must enforce that scl(2)==1
+  if thini(end-1)==Inf; scl(2)=1; end
   thini=thini./scl;
-
+ 
   % Analysis taper
   if length(taper)==1 && (taper==0 || taper==1)
       Tx=1;
@@ -194,6 +208,13 @@ if ~isstr(Hx)
   % And with these new scalings you have no more business for the first scale
   % though for the derived quantity you need to retain them
   matscl=[scl(:)*scl(:)']; scl(1)=1;
+
+  % If we have the special case of nu->Inf, we will make a special matrix scale
+  if isinf(thini(end-1)) && ifinv(end-1)==0
+    matsclInf=[matscl(1:end-2,1:end-2) matscl(1:end-2,end);...
+               matscl(  end,  1:end-2) matscl(  end,  end)];
+  end
+
   % Always demean the data sets - think about deplaning as well?
   Hx(:,1)=Hx(:,1)-nanmean(Hx(:,1));
 
@@ -204,7 +225,7 @@ if ~isstr(Hx)
   % Account for the size here? Like in SIMULOSL and checked in BLUROSY
   % See BLUROSY and how to normalize there, maybe take values of Tx?
   if size(Tx)~=1
-      % This to adjust for the size of the taper if it is explicit
+      % This adjusts for the size of an explicit taper
       Hk(:,1)=Hk(:,1)/sqrt(sum(Tx(:).^2))*sqrt(prod(params.NyNx));
   end
   
@@ -250,13 +271,17 @@ if ~isstr(Hx)
     switch algo
      case 'unc'
       % disp('Using FMINUNC for unconstrained optimization of LOGLIOSL')
-       if ifinv==[1 0 1]
-           % we will only optimize for the variance and range parameters and
-           % will take the set value of nu from thini
+       if any(ifinv~=[1 1 1])
+           % We want to optimize for only the parameters requested, taking the
+           % value of thini for fixed parameters
+           [~,tmpidx]=sort(ifinv);[~,invidx]=sort(tmpidx);
+           th2inv=@(x,srtidx) x(srtidx);
+
            t0=clock;
            [thhat,logli,eflag,oput,~,~]=...
-               fminunc(@(theta) logliosl(k,[theta(1) thini(end-1) theta(2)],scl,params,Hk,xver),...
-                       [thini(1:end-2) thini(end)],options);
+               fminunc(@(theta) logliosl(k,th2inv([thini(~ifinv) theta],invidx),...
+                       scl,params,Hk,xver),...
+                       thini(~~ifinv),options);
            ts=etime(clock,t0);
            % the estimate of theta should include the parameters that we
            % optimized for, as well as the set value of nu
@@ -280,7 +305,7 @@ if ~isstr(Hx)
       % disp('Using FMINCON for constrained optimization of LOGLIOSL')
       t0=clock;
       % See M. K. Stein p. 173 when differentiability parameter maxes out
-      % Also check for when this crucial parameter hits the lower bound
+      % Also check for when this crucial parameter hits the lower bound.
       % Hitting the bounds for a parameter is relative, say within 10%.
       thhat(2)=bounds{6}(2); nwh=4; nwi=0; hitit=thhat(2)/10;
       while [bounds{6}(2)-thhat(2)<hitit ...
@@ -293,7 +318,7 @@ if ~isstr(Hx)
                   '\nHit the wall on differentiability... trying again %i/%i\n',...
                   nwi,nwh))
           end
-          if ininv==[1 0 1]
+          if ifinv==[1 0 1]
               % Only optimize for variance and range, fix value of nu given by
               % thini
               lb=bounds{5}./scl;lb=[lb(1) lb(3)];
@@ -607,13 +632,15 @@ elseif strcmp(Hx,'demo1')
     % This is the AVERAGE of the numerical Hessians, should be closer to the Fisher
     avhsz=avhsz.*[sclth0(:)*sclth0(:)']/good;
 
-    % You may have ended on a nonsensical estimate
-    if ~any(isnan(k(:)))
+    % If you are working within the squared exponential case, or if you ended on
+    % a nonsensical estimate, we will have to intervene and forgo the
+    % calculation of the Fisher-derived covariance at the truth
+    if ~any(isnan(k(:))) && ~isinf(th0(2))
         % Now compute the Fisher and Fisher-derived covariance at the truth
         [F0,covF0]=fishiosl(k,th0);
         matscl=[sclth0(:)*sclth0(:)'];
     else
-        [F0,covF0,matscl]=deal(nan(3,3));
+        [F0,covF0,matscl,avhsz]=deal(nan(3,3));
     end
 
     % Of course when we don't have the truth we'll build the covariance
