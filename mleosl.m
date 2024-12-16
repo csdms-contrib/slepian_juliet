@@ -24,8 +24,8 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver)
 %          kiso   wavenumber beyond which we are not considering the likelihood
 %          quart 1 quadruple, then QUARTER the spatial size
 %                0 size as is, watch for periodic correlation behavior
-%          taper 0 there is no taper near of far
-%                1 it's a unit taper, implicitly
+%          taper 0 there is no taper near of far, same as 1
+%                1 it's a unit taper, implicitly, same as 0
 %                OR an appropriately sized taper with proper values 
 %                   (1 is yes and 0 is no and everything in between)
 % algo     'unc' uses FMINUNC for unconstrained optimization
@@ -115,7 +115,7 @@ if ~isstr(Hx)
   % Supply the needed parameters, keep the givens, extract to variables
   fields={               'dydx','NyNx','blurs','kiso','quart','taper'};
   defstruct('params',fields,...
-	    {                      [20 20]*1e3,sqrt(length(Hx))*[1 1],-1,NaN,0,0});
+	    {                      [20 20]*1e3,sqrt(length(Hx))*[1 1],-1,NaN,0,1});
   struct2var(params)
 
   % You cannot call MLEOSL with params.blurs=Inf, since that's for
