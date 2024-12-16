@@ -274,24 +274,35 @@ if ~isstr(Hx)
        if any(ifinv~=[1 1 1])
            % We want to optimize for only the parameters requested, taking the
            % value of thini for fixed parameters
-           [~,tmpidx]=sort(ifinv);[~,invidx]=sort(tmpidx);
-           th2inv=@(x,srtidx) x(srtidx);
+           % Put the non-inverted-for parameters up front
+           [~,tmpidx]=sort(ifinv);
+           % But remember how to put them back in order for later
+           [~,invidx]=sort(tmpidx);
 
            t0=clock;
            [thhat,logli,eflag,oput,~,~]=...
-               fminunc(@(theta) logliosl(k,th2inv([thini(~ifinv) theta],invidx),...
+               fminunc(@(theta) logliosl(k,indeks([thini(~ifinv) theta],invidx),...
                        scl,params,Hk,xver),...
                        thini(~~ifinv),options);
            ts=etime(clock,t0);
-           % the estimate of theta should include the parameters that we
-           % optimized for, as well as the set value of nu
-           thhat = [thhat(1) thini(end-1) thhat(2)];
-           % calculate the numerical gradient and hessian from all three
+
+           % The estimate of theta that we report should include the optimized
+           % and fixed parameters
+           thhat=indeks([thini(~ifinv) thhat],invidx);
+           % Calculate the numerical gradient and Hessian given all three
            % parameters
            derivopts=optimset('MaxIter',0,'MaxFunEvals',0,'Display','off');
            [~,~,~,~,grd,hes]=...
                fminunc(@(theta) logliosl(k,theta,scl,params,Hk,0),...
                        thhat,derivopts);
+           % In the special case of nu->Inf, we will retain a slice of grd and 
+           % hes to avoid singularities when we later calculate the numerical 
+           % covariance approximations
+           if isinf(thini(end-1))
+             grdInf=[grd(1:end-2) grd(end)]'; 
+             hesInf=[hes(1:end-2,1:end-2) hes(1:end-2,end);...
+                     hes(  end,  1:end-2) hes(  end,  end)];
+             end
        else
            t0=clock;
            [thhat,logli,eflag,oput,grd,hes]=...
@@ -318,27 +329,60 @@ if ~isstr(Hx)
                   '\nHit the wall on differentiability... trying again %i/%i\n',...
                   nwi,nwh))
           end
-          if ifinv==[1 0 1]
-              % Only optimize for variance and range, fix value of nu given by
-              % thini
-              lb=bounds{5}./scl;lb=[lb(1) lb(3)];
-              ub=bounds{6}./scl;ub=[ub(1) ub(3)];
-              [thhat,logli,eflag,oput,lmd,grd,hes]=...
-                  fmincon(@(theta) logliosl(k,[theta(1) thini(end-1) theta(2)],scl,params,Hk,xver),...
-                          [thini(1:end-2) thini(end)],...
-                          bounds{1},bounds{2},bounds{3},bounds{4},...
-                          lb,ub,bounds{7},...
+          if any(ifinv~=[1 1 1])
+              % Only optimize for the parameters requested
+              for bdx=1:length(bounds)
+                % For the lower and upper bounds of the parameter set
+                  if ~isempty(bounds{bdx})
+                      % Only scale the parameter bounds actually inverted for
+                    subbounds{bdx}=bounds{bdx}(logical(ifinv))./scl(logical(ifinv));
+                else
+                    % This remains empty
+                    subbounds{bdx}=[];
+                  end
+              end
+
+              % Put the non-inverted-for parameters up front
+              [~,tmpidx]=sort(ifinv);
+              % But remember how to put them back in order for later
+              [~,invidx]=sort(tmpidx);
+
+              [thhat,logli,eflag,oput,lmd,~,~]=...
+                  fmincon(@(theta) logliosl(k,...
+                          indeks([thini(~ifinv) theta],invidx),...
+                          scl,params,Hk,xver),...
+                          thini(~~ifinv),...
+                          subbounds{1},subbounds{2},subbounds{3},subbounds{4},...
+                          subbounds{5},subbounds{6},subbounds{7},...
                           options);
-              thhat = [thhat(1) thini(end-1) thhat(2)];
-              % calculate the numerical gradient and hessian from all three
-              % parameters
+              % The estimate of theta should include all three parameters, whether
+              % we fixed or optimized for them
+              thhat=indeks([thini(~ifinv) thhat],invidx);
+              % Whatever the incoming bounds were, make the lower and upper bound of
+              % the non-inverted-for parameters equal to their fixed value
+              bounds{5}=indeks([thini(~ifinv)./scl(~ifinv) subbounds{5}],invidx);
+              bounds{6}=indeks([thini(~ifinv)./scl(~ifinv) subbounds{6}],invidx);
+
+              % Calculate the numerical gradient and Hessian from all three
+              % parameters; keep in mind that FMINCON estimates numerical
+              % Hessian at the next-to-last iteration from the Lagrangian 
+              % rather than the objective function directly; may present
+              % inaccuracies
               derivopts=optimset('MaxIter',0,'MaxFunEvals',0,'Display','off');
-              [~,~,~,~,lmd,grd,hes]=...
+              [~,~,~,~,~,grd,hes]=...
                   fmincon(@(theta) logliosl(k,theta,scl,params,Hk,0),...
                           thhat,...
                           bounds{1},bounds{2},bounds{3},bounds{4},...
-                          bounds{5}./scl,bounds{6}./scl,bounds{7},...
+                          bounds{5},bounds{6},bounds{7},...
                           derivopts);
+              % In the special case of nu->Inf, we will retain a slice of grd and 
+              % hes to avoid singularities when we later calculate the numerical 
+              % covariance approximations
+              if isinf(thini(end-1))
+                  grdInf=[grd(1:end-2) grd(end)]'; 
+                  hesInf=[hes(1:end-2,1:end-2) hes(1:end-2,end);...
+                          hes(  end,  1:end-2) hes(  end,  end)];
+              end
           else
               [thhat,logli,eflag,oput,lmd,grd,hes]=...
                   fmincon(@(theta) logliosl(k,theta,scl,params,Hk,xver),...
@@ -347,7 +391,7 @@ if ~isstr(Hx)
                           bounds{5}./scl,bounds{6}./scl,bounds{7},...
                           options);
               % Try resetting the offending parameter nu by a serious kick
-              thini(2)=thini(2)/[1+1/4-rand/2];
+              thini(end-1)=thini(end-1)/[1+1/4-rand/2];
           end
           % And the others, switching the relationship between sigma^2 and rho
           thini(1)=thini(1)*rand;
