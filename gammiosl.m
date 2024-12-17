@@ -1,10 +1,10 @@
 function g=gammiosl(k,th,params,Hk,xver)
 % g=GAMMIOSL(k,th,params,Hk,xver)
 %
-% Calculates the entries in the score matrix of Olhede & Simons (2013) for
-% the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN model, after
-% wavenumber averaging. Blurring is only approximately possible here, we
-% work with analytical expressions for some of the derivatives, see
+% Calculates the entries in the score matrix of Olhede & Simons (2013, eq. A. 53)
+% for the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN model,
+% after wavenumber averaging. Blurring is only approximately possible here,
+% we work with analytical expressions for some of the derivatives, see
 % LOGLIOSL. Zero-wavenumber excluded. No scaling asked or applied.
 %
 % INPUT:
@@ -38,8 +38,8 @@ function g=gammiosl(k,th,params,Hk,xver)
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 % 
-% Last modified by olwalbert-at-princeton.edu, 09/03/2024
-% Last modified by fjsimons-at-alum.mit.edu, 09/03/2024
+% Last modified by olwalbert-at-princeton.edu, 12/17/2024
+% Last modified by fjsimons-at-alum.mit.edu, 12/17/2024
 
 % params.blurs=Inf can only refer to spatial-domain generation and at
 % this point we are already in the spectral domain; reset not returned
@@ -61,7 +61,7 @@ k = k(~~k);
 % The number of nonzero wavenumbers
 lk=length(k(:));
 
-% The statistics of Xk will be tested in LOGLIOS
+% The statistics of Xk are computed in LOGLIOSL
 Xk=hformos(S,Hk,[],xver);
 
 % First compute the auxiliary parameters
