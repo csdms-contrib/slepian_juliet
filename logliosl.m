@@ -1,5 +1,5 @@
-function [L,g,H,momx,vr,Lk]=logliosl(k,th,scl,params,Hk,xver)
-% [L,g,H,momx,vr,Lk]=LOGLIOSL(k,th,scl,params,Hk,xver)
+function [L,g,H,momx,vr,Lk]=logliosl(k,th,params,Hk,xver)
+% [L,g,H,momx,vr,Lk]=LOGLIOSL(k,th,params,Hk,xver)
 %
 % Calculates the full negative logarithmic likelihood and its derivatives as
 % averaged over wavenumber space. This is the function that we MINIMIZE! No
@@ -7,12 +7,11 @@ function [L,g,H,momx,vr,Lk]=logliosl(k,th,scl,params,Hk,xver)
 %
 % INPUT:
 %
-% k        The wavenumbers at which these are being evaluated [1/m]
-% th       The three-parameter vector argument [scaled]
+% k        The wavenumbers at which these are being evaluated [rad/m]
+% th       The three-parameter vector argument
 %          th(1)=s2   The first Matern parameter [variance in unit^2]
 %          th(2)=nu   The second Matern parameter [differentiability]
 %          th(3)=rho  The third Matern parameter [range in m]
-% scl      The scaling factors applied, so that [scl.*thhat] is in units 
 % params   A structure with AT LEAST these constants that are known:
 %          dydx  sampling interval in the y and x directions [m m]
 %          NyNx  number of samples in the y and x directions
@@ -48,11 +47,11 @@ function [L,g,H,momx,vr,Lk]=logliosl(k,th,scl,params,Hk,xver)
 % p.quart=0; p.blurs=0; p.kiso=NaN; clc; [~,th0,p,k,Hk]=simulosl([],p,1);
 % F=fishiosl(k,th0); g=gammiosl(k,th0,p,Hk); H=hessiosl(k,th0,p,Hk);
 % round(abs((F+H)./F)*100) % should be small percentages
-% [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
+% [L,Lg,LH]=logliosl(k,th0,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by olwalbert-princeton.edu, 09/03/2024
-% Last modified by fjsimons-at-alum.mit.edu, 09/03/2024
+% Last modified by olwalbert-princeton.edu, 12/17/2024
+% Last modified by fjsimons-at-alum.mit.edu, 12/17/2024
 
 % Make sure that this does render LKOSL obsolete
 
@@ -62,19 +61,13 @@ if isinf(params.blurs); params.blurs=-1; end
 
 defval('xver',1)
 
-% Default scaling is none
-defval('scl',ones(size(th)))
-
-% Scale up the parameter vector for the proper likelihood and score
-th=th.*scl;
-
 if any(th<0)
     % I had previously built the protection that the three Matern parameters
     % should be positive by mirroring using % th([1 2 3])=abs(th([1 2 3]));
     % Thereby messing with the iteration path while sticking to FMINUNC instead
     % of FMINCON with positivity constraints. This often sent the smoothness
     % into really high values, and that did more harm than good. So that all
-    % went out the door on 14 Oct 2023 and now we return, which errors "Output
+    % went out the door on 14 Oct 2023 and now we RETURN, which errors "Output
     % argument "L" (and maybe others) not assigned during call to "LOGLIOSL",
     % but that's caught in MLEOSL and so we can move on more or less gracefully.
     return
