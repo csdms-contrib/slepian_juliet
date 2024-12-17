@@ -280,7 +280,8 @@ if ~isstr(Hx)
   thini(1)=thini(1).*scl(1)/shats(1);
   % And with these new scalings you have no more business for the first scale
   % though for the derived quantity you need to retain them
-  matscl=[scl(:)*scl(:)']; scl(1)=1;
+  scl(1)=shats(1);
+  matscl=[scl(:)*scl(:)'];
 
   % If we have the special case of nu->Inf, we will make a special matrix scale
   if isinf(thini(end-1)) && ifinv(end-1)==0
@@ -371,7 +372,7 @@ if ~isstr(Hx)
            % In the special case of nu->Inf, we will retain a slice of grd and 
            % hes to avoid singularities when we later calculate the numerical 
            % covariance approximations
-           if isinf(thini(end-1))
+           if isinf(thini(end-1)) && ifinv(end-1)==0
              grdInf=[grd(1:end-2) grd(end)]'; 
              hesInf=[hes(1:end-2,1:end-2) hes(1:end-2,end);...
                      hes(  end,  1:end-2) hes(  end,  end)];
@@ -451,7 +452,7 @@ if ~isstr(Hx)
               % In the special case of nu->Inf, we will retain a slice of grd and 
               % hes to avoid singularities when we later calculate the numerical 
               % covariance approximations
-              if isinf(thini(end-1))
+              if isinf(thini(end-1)) && ifinv(end-1)==0
                   grdInf=[grd(1:end-2) grd(end)]'; 
                   hesInf=[hes(1:end-2,1:end-2) hes(1:end-2,end);...
                           hes(  end,  1:end-2) hes(  end,  end)];
@@ -526,7 +527,7 @@ if ~isstr(Hx)
         % In the special case of nu->Inf, we will retain a slice of grd and 
         % hes to avoid singularities when we later calculate the numerical 
         % covariance approximations
-        if isinf(thini(end-1))
+        if isinf(thini(end-1)) && ifinv(end-1)==0
             grdInf=[grd(1:end-2) grd(end)]'; 
             hesInf=[hes(1:end-2,1:end-2) hes(1:end-2,end);...
                     hes(  end,  1:end-2) hes(  end,  end)];
@@ -542,8 +543,9 @@ if ~isstr(Hx)
     end
   catch
     % If something went wrong, exit gracefully
-      varargout=cellnan(nargout,1,1);
-      varargout{5}=thini;
+    if ~exist('thhat') || isnan(thhat); thhat=deal(nan(1,3)); end
+    varns={thhat,[],[],scl.*shats,thini,params,Hk,k,shats};
+    varargout=varns(1:nargout);
     return
   end
 
@@ -589,14 +591,33 @@ if ~isstr(Hx)
     
   % Fisher matrix AT the estimate, and covariance derived from it
   [F,covF]=fishiosl(k,thhat.*scl,xver);
+  if isinf(thini(end-1)) && ifinv(end-1)==0
+    FInf=[F(1:end-2,1:end-2) F(1:end-2,end);
+          F(  end  ,1:end-2) F(  end,  end)];
+    covF=inv(FInf)/df;
+  end
 
   % Analytic (poorly blurred) Hessian AT the estimate, and derived covariance
-  [H,covH]=hessiosl(k,thhat.*scl,params,Hk,xver);
+  [H,covH]=hessiosl(k,thhat.*[1 scl(2:3)],params,Hk,xver);
+  H=H./[shats(:)*shats(:)'];
+  covH=inv(-H)/df;
+
+  % For the special case of nu->Inf, we will neglect terms involving nu
+  if isinf(thini(end-1)) && ifinv(end-1)==0
+      HInf=[H(1:end-2,1:end-2) H(1:end-2,end);
+            H(  end  ,1:end-2) H(  end,  end)];
+      covH=inv(-HInf)/df;
+  end
 
   % FJS how about a step further, use F-1 H F-T to get any influence at all
   % Does Arthur use the average variance of the gradient here somewhere
-  covFHF=inv(F)*[-H]*inv(F)/df;
-  covFhF=inv(F)*[hes./matscl]*inv(F)/df;
+  if isinf(thini(end-1)) && ifinv(end-1)==0
+    covFHF=inv(FInf)*[-HInf]*inv(FInf)/df;
+    covFhF=inv(FInf)*[hesInf./matsclInf]*inv(FInf)/df;
+  else
+    covFHF=inv(F)*[-H]*inv(F)/df;
+    covFhF=inv(F)*[hes./matscl]*inv(F)/df;
+  end
 
   % Analytical calculations of the gradient and the Hessian poorly represent
   % the blurring (though it's much better than not trying at all), and thus,
@@ -666,7 +687,9 @@ if ~isstr(Hx)
   % Here we compute the moment parameters and recheck the likelihood
   [L,~,Hagain,momx,vr]=logliosl(k,thhat,scl,params,Hk,xver);
   diferm(L,logli)
-  diferm(Hagain,H)
+  try
+      diferm(Hagain,H)
+  end
 
   % Reorganize the output into cell arrays
   covFHh{1}=covF;
@@ -708,11 +731,15 @@ elseif strcmp(Hx,'demo1')
   % What datum? The SIXTH argument, after the demo id
   defval('aguess',[])
   % If there is no preference, then that's OK, it gets taken care of
-  bounds=aguess; clear aguess
-  % The EIGHT argument, after the demo id
-  defval('xver',[])
+  datum=aguess; clear aguess
+  % Where to initialize (approx.)? The SEVENTH argument, after the demo id
+  defval('ifinv',[])
   % If there is no preference, then that's OK, it gets taken care of
-  aguess=xver; clear xver
+  aguess=ifinv; clear ifinv
+  % Which parameters to invert for? The EIGHTH argument, after the demo id
+  defval('xver',[1 1 1])
+  % If there is no preference, then that's OK, it gets taken care of
+  ifinv=xver; clear xver
 
   % You can't stick in a NINTH argument so you'll have to default 
   defval('xver',0)
@@ -917,6 +944,7 @@ elseif strcmp(Hx,'demo4')
   defval('thini',[]);
   datum=thini;
   defval('datum',date)
+  defval('ifinv',[1 1 1])
 
   % The number of parameters to solve for
   np=3;
@@ -927,7 +955,7 @@ elseif strcmp(Hx,'demo4')
   [th0,thhats,params,covX,~,pix,~,~,obscov,sclcovX,~,covXpix]=osload(datum,trims);
 
   % Make the plot
-  ah=covplos(2,sclcovX,obscov,params,thhats,[],[],'ver');
+  ah=covplos(2,sclcovX,obscov,params,thhats,[],[],'ver',ifinv);
 
   % Print the figure!
   disp(' ')
@@ -1014,8 +1042,14 @@ elseif strcmp(Hx,'demo6')
     % Simulate something
     [Hx,th0,params]=simulosl;
     % Optimize the smoothness
-    tic; [thhat,~,~,scl]=mleosl(Hx,[],params); toc
+    tic; [thhat,~,~,scl]=mleosl(Hx,[],params,[],[],[],[1 1 1]); toc
     % Do not optimize the smoothness
     thini=thhat.*scl; thini(2)=th0(2);
-    tic ; [thhat2,~,~,scl2]=mleosl(Hx,thini,params,[],[],[],2); toc
+    tic; [thhat2,~,~,scl2]=mleosl(Hx,thini,params,[],[],[],[1 0 1]); toc
+    disp(sprintf('3-parameter inversion estimate: [%0.2f %0.2f %0.2f]',...
+        thhat.*scl))
+    disp(sprintf('2-parameter inversion estimate (nu fixed): [%0.2f %0.2f %0.2f]',...
+        thhat2.*scl2))
 end
+
+
