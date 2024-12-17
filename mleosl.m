@@ -226,8 +226,8 @@ if ~isstr(Hx)
       % plot(ktrm,b(1)+b(2)*ktrm)
       defval('aguess',[s2guess nuguess rhoguess]);
   else
-      defval('aguess',[nanvar(Hx) 2.0 sqrt(prod(dydx.*NyNx))/pi/2/20]);
-    end
+      defval('aguess',[nanvar(Hx) 2.0 sqrt(prod(dydx.*NyNx))/pi/2/10]);
+  end
 
   % Scale the parameters by this factor; fix it unless "thini" is supplied
   defval('scl',10.^round(log10(abs(aguess))));
@@ -271,17 +271,18 @@ if ~isstr(Hx)
   knz=(~~k);
 
   % Always scale the data sets but don't forget to reapply at the very end
-  shat=nanstd(Hx(:,1)); 
-  % Prepare for the unscaling of the variance
-  shats=[shat.^2 1 1];
+  shat=nanstd(Hx(:,1));
   % Scale the data; don't reorder the next three lines!
   Hx(:,1)=Hx(:,1)./shat;
   % Rescale the initial value so the output applies to both THHAT and THINI
-  thini(1)=thini(1).*scl(1)/shats(1);
+  thini(1)=thini(1).*scl(1)/shat^2;
   % And with these new scalings you have no more business for the first scale
   % though for the derived quantity you need to retain them
-  scl(1)=shats(1);
-  matscl=[scl(:)*scl(:)'];
+  sclh=[shat^2 scl(2:3)];
+  matscl=[sclh(:)*sclh(:)'];
+  % Every next occurence has theta(1) compared to scaled Hk so that makes scl(1)=1
+  scl(1)=1;
+  matscl1=[scl(:)*scl(:)'];
 
   % If we have the special case of nu->Inf, we will make a special matrix scale
   if isinf(thini(end-1)) && ifinv(end-1)==0
@@ -354,9 +355,10 @@ if ~isstr(Hx)
            [~,invidx]=sort(tmpidx);
 
            t0=clock;
+           % It's the FMINUNC that benefits from the scaling, but LOGLIOSL is in units
            [thhat,logli,eflag,oput,~,~]=...
-               fminunc(@(theta) logliosl(k,indeks([thini(~ifinv) theta],invidx),...
-                       scl,params,Hk,xver),...
+               fminunc(@(theta) logliosl(k,scl.*indeks([thini(~ifinv) theta],invidx),...
+                                         params,Hk,xver),...
                        thini(~~ifinv),options);
            ts=etime(clock,t0);
 
@@ -367,7 +369,8 @@ if ~isstr(Hx)
            % parameters
            derivopts=optimset('MaxIter',0,'MaxFunEvals',0,'Display','off');
            [~,~,~,~,grd,hes]=...
-               fminunc(@(theta) logliosl(k,theta,scl,params,Hk,0),...
+               fminunc(@(theta) logliosl(k,scl.*theta,...
+                                         params,Hk,0),...
                        thhat,derivopts);
            % In the special case of nu->Inf, we will retain a slice of grd and 
            % hes to avoid singularities when we later calculate the numerical 
@@ -380,7 +383,8 @@ if ~isstr(Hx)
        else
            t0=clock;
            [thhat,logli,eflag,oput,grd,hes]=...
-	       fminunc(@(theta) logliosl(k,theta,scl,params,Hk,xver),...
+	       fminunc(@(theta) logliosl(k,scl.*theta,...
+                                         params,Hk,xver),...
 		       thini,options);
            ts=etime(clock,t0);
        end
@@ -422,9 +426,8 @@ if ~isstr(Hx)
               [~,invidx]=sort(tmpidx);
 
               [thhat,logli,eflag,oput,lmd,~,~]=...
-                  fmincon(@(theta) logliosl(k,...
-                          indeks([thini(~ifinv) theta],invidx),...
-                          scl,params,Hk,xver),...
+                  fmincon(@(theta) logliosl(k,scl.*indeks([thini(~ifinv) theta],invidx),...
+                                            params,Hk,xver),...
                           thini(~~ifinv),...
                           subbounds{1},subbounds{2},subbounds{3},subbounds{4},...
                           subbounds{5},subbounds{6},subbounds{7},...
@@ -444,7 +447,8 @@ if ~isstr(Hx)
               % inaccuracies
               derivopts=optimset('MaxIter',0,'MaxFunEvals',0,'Display','off');
               [~,~,~,~,~,grd,hes]=...
-                  fmincon(@(theta) logliosl(k,theta,scl,params,Hk,0),...
+                  fmincon(@(theta) logliosl(k,scl.*theta,...
+                                            params,Hk,0),...
                           thhat,...
                           bounds{1},bounds{2},bounds{3},bounds{4},...
                           bounds{5},bounds{6},bounds{7},...
@@ -459,7 +463,8 @@ if ~isstr(Hx)
               end
           else
               [thhat,logli,eflag,oput,lmd,grd,hes]=...
-                  fmincon(@(theta) logliosl(k,theta,scl,params,Hk,xver),...
+                  fmincon(@(theta) logliosl(k,scl.*theta,...
+                                            params,Hk,xver),...
                           thini,...
                           bounds{1},bounds{2},bounds{3},bounds{4},...
                           bounds{5}./scl,bounds{6}./scl,bounds{7},...
@@ -500,9 +505,9 @@ if ~isstr(Hx)
            t0=clock;
            options=[];
            [thhat,logli,eflag,oput]=...
-             fminsearch(@(theta) logliosl(k,indeks([thini(~ifinv) theta],invidx),...
-                       scl,params,Hk,xver),...
-                       thini(~~ifinv),options);
+             fminsearch(@(theta) logliosl(k,scl.*indeks([thini(~ifinv) theta],invidx),...
+                                          params,Hk,xver),...
+                        thini(~~ifinv),options);
            ts=etime(clock,t0);
            % The estimate of theta should include all three parameters, whether
            % we fixed or optimized for them
@@ -511,8 +516,9 @@ if ~isstr(Hx)
            t0=clock;
            options=[];
            [thhat,logli,eflag,oput]=...
-	           fminsearch(@(theta) logliosl(k,theta,scl,params,Hk,xver),...
-		           thini,options);
+	       fminsearch(@(theta) logliosl(k,scl.*theta,...
+                                            params,Hk,xver),...
+		          thini,options);
            ts=etime(clock,t0);
         end
         % While FMINSEARCH is gradient-free, we might still want to know
@@ -522,7 +528,8 @@ if ~isstr(Hx)
         derivopts=optimset('MaxIter',0,'MaxFunEvals',0,'Display','off');
         
         [~,~,~,~,grd,hes]=...
-            fminunc(@(theta) logliosl(k,theta,scl,params,Hk,0),...
+            fminunc(@(theta) logliosl(k,scl.*theta,...
+                                      params,Hk,0),...
                     thhat,derivopts);
         % In the special case of nu->Inf, we will retain a slice of grd and 
         % hes to avoid singularities when we later calculate the numerical 
@@ -544,7 +551,7 @@ if ~isstr(Hx)
   catch
     % If something went wrong, exit gracefully
     if ~exist('thhat') || isnan(thhat); thhat=deal(nan(1,3)); end
-    varns={thhat,[],[],scl.*shats,thini,params,Hk,k,shats};
+    varns={thhat,[],[],sclh,thini,params,Hk,k};
     varargout=varns(1:nargout);
     return
   end
@@ -590,7 +597,7 @@ if ~isstr(Hx)
   end
     
   % Fisher matrix AT the estimate, and covariance derived from it
-  [F,covF]=fishiosl(k,thhat.*scl,xver);
+  [F,covF]=fishiosl(k,sclh.*thhat,xver);
   if isinf(thini(end-1)) && ifinv(end-1)==0
     FInf=[F(1:end-2,1:end-2) F(1:end-2,end);
           F(  end  ,1:end-2) F(  end,  end)];
@@ -598,9 +605,10 @@ if ~isstr(Hx)
   end
 
   % Analytic (poorly blurred) Hessian AT the estimate, and derived covariance
-  [H,covH]=hessiosl(k,thhat.*[1 scl(2:3)],params,Hk,xver);
-  H=H./[shats(:)*shats(:)'];
-  covH=inv(-H)/df;
+  [H,covH]=hessiosl(k,scl.*thhat,params,Hk,xver);
+  scls=[shat^2 1 1];
+  matscls=[scls(:)*scls(:)'];
+  covH=inv(-H./matscls)/df;
 
   % For the special case of nu->Inf, we will neglect terms involving nu
   if isinf(thini(end-1)) && ifinv(end-1)==0
@@ -615,7 +623,7 @@ if ~isstr(Hx)
     covFHF=inv(FInf)*[-HInf]*inv(FInf)/df;
     covFhF=inv(FInf)*[hesInf./matsclInf]*inv(FInf)/df;
   else
-    covFHF=inv(F)*[-H]*inv(F)/df;
+    covFHF=inv(F)*[-H./matscls]*inv(F)/df;
     covFhF=inv(F)*[hes./matscl]*inv(F)/df;
   end
 
@@ -624,7 +632,7 @@ if ~isstr(Hx)
   % are expected to be close to numerical results only without blurring
   if xver==1
     % Analytic (poorly blurred) gradient, scaled for numerical comparison
-    gros=gammiosl(k,thhat.*scl,params,Hk,xver).*scl(:);
+    gros=gammiosl(k,scl.*thhat,params,Hk,xver).*scl(:);
 
     % Compare the analytic Hessian with the numerical Hessian and with
     % the Hessian expectation, which is the Fisher, at the estimate, and
@@ -649,7 +657,7 @@ if ~isstr(Hx)
     disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3s,1,npp)),...
 	       ' ','(ds2)^2','(dnu)^2','(drho)^2','ds2dnu','ds2drho','dnudrho'))
     disp(sprintf(sprintf(' Numerical Hessian : %s',str3),trilos(hes)))
-    disp(sprintf(sprintf(' Analyticl Hessian : %s',str3),trilos(-H.*matscl)))
+    disp(sprintf(sprintf(' Analyticl Hessian : %s',str3),trilos(-H.*matscl1)))
     disp(sprintf(sprintf(' Analytical Fisher : %s',str3),trilos( F.*matscl)))
 
     disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3s,1,npp)),...
@@ -676,7 +684,7 @@ if ~isstr(Hx)
   disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3s,1,np)),...
 	       ' ','s2','nu','rho'))
   disp(sprintf(sprintf('%s : %s ',str0,str2),...
-	       'Estimated theta',thhat.*scl.*shats))
+	       'Estimated theta',sclh.*thhat))
   disp(' ')
   if xver==0 || xver==1
     disp(sprintf('%8.1fs per %i iterations or %5.1fs per %i function counts',...
@@ -685,7 +693,8 @@ if ~isstr(Hx)
   end
 
   % Here we compute the moment parameters and recheck the likelihood
-  [L,~,Hagain,momx,vr]=logliosl(k,thhat,scl,params,Hk,xver);
+  [L,~,Hagain,momx,vr]=logliosl(k,scl.*thhat,...
+                                params,Hk,xver);
   diferm(L,logli)
   try
       diferm(Hagain,H)
@@ -706,7 +715,7 @@ if ~isstr(Hx)
   lpars{8}=momx;
   lpars{9}=vr;
   % Generate output as needed
-  varns={thhat,covFHh,lpars,scl.*shats,thini,params,Hk,k,shats};
+  varns={thhat,covFHh,lpars,sclh,thini,params,Hk,k};
   varargout=varns(1:nargout);
 elseif strcmp(Hx,'demo1')
   more off
@@ -1024,7 +1033,7 @@ elseif strcmp(Hx,'demo5')
   % Time to rerun LOGLIOS one last time at the solution
   % Do not collect the analytical gradient and Hessian, since these are
   % not the observed blurred gradients
-  [L,~,~,momx]=logliosl(k,thhat,[1 scl(2:3)],p,Hks,1);
+  [L,~,~,momx]=logliosl(k,scl.*thhat,p,Hks,1);
 
   % We had this already, just making sure it checks out
   diferm(L,lpars{1})
@@ -1051,5 +1060,3 @@ elseif strcmp(Hx,'demo6')
     disp(sprintf('2-parameter inversion estimate (nu fixed): [%0.2f %0.2f %0.2f]',...
         thhat2.*scl2))
 end
-
-
