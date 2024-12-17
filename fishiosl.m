@@ -34,7 +34,7 @@ function [F,covF,cF]=fishiosl(k,th,xver,params)
 % p.quart=0; p.blurs=0; p.kiso=NaN; clc; [~,th0,p,k,Hk]=simulosl([],p,1);
 % F=fishiosl(k,th0); g=gammiosl(k,th0,p,Hk); H=hessiosl(k,th0,p,Hk);
 % round(abs((F+H)./F)*100) % should be small numbers
-% [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
+% [L,Lg,LH]=logliosl(k,th0,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
 % Last modified by olwalbert-at-princeton.edu, 12/17/2024
