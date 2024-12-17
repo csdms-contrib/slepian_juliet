@@ -1,10 +1,10 @@
 function [H,covH,cH]=hessiosl(k,th,params,Hk,xver)
 % [H,covH,cH]=HESSIOSL(k,th,params,Hk,xver)
 %
-% Calculates the entries in the Hessian matrix of Olhede & Simons (2013,
-% eq. 132) for the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN
-% model, after wavenumber averaging. Blurring is only approximately possible
-% here, we work with analytical expressions for some of the derivatives, see
+% Calculates the entries in the Hessian matrix of Olhede & Simons (2013, eq. 132)
+% for the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN model,
+% after wavenumber averaging. Blurring is only approximately possible here,
+% we work with analytical expressions for some of the derivatives, see
 % LOGLIOSL. Zero-wavenumber excluded. No scaling asked or applied.
 %
 % INPUT:
@@ -45,8 +45,8 @@ function [H,covH,cH]=hessiosl(k,th,params,Hk,xver)
 % [L,Lg,LH]=logliosl(k,th0,1,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by olwalbert-at-princeton.edu, 09/03/2024
-% Last modified by fjsimons-at-alum.mit.edu, 09/03/2024
+% Last modified by olwalbert-at-princeton.edu, 12/17/2024
+% Last modified by fjsimons-at-alum.mit.edu, 12/17/2024
 
 % params.blurs=Inf can only refer to spatial-domain generation and at
 % this point we are already in the spectral domain; reset not returned
@@ -65,8 +65,8 @@ npp=np*(np+1)/2;
 
 % Exclude the zero wavenumbers
 Hk=Hk(~~k);
-S = S(~~kk);
-k = k(~~k);
+S=S(~~kk);
+k=k(~~k);
 
 % The number of nonzero wavenumbers
 lk=length(k(:));
