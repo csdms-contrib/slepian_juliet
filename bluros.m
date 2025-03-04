@@ -50,7 +50,7 @@ function varargout=bluros(S,params,xver)
 %
 % BLUROS('demo2',pp,bb) a very simple run test with graphical output
 % 
-% Last modified by fjsimons-at-alum.mit.edu, 12/19/2023
+% Last modified by fjsimons-at-alum.mit.edu, 02/25/2025
 
 if ~isstr(S)
   % disp('Ich bin so lang nicht bei dir g''west')
@@ -322,8 +322,9 @@ end
 function bluros_demo(pp,bb)
 % bluros_demo(pp,bb)
 %
-% This function compares the various ways of blurring, make sure you
-% run it in a variety of combinations in both even and odd numbers.
+% This function compares the various ways of blurring, make sure you run it in a
+% variety of combinations in both even and odd numbers, and test growing sizes
+% and growing refinement parameters.
 %
 % INPUT:
 %
@@ -484,6 +485,8 @@ end
 
 % Print it baby
 figdisp([],sprintf('2_%3.3i_%2.2i',pp,bb),[],2)
+
+% STILL WORTH TESTING AGAINST efd with tsto [0 0]
 
 % A CONSIDERATION AT SOME POINT BUT NOW LARGELY FORGOTTEN
 
