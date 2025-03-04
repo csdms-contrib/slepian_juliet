@@ -28,18 +28,23 @@ function varargout=blurosy(th,params,xver,method,tsto,dth)
 %                1 it's a unit taper, implicitly
 %                OR an appropriately sized taper with explicit values 
 %                   (1 is yes and 0 is no and everything in between)
-% xver    1 or 2 extra verification via BLURCHECK and alternative computations
-%         0 No checking at all
+% xver    1 extra verification via BLURCHECK and alternative computations
+%         0 no checking at all
 % method  'ef' exact, efficient and fast [default]
 %         'efs' exact, efficient and exploiting symmetry
+%         'efd' exact, for diagonals calculation in JMATRIX method 3
+%               which requires tsto but should be close to ef/efs is tsto=[0 0]
+%               (remaining question: does that solve BLUROS_DEMO lingering issue)
 % tsto    An extra parameter slot to pass onto demo2
+%         OR the 2 element list of offsets for the frequency indices, [m1, m2]
+%            default assumption is [0, 0]; used for JMATRIX method 3
 % dth     1, 2, or 3 specifies which element of th gets differentiated, to serve as
 %         an input to the variance calculation, which requires a "blurred" version of
 %         mAosl, if you will, but there is no sense doing it there.
 %
 % OUTPUT:
 %
-% SbarordSbardth    The blurred spectral matrix or its derivative, with the unwrapped 
+% SbarordSbardth    The blurred spectral matrix or its derivative, with the unwrapped
 %                   requested dimension as identified by the input 'params' (wrap with V2S)
 % k                 The wavenumber matrix (the norm of the wave vectors), unwrapped
 % tyy               The autocorrelation of the spatial taper... which you 
@@ -56,30 +61,37 @@ function varargout=blurosy(th,params,xver,method,tsto,dth)
 %                 pp     A square matrix size (one number)
 %                    bb  A MATERNOSP blurring densification (one number)
 %
-% BLUROSY('demo2',pp,nn,mm,tt) Boxcar/Ukraine/France example
-%                 pp           A matrix size (two numbers) [defaulted]
-%                    nn        A number of iterations to average over [defaulted] 
-%                       mm     A method, either 'ef' or 'efs' [defaulted]
-%                          tt  1 Boxcar 2 France 3 Ukraine
+% BLUROSY('demo2',pp,nn,mm,tt,cc) Boxcar/Ukraine/France/Speckle example
+%                 pp              A matrix size (two numbers) [defaulted]
+%                    nn           A number of iterations to average over [defaulted]
+%                                 OR: a date string (e.g. '14-Oct-2025') will produce
+%                                   a second row of figures with the distribution of
+%                                   the parameter (s_x^2) from a MLEOSL precalculated
+%                                   ensemble that are either loaded or calculated live
+%                                   (see also EGGERS6 for pedestrian tapers)
+%                       mm        A method, either 'ef' or 'efs' [defaulted]
+%                          tt     1 Boxcar 2 France 3 Ukraine 4 Speckle
+%                             cc  Flag for tapered data with non-tapered analysis
 %
 % BLUROSY('demo3') % should produce no output
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by olwalbert-at-princeton.edu, 06/17/2024
-% Last modified by fjsimons-at-alum.mit.edu, 06/17/2024
+% Last modified by fjsimons-at-alum.mit.edu, 03/04/2025
+% Last modified by olwalbert-at-princeton.edu, 03/04/2025
 
 if ~isstr(th)
-    if params.blurs>=0 & ~isinf(params.blurs)
+    % Defaults (avoiding DEFVAL to avoid costly EVALIN statements)
+    if ~exist('xver','var') | isempty(xver); xver=1; end
+    if ~exist('method','var') | isempty(method); method='ef'; end
+    if ~exist('tsto','var'); tsto=[]; end
+    if ~exist('dth','var'); dth=[]; end
+
+    if params.blurs>=0 && ~isinf(params.blurs)
         error('Are you sure you should be running BLUROSY, not BLUROS?')
     end
-    if isinf(params.blurs)
+    if isinf(params.blurs) & isempty(dth)
         error('Are you sure you should be running BLUROSY, not MATERNOSY?')
     end
-
-    % Defaults
-    defval('xver',1)
-    defval('method','ef')
-    defval('dth',[])
 
     % Target dimensions, the original ones
     NyNx=params.NyNx;
@@ -87,7 +99,7 @@ if ~isstr(th)
 
     switch method 
       case 'ef'
-        % Generates a double grid from which we subsample
+        % Generates a 2*NyNx double grid from which we subsample
         % Fully exact and not particularly fast, still much faster than BLUROS
 
         % Here are the full lags
@@ -98,7 +110,7 @@ if ~isstr(th)
         % multiplied by the spatial taper in a way that its Fourier
         % transform can be the convolution of the spectral density with the
         % spectral density of the taper, i.e. the expected periodogram
-        [Cyy,tyy]=spatmat(ydim,xdim,th,params,xver,dth);
+        [Cyy,tyy]=spatmat(ydim,xdim,th,params,xver,dth,tsto);
 
         % http://blogs.mathworks.com/steve/2010/07/16/complex-surprises-from-fft/
         % Here is the blurred covariance on the 'double' grid
@@ -115,7 +127,7 @@ if ~isstr(th)
         xdim=[0:NyNx(2)-1] ;
         
         % Here is the Matern spatial covariance on the quarter distance grid, see above
-        [Cyy,tyy]=spatmat(ydim,xdim,th,params,xver,dth);
+        [Cyy,tyy]=spatmat(ydim,xdim,th,params,xver,dth,tsto);
 
         % Exploit the symmetry just a tad, which allows us to work with smaller matrices
         q1=fft2(Cyy);
@@ -132,16 +144,44 @@ if ~isstr(th)
             Cyy=[fliplr(Cyy(:,2:end)) Cyy]; Cyy=[flipud(Cyy(2:end,:)) ; Cyy];
             Cyy=[zeros(size(Cyy,1)+1,1) [zeros(1,size(Cyy,2)) ; Cyy]];
         end
+      case 'efd'
+        % Generates a 2*NyNx-1 double grid from which we subsample; applied for
+        % calculating the covariance of the DFT over a diagonal in JMATRIX
+        ydim=[-NyNx(1)+1:NyNx(1)-1]';
+        xdim=[-NyNx(2)+1:NyNx(2)-1] ;
+
+        % Here is the Matern spatial covariance on the double distance grid,
+        % multiplied by the spatial taper in a way that its Fourier
+        % transform can be the convolution of the spectral density with the
+        % spectral density of the taper, i.e. the expected periodogram
+        [Cyy,tyy]=spatmat(ydim,xdim,th,params,xver,dth,tsto);
+
+        % Implementing Arthur's fold for the univariate, 2-dimensional case
+        numvars=1;
+        cbar=reshape(Cyy,[size(Cyy) numvars numvars]);
+        foldarr=zeros([NyNx,numvars,numvars]);
+        numdims=2;
+        for ind=0:numdims-1
+          for jnd=0:numdims-1
+            res=cbar(ind*NyNx(1)+1:min([(ind+1)*NyNx(1) NyNx(1)*2-1]),...
+                     jnd*NyNx(2)+1:min([(jnd+1)*NyNx(2) NyNx(2)*2-1]));
+            pres=[zeros(size(res,1)+ind,jnd) [zeros(ind,size(res,2)); res]];
+            foldarr=foldarr+pres;
+          end
+        end
+        % To get Cyy out as the size of the data
+        Cyy=foldarr;
+        Hh=fft2(foldarr);
     end
 
     % Normalize and vectorize
     Sbar=Hh(:)*prod(dydx)/(2*pi)^2;
 
-    % Should check positivity always!
-    if any(Sbar<0); keyboard; end
+    % Should check positivity if you want the non-derivative outputs
+    if any(Sbar<0) & isempty(dth) & ~any(tsto); keyboard; end
 
-    % Check Hermiticity of the results
-    if xver==1 || xver==2
+    % Check Hermiticity of the results for the straight variance case
+    if xver==1 & isempty(dth) & ~any(tsto)
         blurcheck(Sbar,params)
         if strcmp('method','ef')
             hermcheck(tyy)
@@ -172,31 +212,59 @@ elseif strcmp(th,'demo2')
     % the uncorrelated-wavenumber approximation of the debiased Whittle
     % approach, but we do fear systematic offsets.
 
-    % Number of iterations
-    defval('xver',100);
     % Method of computation
     defval('method','efs')
-    % Type of taper, e.g. boxcar, France, Ukraine
+    % Type of taper, e.g. boxcar, France, Ukraine, Speckle
     defval('tsto',1)
+    % Include taper in the analysis (i.e., calculate the expected periodogram by
+    % correctly accounting for variations in sampling)
+    defval('dth',0)
     % Field size 
     defval('params',[188 233]+randi(20,[1 2]))
-    
-    % BEGIN Figure for boxcar paper
-    params=[33 33]*3;
-    % Some Matern paramters
-    th=[1 2.5 1e3];
-    % Some number of iterations
-    xver=100;
-    % Taper type
-    tsto=1;
-    % END Figure for boxcar paper
 
-    % Some combinations - SIMULOSL
-    p.NyNx=[params(1) params(2)];
-    p.dydx=1e3*[1 1];
+    % Number of iterations
+    defval('xver',100)
+    % Option to use xver input to specify datum of existing calculations to
+    % load for sx2 visual summary, provided as string 
+    if isstr(xver)
+        datum=xver;
+        clear xver;
+        defval('xver',100);
+        % Additions from EGGERS6 for sx2 visual statistics summary require loading
+        % MLEOSL batch calculations
+        try
+            [th,thhats,p,~,~,~,~,~,~,~,momx]=osload(datum,[],'mleosl');
+            warning(sprintf('%s %s\n%s %i %s',...
+                            'OSLOAD retrieved existing moment parameter data for',datum,...
+                            'make sure that taper type',tsto,'corresponds to these data'))
+        catch
+            % If premade simulations do not exists, will generate a set using
+            % MLEOSL defaults for th and p that we will retrieve from OSLOAD;
+            % recall that MLEOSL('DEMO1') will store simulations for today's
+            % date only
+            disp(sprintf('Calculating %i simulations for new datum %s',xver,date))
+            mleosl('demo1',xver);
+            datum=date;
+            [th,thhats,p,~,~,~,~,~,~,~,momx]=osload(datum,[],'mleosl');
+        end 
+    else 
+        % BEGIN Figure for boxcar paper
+        %params=[33 33]*3;
+        % Some Matern paramters
+        th=[1 2.5 1e3];
+        % Some number of iterations
+        % xver=100;
+        % Taper type
+        % tsto=1;
+        % END Figure for boxcar paper
+
+        % Some combinations - SIMULOSL
+        p.NyNx=[params(1) params(2)];
+        p.dydx=1e3*[1 1];
+    end
 
     % Compare the average periodogram with the blurred spectral density
-
+    
     % What kind of a test are we running? Boxcar, or France/Ukraine?
     switch tsto
       case 1
@@ -210,20 +278,38 @@ elseif strcmp(th,'demo2')
       case 3
         % Here's another one
         p.mask='ukraine';
+      case 4
+        % Here is the speckled case
+        p.mask='random';
     end
     switch tsto
       case {2,3}
         % Generate "mask" only, never mind what the data will be
-        [~,~,I]=maskit(rand(p.NyNx),p);
+        [~,I]=maskit(rand(p.NyNx),p);
         % Keep the mask as a taper or the taper as mask, for illustration only
         p.taper=I;
+      case 4
+        % Generate "(anti-)mask" only, never mind what the data will be
+        scl=0.1;
+        [~,I]=muckit(rand(p.NyNx),p,scl);
+        % Keep the speckles as a taper or the taper as speckles, for
+        % illustration only
+        p.taper=~I;
     end
-    
+
     % Calculate expected periodogram, i.e. the appropriately blurred likelihood
     % Use the exact method via BLUROSY, force p.blurs=-1
     p.blurs=-1;
+    % If we want to look at the effect of NOT accounting for sampling
+    % irregularities in creating the periodogram, set the taper to 0 following
+    % data creation in the analysis step
+    if dth==1
+        pb=p; pb.taper=1;
+    else
+        pb=p;
+    end
     % Just do the real xver=1 explicitly here
-    Sbar=blurosy(th,p,1,method);
+    Sbar=blurosy(th,pb,1,method);
     % Then for what comes next, to simulate data using SGP, force p.blurs=Inf
     p.blurs=Inf;
 
@@ -263,8 +349,10 @@ elseif strcmp(th,'demo2')
     [ah,ha,H]=krijetem(subnum(2,3));
 
     axes(ah(1))
-    imagefnan([1 1],p.NyNx([2 1]),v2s(Hxx,p),[],th(1)*[-3 3]); axis image ij
+    % imagefnan([1 1],p.NyNx([2 1]),v2s(Hxx,p),[],th(1)*[-3 3]); axis image ij
+    imagefnan([1 1],p.NyNx([2 1]),v2s(Hxx,p),[],[min(Hxx) max(Hxx)]); axis image ij
     t(1)=title(sprintf('field # %i',randix));
+    yl(1)=ylabel('position index');
     
     axes(ah(2))
     imagesc(log10(v2s(Sbx,p))); axis image
@@ -275,44 +363,59 @@ elseif strcmp(th,'demo2')
     if length(p.taper)==1; p.taper=ones(p.NyNx); end
     imagesc(p.taper); axis image
     t(4)=title('taper');
+    xl(4)=xlabel('position index');
+    yl(4)=ylabel('position index');
 
     % The expectation of the periodogram
     axes(ah(3))
     imagesc(log10(v2s(Sbar,p))); axis image
-    t(3)=title(sprintf('expectation | %s [%g %g %gx]',...
-                       '\theta =',th./[1 1 sqrt(prod(p.dydx))]));
+    t(3)=title(sprintf('expectation | %s [%0.2g %g %0.2g]',...
+                       '\theta =',th));
+    % t(3)=title(sprintf('expectation | %s [%g %g %gx]',...
+    %'\theta =',th./[1 1 sqrt(prod(p.dydx))]));
+    yl(3)=ylabel('wavenumber index'); moveh(yl(3),335);
     
     % Then compare with the thing coming out of BLUROSY
     axes(ah(6))
     imagesc(log10(v2s(Sbb,p))); axis image
     t(6)=title(sprintf('average | %i realizations',xver));
+    xl(6)=xlabel('wavenumber index');
+    yl(6)=ylabel('wavenumber index'); moveh(yl(6),335);
     
     axes(ah(5))
     imagesc(v2s(Sbb./Sbar,p)); axis image
     t(5)=title(sprintf('(aver / expec), m %4.2f, s %4.2f',...
                        m(end),s(end)));
+    xl(5)=xlabel('wavenumber index');
     try
         set(ah(5),'clim',m(end)+[-1 1]*nsig*s(end))
     end
     
     % Clean that sh*t up
     [k,dci,dcn,kx,ky]=knums(p);
-    set(ah([1 4]),'xtick',unique([1 dci(2) p.NyNx(2)]),...
-       'ytick',unique([1 dci(1) p.NyNx(1)]));
-    set(ah([2 3 5 6]),'xtick',unique([1 dci(2) p.NyNx(2)]),...
-       'ytick',unique([1 dci(1) p.NyNx(1)]),...
-       'xticklabel',[-1 0 1],...
-       'yticklabel',[-1 0 1]);
+    lx=p.NyNx(2);
+    ly=p.NyNx(1);
+    xlis=unique([1 dci(2) p.NyNx(2)]);
+    ylis=unique([1 dci(1) p.NyNx(1)]);
+    set(ah,'xtick',xlis,...
+       'ytick',ylis,...
+       'xticklabel',[-lx/2 0 lx/2],...
+       'yticklabel',[-ly/2 0 ly/2])
+    set(ah,'FontSize',8)
     longticks(ah)
     set(ah([3 6]),'YAxisLocation','right')
+    set(t,'FontSize',10,'FontWeight','normal')
     % serre(H,1,'across')
     serre(H',0.5,'down')
-    movev(t,-p.NyNx(1)/20)
-    figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i-%3.3i_fld',p.NyNx,tsto,xver),[],2)
+    movev(t,-p.NyNx(1)/15)
+    fname=sprintf('demo_2_%3.3i_%3.3i_%3.3i-%3.3i_fld',p.NyNx,tsto,xver);
+    if dth==1
+        fname=append(fname,'cc1');
+    end
+    figdisp([],fname,[],1)
 
     % Second figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     figure(2)
-    clf
     clf
     [ah,ha,H]=krijetem(subnum(2,3));
     df=2;
@@ -322,10 +425,6 @@ elseif strcmp(th,'demo2')
     xstr=sprintf('quadratic residual %s',varibal);
     xstr2=sprintf('quadratic residual 2%s',varibal);
     cax=[0 3*df];
-    ly=p.NyNx(1);
-    lx=p.NyNx(2);
-    ylis=unique([1 dci(2) p.NyNx(2)]);
-    xlis=unique([1 dci(1) p.NyNx(1)]);
     cborien='vert';
 
     axes(ah(1))
@@ -393,37 +492,178 @@ elseif strcmp(th,'demo2')
     [a,b,c]=normtest(magx,1,vr,0.05);
     % disp(sprintf('NORMTEST %i %5.3f %i',a,b,round(c)))
     if a==0; stp='accept'; else stp='reject'; end
-    t(2)=title(sprintf('%s =  %5.3f   8/K = %5.3f   %s   p = %5.2f',...
+    t(2)=title(sprintf('%s = %5.3f  8/K = %5.4f  %s  p = %5.2f',...
                        neem,magx,vr,stp,b));
     movev(t(2),xll(2)/40)
     
     axes(ah(3))
     imagefnan([xlis(1) ylis(end)],[xlis(end) ylis(1)],...
               v2s(Xk,p),'gray',cax,[],1); axis image square
-    set(ah(3),'xtick',xlis,'XtickLabel',[-1 0 1],...
-	  'ytick',ylis,'YtickLabel',[-1 0 1])
+    set(ah(3),'xtick',xlis,'XtickLabel',[-lx/2 0 lx/2],...
+        'ytick',ylis,'YtickLabel',[-ly/2 0 ly/2]);
     longticks(ah(3))
-    xl(3)=xlabel('relative wavenumber'); 
-    yl(3)=ylabel('relative wavenumber');
-    t(3)=title(sprintf('%s | %i x %i | %s = [%g %g %gx]',p.mask,p.NyNx,'\theta',...
-                       th./[1 1 sqrt(prod(p.dydx))]));
+    xl(3)=xlabel('wavenumber index'); 
+    yl(3)=ylabel('wavenumber index');
+    t(3)=title(sprintf('%s | %i x %i | %s = [%0.2g %g %0.2g]',p.mask,p.NyNx,'\theta',...
+                       th));
+    % t(3)=title(sprintf('%s | %i x %i | %s = [%g %g %gx]',p.mask,p.NyNx,n'\theta',...
+                       %th./[1 1 sqrt(prod(p.dydx))]));
     movev(t(3),ylis(end)/20)
-    delete(ah([4:6]))
-    % Cosmetics from EGGERS6
-    axes(ah(3))
-    [cb,xcb]=addcb(cborien,cax,cax,'gray',df,1);
-    axes(cb)
-    set(xcb,'string',xstr)
-    set(cb,'YAxisLocation','right')
-    set(cb,'position',...
-           [getpos(ah(3),1)+getpos(ah(3),3)*1.1 getpos(ah(3),2) getpos(cb,3) getpos(ah(3),4)])
-    shrink(cb,1,1.15)
+    
+    % Check whether we chose to include the sx2 visual summaries from a MLEOSL
+    % batch run, and if so, make additional figures
+    if ~exist('datum','var')
+        delete(ah(4:6))
 
-    % Control all axes and font sizes at the same time
-    set(ah(1:3),'FontSize',8)
-    set(t,'FontSize',8-1)
+        % Cosmetics from EGGERS6
+        axes(ah(3))
+        [cb(1),xcb(1)]=addcb(cborien,cax,cax,'gray',df,1);
+        axes(cb(1))
+        set(xcb(1),'string',xstr)
+        set(cb(1),'YAxisLocation','right')
+        set(cb(1),'position',...
+               [getpos(ah(3),1)+getpos(ah(3),3)*1.1 getpos(ah(3),2) getpos(cb(1),3) getpos(ah(3),4)])
+        shrink(cb(1),1,1.15)
 
-    figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i-%3.3i_chi',p.NyNx,tsto,xver),[],2)
+        moveh(ah(1),-0.03); moveh(ah(3),0.03)
+        moveh(ah(1:3),-0.03)
+        movev([ah(1:3) cb],-0.2)
+
+        % Control all axes and font sizes at the same time
+        set([ah(1:3) cb],'FontSize',8)
+        set(t,'FontSize',7,'FontWeight','normal')
+    else
+        axes(ah(4))
+        mx3=momx(:,3);
+        % Take out the Inf which may occur at zero wavenumber
+        [bdens,c]=hist(mx3,4*round(log(length(mx3))));
+        bdens=bdens/indeks(diff(c),1)/length(mx3);
+        bb=bar(c,bdens,1);
+        varibal='s_X^2';
+        % Each of the below should be df/2
+        t(4)=title(sprintf('m(%s) =  %5.3f   v(%s) =  %5.3f',...
+                   varibal,nanmean(mx3),...
+                   varibal,nanvar(mx3)));
+        set(bb,'FaceC',grey)
+        hold on
+        sfax=4;
+        k=knums(p); varpred=8/[length(k(~~k))];
+        xll=[1-sfax*sqrt(varpred) 1+sfax*sqrt(varpred)];
+        xls=linspace(1-sfax*sqrt(varpred),1+sfax*sqrt(varpred),sfax+1);
+        refs=linspace(xll(1),xll(2),100);
+        plot(refs,normpdf(refs,1,sqrt(varpred)),'Linew',1,'Color','k')
+        axis square
+        xlim(xll)
+        set(ah(4),'xtick',xls,'xticklabel',round(xls*100)/100)
+        longticks(ah(4))
+        xl(1)=xlabel(varibal);
+        yl(1)=ylabel('probability density');
+        %ylim([0 11])
+        hold off
+
+        % Save this position as it gets messed up afterwards
+        posh=getpos(ah(4));
+        
+        axes(ah(5))
+        h=qqplot(mx3,makedist('normal','mu',1,'sigma',sqrt(varpred)));
+        axis equal; box on
+        set(h(1),'MarkerE','k')
+        set(h(3),'LineS','-','Color',grey)
+        % Extend the line to the full axis
+        xll=[1-sfax*sqrt(varpred) 1+sfax*sqrt(varpred)];
+        
+        hold on
+        xh=get(h(3),'xdata');
+        yh=get(h(3),'ydata');
+        % On the right
+        h(4)=plot([xh(2) xll(2)],...
+              [yh(2) yh(2)+[yh(2)-yh(1)]/[xh(2)-xh(1)]*[xll(2)-xh(2)]]);
+        % On the left
+        h(5)=plot([xll(1) xh(1)],...
+              [yh(1)+[yh(2)-yh(1)]/[xh(2)-xh(1)]*[yh(2)-xll(2)] yh(1)]);
+        set(h(4:5),'LineS','-','Color',grey)
+        hold off
+        top(h(3),ah(2))
+        delete(get(ah(5),'ylabel'));
+        delete(get(ah(5),'title'));
+        sfax=3;
+        xls=linspace(1-sfax*sqrt(varpred),1+sfax*sqrt(varpred),(2*sfax+1));
+        xlc=num2cell(round(xls*10)/10);
+        xlim(xll); ylim(xll)
+        xlc{1}='';
+        xlc{3}='';
+        xlc{5}='';
+        xlc{7}='';
+        set(ah(5),'xtick',xls,'xticklabel',xlc,...
+                  'ytick',xls,'yticklabel',xlc)
+        longticks(ah(5))
+        xl(2)=xlabel(sprintf('predicted %s',varibal));
+        yl(2)=ylabel(sprintf('observed %s',varibal));
+        axis square
+
+        axes(ah(6))
+        sfax=2;
+        if th0(1)>=1000
+            cax2=[-sfax sfax]*sqrt(th0(1))/1000;
+            imagefnan([xlis(1) xlis(end)],[xlis(end) xlis(1)],...
+              reshape(Hx-mean(Hx),p.NyNx)/1000,...
+              'gray',cax2,[],1); axis image
+            xstr3='simulated field [km]';
+        else
+            cax2=[-sfax sfax]*sqrt(th0(1));
+            imagefnan([xlis(1) xlis(end)],[xlis(end) xlis(1)],...
+              reshape(Hx-mean(Hx),p.NyNx),...
+              'gray',cax2,[],1); axis image
+            xstr3='simulated field [m]';
+        end
+        cborien='vert';
+        set(ah(6),'xtick',xlis,'xticklabel',[-lx/2 0 lx/2],...
+              'ytick',ylis,'yticklabel',[-ly/2 0 ly/2])
+        xl(6)=xlabel('position index');
+        yl(6)=ylabel('position index');
+        longticks(ah(6))
+
+        % Cosmetics from EGGERS6
+        axes(ah(3))
+        [cb(1),xcb(1)]=addcb(cborien,cax,cax,'gray',df,1);
+        axes(cb(1))
+        set(xcb(1),'string',xstr)
+        set(cb(1),'YAxisLocation','right')
+        set(cb(1),'position',...
+               [getpos(ah(3),1)+getpos(ah(3),3)*1.1 getpos(ah(3),2) getpos(cb(1),3) getpos(ah(3),4)])
+        shrink(cb(1),1,1.15)
+
+        axes(ah(6))
+        if th0(1)>=1000 
+            [cb(2),xcb(2)]=addcb(cborien,cax2,cax2,'gray',sqrt(th0(1))/1000,1);
+        else
+            [cb(2),xcb(2)]=addcb(cborien,cax2,cax2,'gray',sqrt(th0(1)),1);
+        end
+        axes(cb(2))
+        set(xcb(2),'string',xstr3)
+        cblabs=sprintfc('%0.1f',str2num(get(cb(2),'YTickLabel')));
+        set(cb(2),'YAxisLocation','right','position',...
+           [getpos(ah(6),1)+getpos(ah(6),3)*1.1 getpos(ah(6),2) getpos(cb(2),3) getpos(ah(6),4)],...
+           'YTickLabel',cblabs);
+        shrink(cb(2),1,1.15)
+        moveh(ah([1 4]),-0.03);moveh([ah([3 6]) cb],0.03)
+        moveh([ah cb],-0.03)
+
+        % Control all axes and font sizes at the same time
+        set([ah cb],'FontSize',8)
+        set(t,'FontSize',7,'FontWeight','normal')
+        pah3b=getpos(ah(3));
+        serre(H',0.25,'down')
+        pah3a=getpos(ah(3));
+        movev(cb(1),pah3a(2)-pah3b(2));
+    end
+
+    fname=sprintf('demo_2_%3.3i_%3.3i_%3.3i-%3.3i_chi',p.NyNx,tsto,xver);
+    if dth==1
+        fname=append(fname,'cc1');
+    end
+    figdisp([],fname,[],1)
+    %figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i-%3.3i_chi',p.NyNx,tsto,xver),[],1)
 
     % Third figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     figure(3)
@@ -446,11 +686,19 @@ elseif strcmp(th,'demo2')
 
     hold on
     plot(1:xver,m,'LineWidth',1,'Color','b')
+    plot(1:xver,1.96./sqrt(1:xver)+m,'LineWidth',1,'Color','k')
     hold off
-    tt=title(sprintf('%s | %i x %i | %s = [%g %g %gx]',p.mask,p.NyNx,'\theta',...
-                     th./[1 1 sqrt(prod(p.dydx))]));
+    %tt=title(sprintf('%s | %i x %i | %s = [%g %g %gx]',p.mask,p.NyNx,'\theta',...
+    %                 th./[1 1 sqrt(prod(p.dydx))]));
+    tt=title(sprintf('%s | %i x %i | %s = [%0.2g %g %0.2g]',p.mask,p.NyNx,'\theta',...
+                     th));
     movev(tt,range(ylim)/30)
-    figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i-%3.3i_std',p.NyNx,tsto,xver),[],2)
+    fname=sprintf('demo_2_%3.3i_%3.3i_%3.3i-%3.3i_std',p.NyNx,tsto,xver);
+    if dth==1
+        fname=append(fname,'cc1');
+    end
+    figdisp([],fname,[],1)
+    %figdisp([],sprintf('demo_2_%3.3i_%3.3i_%3.3i-%3.3i_std',p.NyNx,tsto,xver),[],1)
 elseif strcmp(th,'demo3')
     % Simulate some random data with default p.blurs=Inf and p.taper=0
     [H,th,p]=simulosl;
@@ -482,8 +730,8 @@ elseif strcmp(th,'demo3')
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [Cyy,t]=spatmat(ydim,xdim,th,params,xver,dth)
-% [Cyy,t]=spatmat(ydim,xdim,th,params,xver,dth)
+function [Cyy,t]=spatmat(ydim,xdim,th,params,xver,dth,tsto)
+% [Cyy,t]=spatmat(ydim,xdim,th,params,xver,dth,tsto)
 %
 % Returns the modified spatial covariance whose Fourier transform is the blurred
 % spectrum after spatial data tapering, i.e. the expected periodogram. No use to
@@ -541,7 +789,7 @@ if prod(size(params.taper))>1
     % kernel2 = kernel2(1:p.NyNx(1),1:p.NyNx(2));
     % Then feed that into COMPUTE_EXPECTATION_FROM_KERNELS
 
-    if (xver==1 || xver==2)  && all(size(t)==NyNx)
+    if xver==1 && all(size(t)==NyNx)
         t3=xcorr2(Tx); t3=t3/sum(sum(Tx.^2));
         if all(size(t)==NyNx)
             % Then the doubling inside this block needs to be undone
@@ -560,15 +808,17 @@ else
     % Here is the gridded triangle for this case
     t=bsxfun(@times,triy,trix);
 
-    if xver==1 || xver==2
+    if xver==1 
         % Do form the taper explicitly after all, normalize ahead of time
         Tx=ones(NyNx)/sqrt(prod(NyNx));
         % Need to cut one off Arthur says, possibly need to
         % re-re-visit these even/odd comparisons in BLUROS, if it ever
         % gets to that point; currently the comparison is favorable
         t2=fftshift(ifft2(abs(fft2(Tx,2*size(Tx,1)-1,2*size(Tx,2)-1)).^2));
-        % Fix the rim by adding zeroes top and left
-        t2=[zeros(size(t2,1)+1,1) [zeros(1,size(t2,2)) ; t2]];
+        if ~any(tsto)
+          % Fix the rim by adding zeroes top and left
+          t2=[zeros(size(t2,1)+1,1) [zeros(1,size(t2,2)) ; t2]];
+        end
         % Check the difference between these two implementations,
         % all checked for even/odd/method combinations on 2/24/2023
         if all(size(t)==NyNx)
@@ -579,13 +829,50 @@ else
     end
 end
 
+% Use the tsto input argument for providing frequency index offsets required
+% for calculating the JMATRIX per-diagonal method (3; Eq. 17 of VoWE)
+if ~isempty(tsto) & size(tsto,2)==2
+    %%% OLW TODO: Confirm that this dual use of tsto will not harm demo2
+    m1=tsto(1); m2=tsto(2);
+    normalization_factor=prod(NyNx);
+    two_n=NyNx.*2-1;
+    a=exp(2i*pi*m1/NyNx(1).*(NyNx(1):-1:1))';
+    b=reshape(exp(2i*pi*m2/NyNx(2).*(NyNx(2):-1:1))',1,NyNx(2));
+    c=a*b;
+    if isfield(params,'taper') & numel(params.taper)>1
+        g=params.taper;
+        sg=sum(g.^2,"all");
+        g2=g.*c; 
+    else
+        g=ones(NyNx);
+        sg=numel(g);
+        g2=c;
+    end
+    % We can speed up the calculation sometimes using gpuArray calculations
+    % below, however this only pays off for grids larger than about 2500 
+    % elements when not using parfor and larger than 6000 elements when using 
+    % parfor, which we should
+    mkgpuarr=1 & normalization_factor>6e3;
+    if mkgpuarr
+        g=gpuArray(g);
+        g2=gpuArray(g2);
+    end
+    % The next two lines are the most expensive part of calculating JMATRIX
+    % method 3, so we provide gpuArrays when it will help
+    f =fftn(g,two_n).*conj(fftn(g2,two_n));
+    cg=ifftn(f);
+    if mkgpuarr
+        cg=gather(cg);
+    end
+    t =cg./sg;
+end
+
 % Here is the distance grid, whose size depends on the input
 y=sqrt(bsxfun(@plus,[ydim*dydx(1)].^2,[xdim*dydx(2)].^2));
 
 % The modified spatial covariance
-Cyy=maternosy(y,th,[],dth).*t;
-
-% Remind me: Arthur: diag(U^T * Cyy * U) where U is the DFMTX is the
-% expected periodogram, the diagonal variance, but to get the variance of
-% the gradient we need the whole thing, the covariance, (U^T * Cyy * U) of
-% course in two dimensions, so properly arranged.
+Cyy=maternosy(y,th,dth);
+if ~isempty(tsto) & size(tsto,2)==2
+    Cyy=ifftshift(Cyy);
+end
+Cyy=Cyy.*t;
