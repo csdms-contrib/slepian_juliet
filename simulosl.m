@@ -14,9 +14,9 @@ function varargout=simulosl(th0,params,xver,varargin)
 % INPUT:
 %
 % th0      The true parameter vector with elements:
-%          th0(1)=s2   The first Matern parameter, aka sigma^2 
-%          th0(2)=nu   The second Matern parameter 
-%          th0(3)=rho  The third Matern parameter 
+%          th0(1)=s2   The first Matern parameter, aka sigma^2, in field units^2 
+%          th0(2)=nu   The second Matern parameter
+%          th0(3)=rho  The third Matern parameter, in the units of the grid
 % params   A structure with constants that are (assumed to be) known:
 %          dydx   sampling interval in the y and x directions [m m]
 %          NyNx   number of samples in the y and x directions
@@ -80,6 +80,7 @@ function varargout=simulosl(th0,params,xver,varargin)
 % simulosl('demo6',th0,p) % A better space-domain covariance estimator
 % simulosl('demo7',th0,p) % Illustrates p.blurs=-1 versus p.blurs=Inf
 % simulosl('demo8') % Illustrates p.blurs=-1 versus p.blurs=Inf
+% simulosl('demo9') % Example for Ivy
 %
 % SEE ALSO:
 %
@@ -87,19 +88,17 @@ function varargout=simulosl(th0,params,xver,varargin)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 % Last modified by olwalbert-at-princeton.edu, 12/18/2023
-% Last modified by fjsimons-at-alum.mit.edu, 05/30/2024
-
-% Make a demo9 with Baig's example
+% Last modified by fjsimons-at-alum.mit.edu, 03/14/2025
 
 % Here is the true parameter vector and the only variable that gets used 
-defval('th0',[1e6 1.5 2e4]);
+defval('th0',[1e6 2.5 2e4]);
 
 % If not a demo...
 if ~isstr(th0)
   % Supply the needed parameters, keep the givens, extract to variables
   fields={               'dydx','NyNx','blurs','kiso','quart','taper','nugget'};
   defstruct('params',fields,...
-	    {                      [10 10]*1e3,[256 256],Inf,NaN,0,0,0});
+	    {                      [10 10]*1e3,[64 64],Inf,NaN,0,0,0});
   struct2var(params)
 
   % Here is the extra verification parameter
@@ -161,7 +160,7 @@ if ~isstr(th0)
     if xver==1
       % Check Hermiticity before transformation, absolute tolerance
         hermcheck(reshape(Hk,NyNx))
-      % Check unitarity of the transform; relative tolerance
+        % Check unitarity of the transform; relative tolerance
       diferm(Hk-tospec(Hx,params)/(2*pi),[],9-round(log10(mean(abs(Hk)))));
     end
     
@@ -827,6 +826,29 @@ elseif strcmp(th0,'demo8')
     % look at difference
     % plot first/second row/colum on top of last
     % notice different periodicities
+elseif strcmp(th0,'demo9')
+    % Make an empty run to get defaults (in particular, p.blurs=Inf)
+    [~,th0,p]=simulosl;
+    % Run four examples
+    t{1}=[  th0(1)   th0(2)   th0(3)];
+    t{2}=[  th0(1) 1/2*th0(2)   th0(3)];
+    t{3}=[2*th0(1)   th0(2)   th0(3)];
+    t{4}=[  th0(1)   th0(2) 2*th0(3)];
+    % Plot
+    ah=krijetem(subnum(2,2));
+    for index=1:4
+        axes(ah(index))
+        Hx{index}=v2s(simulosl(t{index}),p);
+        imagesc(Hx{index})
+    end
+    % Set a common color bar
+    cols=halverange((cat(1,Hx{:})),75);
+    for index=1:4
+        axes(ah(index))
+        caxis(cols)
+        tl(index)=title(sprintf('%i | %4.2f | %i',...
+                               round(t{index}(1)),t{index}(2),round(t{index}(3))));
+    end
 end
 
 % Plotting routine %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
