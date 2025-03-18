@@ -40,7 +40,7 @@ function varargout=blurosy(th,params,xver,method,tsto,dth)
 %            default assumption is [0, 0]; used for JMATRIX method 3
 % dth     1, 2, or 3 specifies which element of th gets differentiated, to serve as
 %         an input to the variance calculation, which requires a "blurred" version of
-%         mAosl, if you will, but there is no sense doing it there.
+%         MAOSL, if you will, but there is no sense doing it there.
 %
 % OUTPUT:
 %
@@ -76,8 +76,8 @@ function varargout=blurosy(th,params,xver,method,tsto,dth)
 % BLUROSY('demo3') % should produce no output
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 03/04/2025
-% Last modified by olwalbert-at-princeton.edu, 03/04/2025
+% Last modified by fjsimons-at-alum.mit.edu, 03/18/2025
+% Last modified by olwalbert-at-princeton.edu, 03/18/2025
 
 if ~isstr(th)
     % Defaults (avoiding DEFVAL to avoid costly EVALIN statements)
@@ -89,6 +89,7 @@ if ~isstr(th)
     if params.blurs>=0 && ~isinf(params.blurs)
         error('Are you sure you should be running BLUROSY, not BLUROS?')
     end
+    % Unlikely this will every trigger as exact blurring will be -1 
     if isinf(params.blurs) & isempty(dth)
         error('Are you sure you should be running BLUROSY, not MATERNOSY?')
     end
