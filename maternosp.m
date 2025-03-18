@@ -1,5 +1,5 @@
-function [Sk,k]=maternosp(th,params,xver)
-% [Sk,k]=maternosp(th,params,xver)
+function [Sk,k]=maternosp(th,params,xver,tsto)
+% [Sk,k]=maternosp(th,params,xver,tsto)
 %
 % Calculates the three-parameter isotropic d-dimensional Matern spectral
 % density used by Olhede & Simons (2013), with or without blurring, exact or
@@ -17,13 +17,14 @@ function [Sk,k]=maternosp(th,params,xver)
 %          blurs 0 No wavenumber blurring
 %                1 No wavenumber blurring, effectively
 %                N Fejer convolutional  BLUROS  on an N-times refined grid
-%               -1 Fejer multiplicative BLUROSY using the exact procedure
+%               -1 Space multiplicative BLUROSY using the exact procedure
 %              Inf Rather simulate using SGP invariant embedding, error
 %           taper  0 there is no taper near of far
 %                  1 it's a unit taper, implicitly
 %                  OR an appropriately sized taper with proper values 
 %                    (1 is yes and 0 is no and everything in between)
 % xver     Perform excessive verification [0, 1 or 2]
+% tsto     Offset in Fourier indices to be passed on to BLUROSY
 %
 % OUTPUT:
 %
@@ -34,11 +35,14 @@ function [Sk,k]=maternosp(th,params,xver)
 %
 % MATERNOS, MATERNOSY, MATERNPRC, KNUMS, BLUROS, BLUROSY, BLURCHECK
 %
-% Last modified by owalbert-at-princeton.edu, 06/07/2024
-% Last modified by fjsimons-at-alum.mit.edu, 06/07/2024
+% Last modified by owalbert-at-princeton.edu, 03/18/2025
+% Last modified by fjsimons-at-alum.mit.edu, 03/18/2025
 
 % Default is to oververify it all
 defval('xver','1')
+
+% We only need to specify tsto for some variance calculations methods
+defval('tsto',[]);
 
 % The dimensionality of the problem (not being actively used)
 d=2;
@@ -77,6 +81,6 @@ switch blurs
         % Here is the alternative EXACT way of doing it, which does away
         % with the approximate convolutional refinement procedure
         % disp(sprintf('%s with exact blurring',upper(mfilename)))
-        [Sk,k]=blurosy(th,params,xver);
+        [Sk,k]=blurosy(th,params,xver,[],tsto);
     end
 end
