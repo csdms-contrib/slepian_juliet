@@ -1,11 +1,12 @@
 function [F,covF,cF]=fishiosl(k,th,xver,params)
 % [F,covF,cF]=FISHIOSL(k,th,xver,params)
 %
-% Calculates the entries in the Fisher matrix of Olhede & Simons (2013, eq. 133)
-% for the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN model,
-% after wavenumber averaging. No blurring is possible here, since no data are
-% involved and we work with analytical expressions for the derivatives, see
-% LOGLIOSL. Zero-wavenumber excluded. No scaling asked or applied.
+% Calculates the entries in the Fisher matrix of Olhede & Simons (2013, eq. 135)
+% for the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN model, after
+% wavenumber averaging. No data are involved. Analytical expressions for the
+% derivatives, see also LOGLIOSL. Zero-wavenumber excluded. No scaling asked or 
+% applied. Exact blurring possible through MAOSL.
+
 %
 % INPUT:
 %
@@ -33,12 +34,12 @@ function [F,covF,cF]=fishiosl(k,th,xver,params)
 % 
 % p.quart=0; p.blurs=0; p.kiso=NaN; clc; [~,th0,p,k,Hk]=simulosl([],p,1);
 % F=fishiosl(k,th0); g=gammiosl(k,th0,p,Hk); H=hessiosl(k,th0,p,Hk);
-% round(abs((F+H)./F)*100) % should be small numbers
+% round(abs((F+H)./F)*100) % should be single-digit small numbers
 % [L,Lg,LH]=logliosl(k,th0,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by olwalbert-at-princeton.edu, 12/17/2024
-% Last modified by fjsimons-at-alum.mit.edu, 12/17/2024
+% Last modified by fjsimons-at-alum.mit.edu, 03/18/2025
+% Last modified by olwalbert-at-princeton.edu, 03/18/2025
 
 % Early setup exactly as in HESSIOSL
 defval('xver',1)
@@ -55,7 +56,7 @@ k=k(~~k);
 lk=length(k(:));
 
 % First compute the auxiliary parameters
-mth=mAosl(k,th,xver);
+mth=mAosl(k,th,xver,params);
 
 % Initialize
 cF=nan(npp,1);
