@@ -17,7 +17,7 @@ function varargout=maternosy(y,th,dth,meth)
 %          rh    The third Matern parameter [range in units]
 % dth      When empty, the spatial Matern covariance is calculated; otherwise, 
 %          1, 2, or 3 specifies which element of th gets differentiated
-% meth     1 straight up calculation
+% meth     1 straight up calculation (for finite nu) 
 %          2 analytical simplification for special values of th(end-1)
 %
 % OUTPUT:
@@ -53,7 +53,7 @@ function varargout=maternosy(y,th,dth,meth)
 %
 % Calculate a partial derivative selected by the index provided as dth
 %
-% dths=[1 2 3];dth=dths(randi(3));dthlabs={'s2','nu','rh'};
+% dths=[1 2 3]; dth=dths(randi(3)); dthlabs={'s2','nu','rh'};
 % sprintf('Calculating the partial derivative w.r.t. %s',dthlabs{dth})
 % dCydth=maternosy(y,th0,dth,1);
 % plot(y,dCydth); % quick plot of partial derivative vs lag distance
@@ -67,9 +67,12 @@ function varargout=maternosy(y,th,dth,meth)
 %
 % maternosy('demo2')
 %
+% Checks the special cases
+%
+% maternosy('demo3')
+%
 % Last modified by fjsimons-at-alum.mit.edu, 03/18/2025
 % Last modified by olwalbert-at-princeton.edu, 03/18/2025
-
 
 if ~isstr(y)
   % Defaults (avoiding DEFVAL to speed up)
@@ -83,7 +86,7 @@ if ~isstr(y)
   % The argument, make sure it is a distance
   argu=2*sqrt(nu)/pi/rh*abs(y);
   % Check whether we are asking for the case that nu approaches
-  % infinity; if so, by the regular method Cy would have Inf/NaN entries
+  % infinity; if so, by the straight-up method Cy would have Inf/NaN entries
   if isinf(nu)
     % Squared exponential 
     % This analytic form of the isotropic Matern covariance 
@@ -101,7 +104,7 @@ if ~isstr(y)
         Cy=zeros(size(y));
     elseif dth==3
         % Calculate the partial derivative with respect to rho
-        Cy=s2/rh*exp(-y.^2/(pi^2*rh^2))*(1/(pi*rh))*(2*y.^2/(pi^2*rh^2)-1);
+        Cy=s2/rh*exp(-y.^2/(pi^2*rh^2))*(1/(pi*rh)).*(2*y.^2/(pi^2*rh^2)-1);
     else
         error('Not a valid partial derivative index. Ask for dth=1,2,or 3.')
     end
@@ -367,11 +370,12 @@ if ~isstr(y)
             % Calculate the spatial covariance
             % A general half-integer case beyond 1/2, 3/2, or 5/2, 
             % nu=n+1/2 for n = 1, 2, 3, ...
-            k=0:nu-0.5;k=k(:); 
+            k=0:nu-0.5; k=k(:); 
             n=nu-0.5;
-            Cy=s2*exp(-2/(pi*rh)*abs(y)*sqrt(nu))*factorial(n)/factorial(2*n).*...
+            % This won't work yet for multidimensional y
+            Cy=reshape(s2*exp(-2/(pi*rh)*abs(y(:))*sqrt(nu))*factorial(n)/factorial(2*n).*...
                sum(factorial(n+k)./(factorial(k).*factorial(n-k)).*...
-               (4*sqrt(nu)*abs(y)/(pi*rh)).^(n-k),1); 
+               (4*sqrt(nu)*abs(y(:))/(pi*rh)).^(n-k),1),size(y)); 
             % Compute the value at zero lag
             Cy(y==0)=s2;
           else
@@ -398,49 +402,60 @@ elseif strcmp(y,'demo1')
     % fine and large enough grid... and that is the point of estimating
     % parameters differently. See the comparison in SIMULOSL1('demo1')
 
-    % Matern parameters... very sensitive to the last one
-    th=[2000 0.5 2/3];
+    % Physical length
+    lY=13; lX=24;
+
+    % Matern parameters... think about last one in terms of sqrt(lX^2+lY^2)
+    th=[2000 2.25 2/3];
 
     % Grid size, also in physical units, keep it even for this example
-    p.NyNx=[4300 5500]+randi(1000,[1 2])*(-1)^round(rand);
+    p.NyNx=[4300 5500]*2; %+randi(1000,[1 2])*(-1)^round(rand);
     p.NyNx=p.NyNx+mod(p.NyNx,2);
-    lY=13; lX=24;
     p.dydx=[lY/(p.NyNx(1)-1) lX/(p.NyNx(2)-1)];
     % Wavenumber grid
     [k,kx,ky,dci]=knum2(p.NyNx,[lY lX]);
     % Space grid
     x=[-floor(p.NyNx(2)/2):1:+floor(p.NyNx(2)/2)-1]*p.dydx(2);
     y=[-floor(p.NyNx(1)/2):1:+floor(p.NyNx(1)/2)-1]*p.dydx(1);
-    [X,Y]=meshgrid(x,y); yy=sqrt(X.^2+Y.^2);
+    [X,Y]=meshgrid(x,y);
+    yy=sqrt(X.^2+Y.^2);
     % Evaluate the Matern spectral covariance
-    Sbb=v2s(maternos(k,th,[],2),p);
+    methS=randi(2); methS=1;
+    Sbb=v2s(maternos(k,th,[],2,methS),p);
     % Evaluate the Matern correlation
-    Cy=maternosy(yy,th,[],1); difer(Cy(dci(1),dci(2))-th(1))
+    methC=randi(2); methC=1;
+    Cy=maternosy(yy,th,[],methC);
+    % Check the variance
+    difer(Cy(dci(1),dci(2))-th(1))
 
     % Fourier transform the correlation to check its relation to the covariance
-    % Cy is already in space; the following two outputs appear similarly in
-    % comparison to Sbb; will need to follow up on this to better understand 
-    Skk=fftshift(v2s(tospace(Cy,p),p));
-    Skk=v2s(tospec(Cy,p),p); 
-
-    % Compare two profiles somehow
-    m=median(Sbb(dci(1),:)./abs(Skk(dci(1),:)));
-    m=max(max(Sbb))./max(max((Skk)));
+    % Cy is already in space; the following two are identical
+    Skk=v2s(tospec(Cy,p),p)*(sqrt(prod(p.dydx))*sqrt(prod(p.NyNx)))/(2*pi)^2;
+    Skk=fftshift(fft2(Cy)*prod(p.dydx)/(2*pi)^2);
     
-    plot(log10(abs(Skk(dci(1),:))),'Color','r');
+    % Compare two profiles somehow
+    %m=median(Sbb(dci(1),:)./abs(Skk(dci(1),:)));
+    %m=max(max(Sbb))./max(max((Skk)))
+    % and subtract -log10(m) from what's being plotted
+    
+    %plot(log10(Sbb(dci(1),:))-log10(m),'LineWidth',2,'Color','m');
+    plot(log10(kx(dci(2):end)),log10(Sbb(dci(1),dci(2):end)),'LineWidth',2,'Color','m');
     hold on
-    plot(log10(Sbb(dci(1),:))-log10(m),'LineWidth',2,'Color','m');
+    %plot(log10(abs(Skk(dci(1),:))),'Color','r');
+    plot(log10(kx(dci(2):end)),log10(abs(Skk(dci(1),dci(2):end))),'Color','r');
     hold off
     legend('FFT(MATERNOSY)','MATERNOS')
     axis tight
     grid on
+    blax=ylim;
+    ylim([blax(2)-8 blax(2)])
     % Annotate 
     title(sprintf('p.NyNx = [%i %i]',p.NyNx))
     xlabel('wavenumber')
     ylabel('MATERNOS 2s FFT(MATERNOSY)')
 elseif strcmp(y,'demo2')
     clf
-    th0 = [1 2 27]; p = []; p.NyNx = [256 256]; p.dydx = [1 1];
+    th0 = [1 4 20]; p = []; p.NyNx = [256 256]; p.dydx = [1 1];
 
     y = linspace(0,sqrt(prod(p.dydx)*prod(p.NyNx)),1000);
     xels=[0 min(6*pi*th0(3),max(y))];
@@ -466,11 +481,11 @@ elseif strcmp(y,'demo2')
                           '\sigma^2',th0(1),'\nu',th0(2),'\rho',th0(3)))
         end
         grid on
-        ylabel('C(y)')
-        xlabel('y')
+        ylabel('covariance C(y)')
+        xlabel('lag y')
                 
         ah2(index)=subplot(2,3,index+3);
-        keyboard
+        % Calculate derivative
         zdiff=maternosy(y,th0,index);
         pd(index)=plot(y,zdiff,'k');
         ylim(halverange(zdiff,105,NaN))
@@ -481,9 +496,27 @@ elseif strcmp(y,'demo2')
         %     hold off
         % end
         grid on
-        ylabel(sprintf('dC(y)/d%s',labs{index}))
-        xlabel('y')
+        ylabel(sprintf('covariance derivative dC(y)/d%s',labs{index}))
+        xlabel('lag y')
         xlim(xels)
     end
     longticks([ah1 ah2],2)
+elseif strcmp(y,'demo3')
+    s2=rand*100;
+    nus=[1/3 1/2 1 3/2 5/2 3.5 4.5];
+    rho=rand*100;
+    for index=1:length(nus)
+        th=[s2 nus(index) rho];
+        % Just create some lags out to some number of times the correlation length 
+        y=linspace(0,pi*th(3)*4,100);
+        Cy1=maternosy(y,th,[],1);
+        Cy2=maternosy(y,th,[],2);
+        difer(Cy1-Cy2)
+        % Also test MATERNOS
+        % Just create some wavenumbers that are appropriate
+        k=sort([2*pi./y(end:-1:2) 0]);
+        Sk1=maternos(k,th,[],2,1);
+        Sk2=maternos(k,th,[],2,2);
+        difer(Sk1-Sk2,9)
+    end
 end
