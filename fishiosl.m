@@ -16,7 +16,14 @@ function [F,covF,cF]=fishiosl(k,th,xver,params)
 %          th(2)=nu   The second Matern parameter [differentiability]
 %          th(3)=rho  The third Matern parameter [range in m]
 % xver     Excessive verification [0 or 1, which also computes F(k)]
-% params   Attempt at bringing blurring in under the radar
+% params   Parameters of this experiment, the ones that are needed are:
+%          dydx  sampling interval in the y and x directions [m m]
+%          NyNx  number of samples in the y and x directions
+%          blurs 0 No wavenumber blurring
+%                1 No wavenumber blurring, effectively
+%                N Convolutional blurring, errors 
+%               -1 Exact blurring
+%              Inf Exact blurring, effectively
 %
 % OUTPUT:
 %
