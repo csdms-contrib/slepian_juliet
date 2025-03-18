@@ -22,7 +22,7 @@ function varargout=maternosy(y,th,dth,meth)
 %
 % OUTPUT:
 %
-%  CyordCydth   The spatial Matern covariance at all the requested lags, possibly
+% CyordCydth    The spatial Matern covariance at all the requested lags, possibly
 %               calculated using the Abramowitz & Stegun (1965) simplifications to
 %               the Bessel function for half-integer values of nu, the infinite limit
 %               of nu, OR returns the DERIVATIVE in the dth element of th, to feed 
@@ -51,191 +51,347 @@ function varargout=maternosy(y,th,dth,meth)
 %
 % th0(2)=Inf; Cy=maternosy(y,th0);
 %
-% Calculate and visualize the partial derivatives: 
+% Calculate a partial derivative selected by the index provided as dth
 %
-% maternosy('demo2')
+% dths=[1 2 3];dth=dths(randi(3));dthlabs={'s2','nu','rh'};
+% sprintf('Calculating the partial derivative w.r.t. %s',dthlabs{dth})
+% dCydth=maternosy(y,th0,dth,1);
+% plot(y,dCydth); % quick plot of partial derivative vs lag distance
 %
 % Demo1 provides a visual comparison of the general output of MATERNOS and
 % MATERNOSY as Fourier pairs:
 %
 % maternosy('demo1')
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/17/2024
-% Last modified by olwalbert-at-princeton.edu, 06/17/2024
+% Demo2 is an earlier visualization of the partial derivatives (Keep?)
+%
+% maternosy('demo2')
+%
+% Last modified by fjsimons-at-alum.mit.edu, 03/18/2025
+% Last modified by olwalbert-at-princeton.edu, 03/18/2025
+
 
 if ~isstr(y)
-  % Defaults
-  defval('meth',1)
-  defval('dth',[])
+  % Defaults (avoiding DEFVAL to speed up)
+  if ~exist('meth','var') | isempty(meth); meth=1; end
+  if ~exist('dth','var'); dth=[]; end
+
   % The Matern parameters are always the last three elements of the TH input 
   s2=th(end-2);
   nu=th(end-1);
   rh=th(end  );
   % The argument, make sure it is a distance
   argu=2*sqrt(nu)/pi/rh*abs(y);
-  % Calculate the spatial covariance?
-  if isempty(dth)
-    % Check whether we are asking for the case that nu approaches
-    % infinity; if so, by the regular method Cy would have Inf/NaN entries
-    if isinf(nu)
-        % Squared exponential 
-        % This analytic form of the isotropic Matern covariance 
-        % was solved from the inverse Fourier transform of the limit as
-        % nu approaches infinity of the spectral density (see MATERNOS
-        % for details) with use of Eq. 3.323.2 of Gradshteyn & Ryzhik (1980).
-        %%%OLW: (Consistency with BLUROSY demo?)
+  % Check whether we are asking for the case that nu approaches
+  % infinity; if so, by the regular method Cy would have Inf/NaN entries
+  if isinf(nu)
+    % Squared exponential 
+    % This analytic form of the isotropic Matern covariance 
+    % was solved from the inverse Fourier transform of the limit as
+    % nu approaches infinity of the spectral density (see MATERNOS
+    % for details) with use of Eq. 3.323.2 of Gradshteyn & Ryzhik (1980).
+    if isempty(dth)
+        % Calculate the spatial covariance
         Cy=s2/(pi*rh)*exp(-abs(y).^2/(pi^2*rh^2));
+    elseif dth==1
+        % Calculate the partial derivative with respect to s2 
+        Cy=exp(-abs(y).^2/(pi^2*rh^2));
+    elseif dth==2
+        % Calculate the partial derivative with respect to nu
+        Cy=zeros(size(y));
+    elseif dth==3
+        % Calculate the partial derivative with respect to rho
+        Cy=s2/rh*exp(-y.^2/(pi^2*rh^2))*(1/(pi*rh))*(2*y.^2/(pi^2*rh^2)-1);
     else
-        % Switch the calculation method
-        switch meth
-          case 1
+        error('Not a valid partial derivative index. Ask for dth=1,2,or 3.')
+    end
+  else
+    % Switch the calculation method
+    switch meth
+      case 1
+        if isempty(dth)
+            % Calculate the spatial covariance
             % The evaluation
             Cy=2^(1-nu)*s2/gamma(nu)*argu.^nu.*besselk(nu,argu);
             % Supply the smallest arguments
             Cy(y==0)=s2;
-          case 2
-            % By selecting the second method of calculation, we are seeking to 
-            % evaluate Cy from the simplified analytic expression of the 
-            % isotropic Matern covariance for a special value of nu. The 
-            % following analytic forms of half-integer nu are calculated from 
-            % substitution of Eqs 10.1.9 and 10.2.15 of Abramowitz & Stegun 
-            % (1965) for modified Bessel functions of half-integer orders.
-            % See also 10.1093/biomet/93.4.989 for comparison.
-            if nu==1/3
-                % von Karman 
-                Cy=s2*2^(2/3)/gamma(nu).*(2*sqrt(3)/(3*pi*rh)*abs(y)).^...
-                   (nu).*besselk(nu,2*sqrt(3)/(3*pi*rh)*abs(y));
-                % Compute the value at zero lag
-                Cy(y==0)=s2;
-            elseif nu==1/2
-                % Exponential
-                Cy=s2*exp(-sqrt(2)/(pi*rh)*abs(y));
-            elseif nu==1
-                % Whittle
-                Cy=s2*2/(pi*rh)*abs(y).*besselk(nu,2/(pi*rh)*abs(y));
-                % Compute the value at zero lag
-                Cy(y==0)=s2;
-            elseif nu==3/2
-                % Second-order autoregressive
-                Cy=s2*exp(-sqrt(6)/(pi*rh)*abs(y)).*(1+sqrt(6)/(pi*rh)*abs(y));
-            elseif nu==5/2
-                % Third-order autoregressive
-                Cy=s2*exp(-sqrt(10)/(pi*rh)*abs(y)).*(1+sqrt(10)/(pi*rh)*...
-                   abs(y)+10/(3*pi^2*rh^2)*abs(y).^2);            
-            elseif mod(nu+0.5,1)==0
-                % A general half-integer case beyond 1/2, 3/2, or 5/2, 
-                % nu=n+1/2 for n = 1, 2, 3, ...
-                k=0:nu-0.5;k=k(:); 
-                n=nu-0.5;
-                Cy=s2*exp(-2/(pi*rh)*abs(y)*sqrt(nu))*factorial(n)/factorial(2*n).*...
-                   sum(factorial(n+k)./(factorial(k).*factorial(n-k)).*...
-                   (4*sqrt(nu)*abs(y)/(pi*rh)).^(n-k),1); 
+        else
+          % Calculate the partial derivative wrt the requested parameter index
+          % disp(sprintf('Calculating %i%s parameter derivative',dth,ith(dth)))
+          % Abuse of Cy nomenclature, now you're getting a specific derivative
+          if dth==1
+              % The partial derivative of Cy with respect to the variance, dCyds2
+              Cy=2^(1-nu)/gamma(nu)*argu.^nu.*besselk(nu,argu);
+              % Supply the smallest arguments from the partial derivative for the 
+              % small argument limit of the Bessel function, see Eq. 9.6.9 of A&S
+              Cy(y==0)=1;
+          elseif dth==2
+            % The partial derivative of Cy with respect to the smoothness, 
+            % dCydnu; the derivative of the gamma function is provided by Eq.
+            % 6.3.1 of Abramowitz & Stegun (1965); 
+
+            % We are still experiencing numerical issues. Turn off the
+            % analytical solution for now and calculate via finite difference.
+            anlytcl=0;
+            if anlytcl
+              if nu==0
+                  % The partial derivative of the modified Bessel function of the
+                  % second kind with respect to order evaluated for order==0
+                  % is given by Eq. 9.6.46 of A&S; (we do not consider this case) 
+                  dKdnuo=0;
+              elseif (mod(nu,1)~=1)&((ceil(nu)-nu)>=0.05)
+                  % We calculate the derivative of the Bessel function term 
+                  % following in the steps of Brychkov (2016) using Mathematica,
+                  % with the added complication of nu appearing in the Matern 
+                  % argument; this derivative is valid for positive, non-integer
+                  % values of nu. We are trying alternatives to MATLAB's
+                  % HYPERGEOM, which relies on conversion to symbolic values
+                  % (very, very slow)
+                  
+                  % Pre-compute common terms to save time
+                  BKNZ=besselk(nu,argu);
+                  % BINPZ may be the source of the numerical problems for large
+                  % ARGU
+                  BINPZ=besseli(nu,argu); % positive order
+                  CSCNUPI=csc(nu*pi);
+                  ARGUSQ=argu.^2;
+                  HFARGUSQ=(argu/2).^2;
+
+                  % Most recent attempt using genHyper from file exchange;
+                  % GENHYPER does not take vector arguments
+                  NumWorkers=feature('numcores')-1;
+                  if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
+                  parfor ind=1:numel(argu)
+                   GENHYPER1(ind)=genHyper([nu,nu+1/2],[nu+1,nu+1,2*nu+1],ARGUSQ(ind));
+                   GENHYPER2(ind)=genHyper([1/2-nu,-nu],[1-2*nu,1-nu,1-nu],ARGUSQ(ind));
+                   GENHYPER3(ind)=genHyper([1,1,3/2],[2,2,2-nu,2+nu],ARGUSQ(ind));
+                  end
+                  t1=(pi/2.*CSCNUPI).^2*(HFARGUSQ.^(nu)./(gamma(1+nu).^2).*...
+                     besseli(-nu,argu).*GENHYPER1-HFARGUSQ.^(-nu)/(gamma(1-nu).^2).*BINPZ.*...
+                     GENHYPER2);
+                  t2=1/(2*nu).*(argu.*besselk(nu-1,argu)+(nu-1).*BKNZ-...
+                     (pi+pi^2.*nu.*cot(pi*nu)).*CSCNUPI.*BINPZ);
+                  t3=(BKNZ+pi*CSCNUPI.*BINPZ).*(HFARGUSQ./(nu.^2-1).*...
+                     GENHYPER3-log(argu)+psi(nu));
+                  % Original, using MATLAB's hypergeom
+                  % t1=(pi/2.*CSCNUPI).^2*(HFARGUSQ.^(nu)./(gamma(1+nu).^2).*...
+                  %    besseli(-nu,argu).*hypergeom([nu,nu+1/2],[nu+1,nu+1,2*nu+1],ARGUSQ)-...
+                  %    HFARGUSQ.^(-nu)/(gamma(1-nu).^2).*BINPZ.*...
+                  %    hypergeom([1/2-nu,-nu],[1-2*nu,1-nu,1-nu],ARGUSQ));
+                  % t2=1/(2*nu).*(argu.*besselk(nu-1,argu)+(nu-1).*BKNZ-...
+                  %    (pi+pi^2.*nu.*cot(pi*nu)).*CSCNUPI.*BINPZ);
+                  % t3=(BKNZ+pi*CSCNUPI.*BINPZ).*(HFARGUSQ./(nu.^2-1).*...
+                  %    hypergeom([1,1,3/2],[2,2,2-nu,2+nu],ARGUSQ)-log(argu)+psi(nu));
+                  dKdnuo=t1-t2+t3;
+              else %mod(nu,1)==0
+                  % For integer order, we must calculate the limit from the
+                  % non-integer order form of the modified Bessel function of the 
+                  % second kind; note that the singularity that arises at integer
+                  % order is due to the cosecant term in the derivative
+
+                  % For now, let's do this through averaging on either side of
+                  % the singularity (is there a nicer way?)
+                  pert=0.01;
+                  thleft=th;thleft(2)=nu-pert;
+                  dCydnuleft=maternosy(y,thleft,2);
+                  thright=th;thright(2)=nu+pert;  
+                  dCydnuright=maternosy(y,thright,2);
+
+                  dKdnuo=0.5*(dKdnuoleft+dKdnuoright);
+              end
+              % Now put things together
+              Cy=s2*2^(1-nu)/gamma(nu)*argu.^nu.*...
+                  (besselk(nu,argu).*(0.5+log(argu/2)-psi(nu))+...
+                  double(dKdnuo));
+              % Supply the smallest arguments from the partial derivative for the 
+              % small argument limit of the Bessel function, see Eq. 9.6.9 of A&S
+              Cy(y==0)=0;
             else
-                % However, if the nu provided to MATERNOSY is not one of the
-                % special values of nu that we have considered so far, we should 
-                % throw an error
-                error('This is not a special case of nu. Ask for meth=1.')
+              % Central difference approach to calculating the partial
+              % derivative that we are currently defaulting to
+              % Step-size
+              epsln=eps*1e3;
+              % Parameters evaluated for step-size around th
+              th1=th;th1(2)=th1(2)-epsln/2;
+              th2=th;th2(2)=th2(2)+epsln/2;
+              % Autocovariance evaluated near th with a step-size between in nu
+              Cy1=maternosy(y,th1);
+              Cy2=maternosy(y,th2);
+              % We will return this central difference as the partial for nu
+              Cy=(Cy2-Cy1)/epsln;
             end
-        end
-    end
-  % Or, calculate the derivatives?
-  else 
-      % Calculate the partial derivative wrt the requested parameter index
-      % disp(sprintf('Calculating %i%s parameter derivative',dth,ith(dth)))
-      % Abuse of Cy nomenclature, now you're getting a specific derivative
-      if dth==1
-          % The partial derivative of Cy with respect to the variance, dCyds2
-          Cy=2^(1-nu)/gamma(nu)*argu.^nu.*besselk(nu,argu);
-          % Supply the smallest arguments
-          Cy(y==0)=1;
-      elseif dth==2
-          % The partial derivative of Cy with respect to the smoothness, 
-          % dCydnu; the derivative of the gamma function is provided by Eq.
-          % 6.3.1 of Abramowitz & Stegun (1965); 
-          if nu==0
-              % the partial derivative of the modified Bessel function of the
-              % second kind with respect to order when the order is evaluated
-              % at 0 is given by Eq. 9.6.46 of A&S, which we do not consider for
-              % Matern
-              dKdnuo=0;
-          elseif mod(nu,1)==0
-              % for integer order, the partial derivative of the modified
-              % Bessel function of the second kind with respect to order is 
-              % provided by Eq. 9.6.45 of A&S 
-              syms k;
-              dKdnuo=(factorial(nu).*(argu/2).^(-nu)/2).*...
-                  vpasum((argu/2).^k.*besselk(k,argu)./...
-                      ((nu-k).*factorial(k)),0,nu-1);
-          elseif nu==1/2
-              % for order of 1/2, we use Eq. 10.2.34 of A&S; note that
-              % dCydnu(y=0,nu=1/2)=NaN because Ei(0)=-Inf; there also appear to
-              % be numerical instability issues -- many NaNs and Infs for small
-              % parameter values, e.g., th0=[1 0.5 1]; Olivia will study this
-              % further. Default s2,rh for th0=[1e6 0.5 2e4] seems to behave. 
-              warning('derivative wrt nu is still in development for nu given')
-              dKdnuo=-sqrt(pi/2*argu).*ei(-2*argu).*exp(argu);
-          %elseif mod(nu-1/2,1)==0
-              % for half-integer order, Brychkov & Geddes (2005) presented a
-              % solution for n-1/2 and n+1/2 order. We will use the n-1/2
-              % order (Eq. 26) 
-              %warning('derivative wrt nu is still in development for nu given')
-              % I need to look into this expression further before we include
-              % it.
-              %n=nu+0.5;
-              %argun=2*sqrt(n)/pi/rh*abs(y);
-              %syms k p;
-              %dKdnuo=(-1)^n*(pi/2)*(besseli(n-0.5,argun)+...
-              %   besseli(0.5-n,argun)).*(coshint(2*argun)-sinhint(2*argun))+0.5*...
-              %   vpasum((nchoosek(n,k)).*factorial(n-k-1).*(argun/2).^(k-n).*...
-              %       besselk(k-0.5,argun),0,n-1)-...
-              %   (-1)^n*sqrt(pi)*sum((-1).^k.*(nchoosek(n,k)).*2.^(k-1).*...
-              %       (besseli(n-k-0.5,argun)+besseli(k-n+0.5,argun)).*...
-              %        vpasum((nchoosek(k-1,p)).*factorial(k-p-1).*argun.^(p-k+0.5).*...
-              %            besselk(p-0.5,2*argun),0,k-1),...
-              %        1,n);
+          elseif dth==3
+              % The partial derivative of Cy with respect to the range, dCydrho;
+              % simplification of the derivative of the Bessel term with respect
+              % to argument is made through Eq. 3.71.3 of Watson (1962)
+              Cy=(s2/rh)*2^(1-nu)/gamma(nu)*argu.^(nu+1).*besselk(nu-1,argu);
+              % Supply the smallest arguments from the partial derivative for the 
+              % small argument limit of the Bessel function, see Eq. 9.6.9 of A&S
+              Cy(y==0)=0;
           else
-              % for non-integer order, substitute DLMF Eq. 10.38.1 into 
-              % Eq. 9.6.43 of A&S; we need to make an approximation to the 
-              % infinite sum terms by choosing a large sumlim
-              warning('derivative wrt nu is still in development for nu given')
-              sumlim=1;
-              syms k;
-              dIdnup=besseli(nu,argu).*log(argu/2)-(argu/2).^nu.*...
-                  vpasum((psi(nu+k+1)./gamma(nu+k+1).*...
-                  (argu/2).^(k*2)./factorial(k)),0,sumlim);
-              dIdnun=-besseli(-nu,argu).*log(argu/2)+(argu/2).^(-nu).*...
-                  vpasum((psi(-nu+k+1)./gamma(-nu+k+1).*...
-                  (argu/2).^(k*2)./factorial(k)),0,sumlim);
-              dKdnuo=pi/2*csc(nu*pi)*(dIdnun-dIdnup)-...
-                  pi*cot(nu*pi)*besselk(nu,argu);
-              keyboard % solution blowing up for large y when th0=[1e6 1.5 1e6],
-                       % NaNs and Inf when [1 1.5 1]?
-              figure();plot(y(1:end-50),dKdnuo(1:end-50))
+              error('Not a valid partial derivative index. Ask for dth=1,2,or 3.')
           end
-          % Now put things together
-          Cy=s2*2^(1-nu)/gamma(nu)*argu.^nu.*...
-              (besselk(nu,argu).*(0.5+log(argu/2)-psi(nu))-...
-              argu.^nu/(2*nu).*(argu.*besselk(nu-1,argu)+...
-                                nu*besselk(nu,argu)).*double(dKdnuo));
-          % Supply the smallest arguments
-          Cy(y==0)=0;
-          % From the asymptotic expansion of Kn for small z, differentiated in Mathematica
-          %Cy=2^(1-nu)*s2/gamma(nu)*argu.^nu.*gamma(nu)*(argu/2)^(-nu)/2;
-          %bla=-1/4*pi^nu*(sqrt(nu/rh*y)).^(-nu)*gamma(nu).*(1+log(nu)-2*log(pi*rh)+2*log(y)-2*psi(nu));
-      elseif dth==3
-          % The partial derivative of Cy with respect to the range, dCydrho;
-          % simplification of the derivative of the Bessel term with respect
-          % to argument is made through Eq. 3.71.3 of Watson (1962)
-          Cy=(s2/rh)*2^(1-nu)/gamma(nu)*argu.^(nu+1).*besselk(nu-1,argu);
-          % Supply the smallest arguments
-          Cy(y==0)=0;
-      else
-          error('Not a valid partial derivative index. Ask for dth=1,2,or 3.')
+        end
+      case 2
+      % By selecting the second method of calculation, we are seeking to 
+      % evaluate Cy from the simplified analytic expression of the 
+      % isotropic Matern covariance for a special value of nu. The 
+      % following analytic forms of half-integer nu are calculated from 
+      % substitution of Eqs 10.1.9 and 10.2.15 of Abramowitz & Stegun 
+      % (1965) for modified Bessel functions of half-integer orders.
+      % See also 10.1093/biomet/93.4.989 for comparison.
+        if nu==1/3
+          if isempty(dth)
+            % Calculate the spatial covariance
+            % von Karman 
+            Cy=s2*2^(2/3)/gamma(nu).*(2*sqrt(3)/(3*pi*rh)*y).^...
+               (nu).*besselk(nu,2*sqrt(3)/(3*pi*rh)*y);
+            % Compute the value at zero lag
+            Cy(y==0)=s2;
+          elseif dth==1
+            %Calculate the partial derivative with respect to s2
+            Cy=2^(2/3)/gamma(nu).*(2*sqrt(3)/(3*pi*rh)*y).^...
+               (nu).*besselk(nu,2*sqrt(3)/(3*pi*rh)*y);
+            % Compute the value at zero lag
+            Cy(y==0)=1;
+          elseif dth==2
+            %Calculate the partial derivative with respect to nu
+            Cy=zeros(size(y));
+          elseif dth==3
+            %Calculate the partial derivative with respect to rho
+            Cy=s2/rh*2^(2/3)/gamma(1/3).*(2*sqrt(3)/(3*pi*rh)*y).^(4/3).*...
+               besselk(2/3,2*sqrt(3)/(3*pi*rh)*y);
+            % Compute the value at zero lag
+            Cy(y==0)=s2;
+          else
+            error('Not a valid partial derivative index. Ask for dth=1,2,or 3.')
+          end
+        elseif nu==1/2
+          if isempty(dth)
+            % Calculate the spatial covariance
+            % Exponential
+            Cy=s2*exp(-sqrt(2)/(pi*rh)*abs(y));
+            % Compute the value at zero lag
+            Cy(y==0)=s2;
+          elseif dth==1
+            %Calculate the partial derivative with respect to s2
+            Cy=exp(-sqrt(2)/(pi*rh)*abs(y));
+            % Compute the value at zero lag
+            Cy(y==0)=1;
+          elseif dth==2
+            %Calculate the partial derivative with respect to nu
+            Cy=zeros(size(y));
+          elseif dth==3
+            %Calculate the partial derivative with respect to rho
+            Cy=s2/rh*exp(-sqrt(2)/(pi*rh)*abs(y)).*(sqrt(2).*y/(pi*rh));
+            % Compute the value at zero lag
+            %%% OLW TODO: Confirm that the following is correct
+            % Cy(y==0)=s2;
+          else
+            error('Not a valid partial derivative index. Ask for dth=1,2,or 3.')
+          end
+        elseif nu==1
+          if isempty(dth)
+            % Calculate the spatial covariance
+            % Whittle
+            Cy=s2*2/(pi*rh)*abs(y).*besselk(nu,2/(pi*rh)*abs(y));
+            % Compute the value at zero lag
+            Cy(y==0)=s2;
+          elseif dth==1
+            %Calculate the partial derivative with respect to s2
+            Cy=2/(pi*rh)*abs(y).*besselk(nu,2/(pi*rh)*abs(y));
+            % Compute the value at zero lag
+            Cy(y==0)=1;
+          elseif dth==2
+            %Calculate the partial derivative with respect to nu
+            Cy=zeros(size(y));
+          elseif dth==3
+            %Calculate the partial derivative with respect to rho
+            Cy=s2/rh*(2/(pi*rh)*abs(y)).^2.*besselk(0,2/(pi*rh)*abs(y));
+            % Compute the value at zero lag
+            Cy(y==0)=s2;
+          else
+            error('Not a valid partial derivative index. Ask for dth=1,2,or 3.')
+          end
+        elseif nu==3/2
+          if isempty(dth)
+            % Calculate the spatial covariance
+            % Second-order autoregressive
+            Cy=s2*exp(-sqrt(6)/(pi*rh)*abs(y)).*(1+sqrt(6)/(pi*rh)*abs(y));
+            % Compute the value at zero lag
+            Cy(y==0)=s2;
+          elseif dth==1
+            %Calculate the partial derivative with respect to s2
+            Cy=exp(-sqrt(6)/(pi*rh)*abs(y)).*(1+sqrt(6)/(pi*rh)*abs(y));
+            % Compute the value at zero lag
+            Cy(y==0)=1;
+          elseif dth==2
+            %Calculate the partial derivative with respect to nu
+            Cy=zeros(size(y));
+          elseif dth==3
+            %Calculate the partial derivative with respect to rho
+            Cy=s2/rh*exp(-sqrt(6)/(pi*rh)*abs(y)).*(sqrt(6)/(pi*rh)*abs(y)).^2;
+            % Compute the value at zero lag
+            Cy(y==0)=s2;
+          else
+            error('Not a valid partial derivative index. Ask for dth=1,2,or 3.')
+          end
+        elseif nu==5/2
+          if isempty(dth)
+            % Calculate the spatial covariance
+            % Third-order autoregressive
+            Cy=s2*exp(-sqrt(10)/(pi*rh)*y).*(1+sqrt(10)/(pi*rh)*y+...
+               10/(3*pi^2*rh^2)*y.^2);            
+            % Compute the value at zero lag
+            Cy(y==0)=s2;
+          elseif dth==1
+            %Calculate the partial derivative with respect to s2
+            Cy=exp(-sqrt(10)/(pi*rh)*y).*(1+sqrt(10)/(pi*rh)*y+...
+               10/(3*pi^2*rh^2)*y.^2);            
+            % Compute the value at zero lag
+            Cy(y==0)=1;
+          elseif dth==2
+            %Calculate the partial derivative with respect to nu
+            Cy=zeros(size(y));
+          elseif dth==3
+            %Calculate the partial derivative with respect to rho
+            Cy=s2/3/rh*exp(-sqrt(10)/(pi*rh)*y).*(sqrt(10)/(pi*rh)*y).^2.*...
+                (1+sqrt(10)/(pi*rh)*y);
+            % Compute the value at zero lag
+            Cy(y==0)=s2;
+          else
+            error('Not a valid partial derivative index. Ask for dth=1,2,or 3.')
+          end
+        elseif mod(nu+0.5,1)==0
+          if isempty(dth)
+            % Calculate the spatial covariance
+            % A general half-integer case beyond 1/2, 3/2, or 5/2, 
+            % nu=n+1/2 for n = 1, 2, 3, ...
+            k=0:nu-0.5;k=k(:); 
+            n=nu-0.5;
+            Cy=s2*exp(-2/(pi*rh)*abs(y)*sqrt(nu))*factorial(n)/factorial(2*n).*...
+               sum(factorial(n+k)./(factorial(k).*factorial(n-k)).*...
+               (4*sqrt(nu)*abs(y)/(pi*rh)).^(n-k),1); 
+            % Compute the value at zero lag
+            Cy(y==0)=s2;
+          else
+            warning(append('Partial derivatives for the half-integer special',...
+              'case are in progress. Returning the requested partial',...
+              'derivative for the general Matern form instead'))
+            Cy=maternosy(y,th,dth,1);
+          end
+        else
+          % However, if the nu provided to MATERNOSY is not one of the
+          % special values of nu that we have considered so far, we should 
+          % throw an error
+          warning(append('This is not a special case of nu. Returning the',...
+            'requested autocovariance for the general Matern form instead'))
+        end
       end
-    end
-    % Serve output
-    varns={Cy};
-    varargout=varns(1:nargout);
+  end
+  % Serve output
+  varns={Cy};
+  varargout=varns(1:nargout);
 elseif strcmp(y,'demo1')
     % The Fourier relation between the correlation and the covariance
     % is hard to verify... since we can never observe all lags on a
@@ -244,6 +400,7 @@ elseif strcmp(y,'demo1')
 
     % Matern parameters... very sensitive to the last one
     th=[2000 0.5 2/3];
+
     % Grid size, also in physical units, keep it even for this example
     p.NyNx=[4300 5500]+randi(1000,[1 2])*(-1)^round(rand);
     p.NyNx=p.NyNx+mod(p.NyNx,2);
@@ -258,11 +415,14 @@ elseif strcmp(y,'demo1')
     % Evaluate the Matern spectral covariance
     Sbb=v2s(maternos(k,th,[],2),p);
     % Evaluate the Matern correlation
-    Cy=maternosy(yy,th,[],2); difer(Cy(dci(1),dci(2))-th(1))
+    Cy=maternosy(yy,th,[],1); difer(Cy(dci(1),dci(2))-th(1))
 
     % Fourier transform the correlation to check its relation to the covariance
+    % Cy is already in space; the following two outputs appear similarly in
+    % comparison to Sbb; will need to follow up on this to better understand 
     Skk=fftshift(v2s(tospace(Cy,p),p));
-    
+    Skk=v2s(tospec(Cy,p),p); 
+
     % Compare two profiles somehow
     m=median(Sbb(dci(1),:)./abs(Skk(dci(1),:)));
     m=max(max(Sbb))./max(max((Skk)));
@@ -310,6 +470,7 @@ elseif strcmp(y,'demo2')
         xlabel('y')
                 
         ah2(index)=subplot(2,3,index+3);
+        keyboard
         zdiff=maternosy(y,th0,index);
         pd(index)=plot(y,zdiff,'k');
         ylim(halverange(zdiff,105,NaN))
