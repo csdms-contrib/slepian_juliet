@@ -406,10 +406,10 @@ elseif strcmp(y,'demo1')
     lY=13; lX=24;
 
     % Matern parameters... think about last one in terms of sqrt(lX^2+lY^2)
-    th=[2000 2.25 2/3];
+    th=[2000 2.25 2/6];
 
     % Grid size, also in physical units, keep it even for this example
-    p.NyNx=[4300 5500]*2; %+randi(1000,[1 2])*(-1)^round(rand);
+    p.NyNx=[4300 5500]; %+randi(1000,[1 2])*(-1)^round(rand);
     p.NyNx=p.NyNx+mod(p.NyNx,2);
     p.dydx=[lY/(p.NyNx(1)-1) lX/(p.NyNx(2)-1)];
     % Wavenumber grid
@@ -428,27 +428,46 @@ elseif strcmp(y,'demo1')
     % Check the variance
     difer(Cy(dci(1),dci(2))-th(1))
 
+    % ONE-DIMENSIONAL 
+    subplot(211)
+    % Do the one-dimensional profile through the 2-D thing
+    % bb1=Sbb(dci(1),dci(2):end);
+    % This is not the same as the 1-dimensional Matern
+    Sbb1=maternos(k(dci(1),dci(2):end),th,[],1);
+    % This is the one-dimensional correlation
+    Cy1=Cy(dci(1),:);
+    % Ignore the hopefully tiny imaginary parts
+    %fCy1=realize(fft(Cy1));
+    ffCy1=fftshift(realize(fft(fftshift(Cy1))));
+    Skk1=ffCy1(dci(2):end)*p.dydx(2)/(2*pi);
+
+    semilogx(Sbb1,'o-')
+    hold on
+    semilogx(Skk1,'+')
+    hold off
+    grid on
+    legend('FFT(MATERNOSY)','MATERNOS 1D')
+    axis tight
+
+    % TWO-DIMENSIONAL
     % Fourier transform the correlation to check its relation to the covariance
     % Cy is already in space; the following two are identical
-    Skk=v2s(tospec(Cy,p),p)*(sqrt(prod(p.dydx))*sqrt(prod(p.NyNx)))/(2*pi)^2;
+    %Skk=v2s(tospec(Cy,p),p)*(sqrt(prod(p.dydx))*sqrt(prod(p.NyNx)))/(2*pi)^2;
     Skk=fftshift(fft2(Cy)*prod(p.dydx)/(2*pi)^2);
-    
-    % Compare two profiles somehow
-    %m=median(Sbb(dci(1),:)./abs(Skk(dci(1),:)));
-    %m=max(max(Sbb))./max(max((Skk)))
-    % and subtract -log10(m) from what's being plotted
-    
+
+    subplot(212)
     %plot(log10(Sbb(dci(1),:))-log10(m),'LineWidth',2,'Color','m');
-    plot(log10(kx(dci(2):end)),log10(Sbb(dci(1),dci(2):end)),'LineWidth',2,'Color','m');
+    %plot(log10(kx(dci(2):end)),(Sbb(dci(1),dci(2):end)),'LineWidth',2,'Color','m');
+    semilogx(Sbb(dci(1),dci(2):end),'o-');
     hold on
     %plot(log10(abs(Skk(dci(1),:))),'Color','r');
-    plot(log10(kx(dci(2):end)),log10(abs(Skk(dci(1),dci(2):end))),'Color','r');
+    %plot(log10(kx(dci(2):end)),(abs(Skk(dci(1),dci(2):end))),'Color','r');
+    semilogx(abs(Skk(dci(1),dci(2):end)),'+');
     hold off
-    legend('FFT(MATERNOSY)','MATERNOS')
-    axis tight
     grid on
-    blax=ylim;
-    ylim([blax(2)-8 blax(2)])
+    legend('FFT(MATERNOSY)','MATERNOS 2D')
+    axis tight
+
     % Annotate 
     title(sprintf('p.NyNx = [%i %i]',p.NyNx))
     xlabel('wavenumber')
