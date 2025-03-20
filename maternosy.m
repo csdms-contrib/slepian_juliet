@@ -40,6 +40,11 @@ function varargout=maternosy(y,th,dth,meth)
 % y=linspace(0,sqrt(prod(p.dydx))*sqrt(prod(p.NyNx)),bigN);
 % % S(0)=1/(2*pi)\int C(r)rdr
 % [sum(y.*maternosy(y,th0))*(y(2)-y(1))/(2*pi) maternos(0,th0)]
+% % C(0)=(2*pi)\int S(k)kdk
+% p.NyNx=[bigN bigN];
+% [k,dci,dcn,kx,ky]=knums(p); k=k(dci(1),dci(2):end);
+% [sum(k(:).*maternos(k,th0,[],2))*(k(2)-k(1))*(2*pi) maternosy(0,th0) th0(1)]
+% [sum(      maternos(k,th0,[],1))*(k(2)-k(1))*2      maternosy(0,th0) th0(1)]
 %
 % Confirmation that the special case simplifications are equivalent to the
 % straight calculation:
