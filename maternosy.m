@@ -76,8 +76,8 @@ function varargout=maternosy(y,th,dth,meth)
 %
 % maternosy('demo3')
 %
-% Last modified by fjsimons-at-alum.mit.edu, 03/18/2025
-% Last modified by olwalbert-at-princeton.edu, 03/18/2025
+% Last modified by fjsimons-at-alum.mit.edu, 03/19/2025
+% Last modified by olwalbert-at-princeton.edu, 03/19/2025
 
 if ~isstr(y)
   % Defaults (avoiding DEFVAL to speed up)
@@ -375,12 +375,16 @@ if ~isstr(y)
             % Calculate the spatial covariance
             % A general half-integer case beyond 1/2, 3/2, or 5/2, 
             % nu=n+1/2 for n = 1, 2, 3, ...
-            k=0:nu-0.5; k=k(:); 
+            ydim=size(y);                                                       
+            % If y is a row-vector, make it a column vector                     
+            if ydim(1)==1 & ydim(2)>1; y=y(:); end                              
+            % If y is 2+-dimensional, push k to the next dimension        
+            k=0:nu-0.5; k=reshape(k,[repelem(1,numel(size(y)>1)) numel(k)]);
             n=nu-0.5;
-            % This won't work yet for multidimensional y
-            Cy=reshape(s2*exp(-2/(pi*rh)*abs(y(:))*sqrt(nu))*factorial(n)/factorial(2*n).*...
-               sum(factorial(n+k)./(factorial(k).*factorial(n-k)).*...
-               (4*sqrt(nu)*abs(y(:))/(pi*rh)).^(n-k),1),size(y)); 
+            Cy=s2*exp(-2/(pi*rh)*abs(y)*sqrt(nu))*factorial(n)/factorial(2*n).*...
+               sum(factorial(n+k)./(factorial(k).*factorial(n-k)).*...          
+                   (4*sqrt(nu)*abs(y)/(pi*rh)).^(n-k),numel(size(y)>1)+1);          
+            Cy=reshape(Cy,ydim);           
             % Compute the value at zero lag
             Cy(y==0)=s2;
           else
@@ -394,7 +398,8 @@ if ~isstr(y)
           % special values of nu that we have considered so far, we should 
           % throw an error
           warning(append('This is not a special case of nu. Returning the',...
-            'requested autocovariance for the general Matern form instead'))
+                         'requested autocovariance for the general Matern form instead'))
+          Cy=maternosy(y,th,dth,1);
         end
       end
   end
