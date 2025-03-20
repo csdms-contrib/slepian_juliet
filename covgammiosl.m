@@ -1,10 +1,11 @@
 function [covg,grads]=covgammiosl(th,params,method,ifinv);
 % [covg,GRADS]=COVGAMMIOSL(th,params,method,ifinv);
 %
-% Calculates the covariance of the score, required for calculation of estimator 
-% covariance (compare to eq. 139 of Simons & Olhede 2013, which takes the 
-% covariance of the score to be the inverse of the Fisher information matrix, 
-% but now with wavenumber correlation). Calculations are implemented by either
+% Calculates the covariance of the score, required for calculation of estimator
+% covariance (see A54 etc, compare to eq. 139 of Simons & Olhede 2013, which
+% takes the covariance of the score to be the inverse of the Fisher information
+% matrix, but now with wavenumber correlation). It needs the covariance of the
+% periodogram, whose calculations are implemented by either
 % (1) repeated sampling of empirical periodograms taken in the argument of a
 % straight covariance calculation (parallel computation enabled), 
 % (2) calculating the exact, analytic expression (eq. 37 of Guillaumin et al.
@@ -16,6 +17,7 @@ function [covg,grads]=covgammiosl(th,params,method,ifinv);
 % grid-sizes we can work with from (2), but only if we are patient for a slower
 % calculation (parallel computation and GPU array are enabled when possible
 % and useful). Only developed for 2-dimensional random fields at this time.
+% It also needs derivatives of blurred spectra which can be calculated exactly.
 %
 % INPUT:
 %
@@ -25,15 +27,14 @@ function [covg,grads]=covgammiosl(th,params,method,ifinv);
 % method    The analytical method for calculating the covariance of the score 
 %           (eq. 37 of Guillaumin et al. (2022)) with the key distinction being 
 %           how the covariance of the empirical periodogram is formed:
-%           1   SAMPLING - approximation of the covariance of the score by 
-%               simulating realizations for TH from which we form many empirical
-%               periodograms; method can be run in parallel;
+%           1   SAMPLING - approximation simulating realizations for TH from which
+%               we form many empirical periodograms; method can be run in parallel;
 %           2   DFTMTX - exact calculation of the covariance of the score by
 %               applying Isserlis' rule to express the covariance of the 
 %               empirical periodogram in terms of the DFT of the autocovariance,
 %               requiring the formation of the full cross-covariance matrix and
 %               its DFT in memory (NyNx x NyNx);
-%           3   DIAGONAL - the same calculation as method 2 but implemented to
+%           3   DIAGONALS - the same calculation as method 2 but implemented to
 %               avoid forming matrices in memory by summing over the diagonals
 %               through intensive looping; method can be run in parallel and 
 %               the calculation of the diagonal offset built into 
@@ -131,7 +132,7 @@ if ~isstr(th)
   % Calculate the covariance of the score for the selected method
   switch method
     case 1
-      % Calculate the covariance of the score by sampling many realizations of
+      % Calculate the covariance of the score by SAMPLING many realizations of
       % the empirical periodogram
 
       % Set the number of realizations. 1e3-2e3 is sufficient for terms to
@@ -150,9 +151,9 @@ if ~isstr(th)
         NumWorkers=feature('numcores')-1;
         if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
         parfor ind=1:numreals
-          % Generate an empirical periodogram through SGP simulation; SIMULOSL
-          % already takes the taper in to account and normalizes Semp
-          % appropriately
+          % Generate an empirical (modified, tapered, windowed) periodogram
+          % through SGP simulation; SIMULOSL already takes the taper in to
+          % account and normalizes Semp appropriately
           [~,~,~,~,~,Semp]=simulosl(th,params,xver);
           Semps(:,ind)=Semp;
         end
@@ -168,8 +169,11 @@ if ~isstr(th)
       end
 
       % Calculate the elements of the score for each parameter vectorized in
-      % dSbardth [numreals by np]
-      grads=deal(squeeze(sum((Sbar-Semps).*dSbardth./Sbar.^2)));
+      % dSbardth [numreals by np] % remember dSbardth./Sbar.^2 <- MAOSL/Sbar
+      % (A.53) with Sbar factored out; (A.54) would have gone via cov(semps)
+      % grads=deal(squeeze(sum((1-Semps/Sbar).*mths)));
+      % grads=deal(squeeze(sum((1-Semps/Sbar).*dSbardth./Sbar)));
+      grads=deal(squeeze(sum((Sbar-Semps).*dSbardth./Sbar.^2))); 
 
       if isfield(params,'taper')&numel(params.taper)==prod(params.NyNx)
          % Adjust for the size of an explicit taper as in SIMULOSL and MLEOSL 
@@ -186,7 +190,7 @@ if ~isstr(th)
       covg=cov(grads)./normfact;
     case 2
       % Exact calculation of the gradient of the empirical periodograms using
-      % Iserlis Rule, which allows us to instead calculate the sum of two 2D-FFTs
+      % Isserlis Rule, which allows us to instead calculate the sum of two 2D-FFTs
       % (one as a Hermitian conjugate) of the Matern autocovariance calculated 
       % for a NyNx^2 by NyNx^2 distance grid
       % The largest grid size I can calculate using R2024a on Aguilonius is
@@ -395,7 +399,7 @@ if ~isstr(th)
       % strategy that Arthur uses, meaning that we will multiply our
       % periodograms and their derivatives by (2*pi)^2, shift them so that 0 lag
       % and wavenumber is in the C11 position rather than centered, and we will 
-      % call the new blurosy method 'efd' to allow for offsets in wavenumber
+      % call the new BLUROSY method 'efd' to allow for offsets in wavenumber
       nf=(2*pi)^2;
       Sbar=ifftshift(v2s(Sbar,params))*nf;
       Sbar=Sbar(:);
