@@ -1,5 +1,5 @@
-function [covg,grads]=covgammiosl(th,params,method,ifinv);
-% [covg,GRADS]=COVGAMMIOSL(th,params,method,ifinv);
+function varargout=covgammiosl(th,params,method,ifinv);
+% [covg,grads]=COVGAMMIOSL(th,params,method,ifinv);
 %
 % Calculates the covariance of the score, required for calculation of estimator
 % covariance (see A54 etc, compare to eq. 139 of Simons & Olhede 2013, which
@@ -45,40 +45,42 @@ function [covg,grads]=covgammiosl(th,params,method,ifinv);
 %
 % OUTPUT:
 %
-% covg         The covariance of the score (i.e., the gradient of the blurred
+% covg      The covariance of the score (i.e., the gradient of the blurred
 %           debiased Whittle likelihood). Matrix size depends on ifinv, with the 
 %           order returned in the general case of ifinv=[1 1 1] being 
-%               [s2s2 s2nu s2rh; nus2 nunu nurh; rhs2 rhnu rhrh].
+%           [s2s2 s2nu s2rh; nus2 nunu nurh; rhs2 rhnu rhrh].
 % grads     Specific only to method 1: the score calculated for each of the
 %           sampled empirical periodograms; used for demos/validation only.
 %
 % SEE ALSO:
 %
-% VARIANCEOFESTIMATES, MATERNOSY, BLUROSY
+% COVTHOSL, MATERNOSY, BLUROSY
 %
 % EXAMPLES:
 % 
-% th=[1 0.5 2];params=[];params.NyNx=[8 8];params.dydx=[1 1];
-% params.blurs = Inf; params.taper = 1; ifinv=[1 1 1]; 
-% tic;[covg1,grads]=covgammiosl(th,params,1,ifinv);toc
-% tic; covg2       =covgammiosl(th,params,2,ifinv);toc
-% tic; covg3       =covgammiosl(th,params,3,ifinv);toc
+% th=[1 0.5 2]; params=[]; params.NyNx=[8 8]; params.dydx=[1 1];
+% params.blurs=Inf; params.taper=1; ifinv=[1 1 1];
+% tic; [covg1,grads]=covgammiosl(th,params,1,ifinv); toc
+% tic;  covg2       =covgammiosl(th,params,2,ifinv); toc
+% tic;  covg3       =covgammiosl(th,params,3,ifinv); toc
 % difer(covg2-covg3,5)
 % difer(covg1-covg3,1)
 %
-% % For studying random deletions,
+% % For studying random deletions and other non-unit tapers
+%
 % th=[1 0.5 1];params=[];params.NyNx=[3 3];params.dydx=[1 1];
 % params.blurs=Inf;ifinv=[1 1 1];tpr=ones(params.NyNx);tpr(2,3)=0;
 % params.taper=tpr;
 % covg2 = covgammiosl(th,params,2,ifinv);
 % covg3 = covgammiosl(th,params,3,ifinv);
 %
-% Last modified by olwalbert-at-princeton.edu, 03/04/2025
+% Last modified by fjsimons-at-princeton.edu, 03/21/2025
+% Last modified by olwalbert-at-princeton.edu, 03/21/2025
 
 if ~isstr(th)
   % Set default for ifinv to assume that the covariance of the score for all
   % three Matern parameters is desired
-  if ~exist('ifinv','var');ifinv=[1 1 1];end
+  if ~exist('ifinv','var'); ifinv=[1 1 1]; end
 
   % Set the calculation method default to SAMPLING so we don't accidentally
   % get into trouble with large fields (costly in memory for method 2, costly
@@ -92,7 +94,7 @@ if ~isstr(th)
   xver=0;
 
   % Capture the mask and work it into calculations
-  if isfield(params,'taper')&numel(params.taper)>1
+  if isfield(params,'taper') & numel(params.taper)>1
     % Our field is masked
     Tx=params.taper;
   else
@@ -114,7 +116,8 @@ if ~isstr(th)
 
   % Calculating the score requires the expected blurred periodogram, which we
   % form from BLUROSY through MATERNOSP, which we must not provide blurs=Inf to
-  paramsSbar=params;paramsSbar.blurs=-1;
+  paramsSbar=params;
+  paramsSbar.blurs=-1;
   Sbar=maternosp(th,paramsSbar);
 
   % We also need blurred partial derivatives of the expected periodogram, which
@@ -182,7 +185,7 @@ if ~isstr(th)
       else
          normfact=prod(params.NyNx).^2;
       end
-      %%% OLW - dy~=dx leads to an inconsistency with methods 2 and 3; 
+      % %% OLW - dy~=dx leads to an inconsistency with methods 2 and 3; 
       % I think that dydx is being applied consistently to Sbar, Semp, and 
       % dSbardth, and it doesn't make sense to scale the score by dydx. Are both
       % methods 2 and 3 off? Should dydx be incorporated in spatmat?
@@ -196,20 +199,6 @@ if ~isstr(th)
       % The largest grid size I can calculate using R2024a on Aguilonius is
       % about 128x128; killed at 140x140
 
-      % Un-do the normalization factor applied in BLUROSY for the blurred
-      % expected periodogram and its partial derivatives; shift both such
-      % that the zero-wavenumber is in the 1,1 position 
-      nf=(2*pi)^2;
-      Sbar=ifftshift(v2s(Sbar,params))*nf;
-      % [NyNx by 1]
-      Sbar=Sbar(:);
-      for ind=1:np
-        tmp=ifftshift(v2s(dSbardth(:,:,ind),params));
-        dSbardth(:,:,ind)=tmp(:)*nf; 
-      end
-      % [NyNx by np]
-      dSbardth=squeeze(dSbardth);
-
       % Isserlis' Rule allows us to calculate the covariance of the empirical
       % periodogram as a combination of transposed and conjugated Fourier 
       % Transforms of the autocovariance (i.e., the expectation of the data
@@ -221,7 +210,8 @@ if ~isstr(th)
       dydx=params.dydx;NyNx=params.NyNx;
       ys=0:NyNx(1)-1;xs=0:NyNx(2)-1;
       [grdx,grdy]=meshgrid(xs(:),ys(:));
-      grdx=grdx(:).*dydx(2);grdy=grdy(:).*dydx(1);
+      grdx=grdx(:).*dydx(2);
+      grdy=grdy(:).*dydx(1);
       dxxp=xxpdist([grdx grdy]);
       % The following is equivalent; is it faster to calculate here?
       % lagx=grdx-grdx';
@@ -230,7 +220,7 @@ if ~isstr(th)
 
       % The autocovariance at the lag-distances
       Cmn=maternosy(dxxp,th);
-      %%% OLW testing is still in progress.
+      % %% OLW testing is still in progress.
       % We must apply the taper here; note that previously this method was
       % consistent with method 2 for fully sampled grids without incorporating
       % the autocorrelation sequence in the commented out lines below
@@ -369,14 +359,29 @@ if ~isstr(th)
       end
 
       % Sum and normalize the quantities above; eq. 8 of Walden+1994
-      Hkcov=(abs(EJJht_out).^2+abs(EJJt_out).^2)./prod(NyNx).^2;
+      Hk2cov=(abs(EJJht_out).^2+abs(EJJt_out).^2)./prod(NyNx).^2;
 
-      % Partial derivative divided by square of periodogram
-      f=dSbardth./Sbar.^2;
+      % Un-do the normalization factor applied in BLUROSY for the blurred
+      % expected periodogram and its partial derivatives; shift both such
+      % that the zero-wavenumber is in the 1,1 position 
+      nf=(2*pi)^2;
+      Sbar=ifftshift(v2s(Sbar,params))*nf;
+      % [NyNx by 1]
+      Sbar=Sbar(:);
+      for ind=1:np
+        tmp=ifftshift(v2s(dSbardth(:,:,ind),params));
+        dSbardth(:,:,ind)=tmp(:)*nf; 
+      end
+      % [NyNx by np]
+      dSbardth=squeeze(dSbardth);
+
+      % Partial derivative divided by square of periodogram, mthth/Sbar
+      fax=dSbardth./Sbar.^2;
 
       % Product of all partials in row-order: 
       % [s2s2 s2nu s2rh nus2 nunu nurh rhs2 rhnu rhrh]
       % f_seq=[f(:,1).*f f(:,2).*f f(:,3).*f];
+      % Arthur special ?
       normalize=0;
       if normalize
         Sbar_n=v2s(Sbar,params);
@@ -385,7 +390,8 @@ if ~isstr(th)
         seq_ep=1;
       end 
 
-      covg=f'*Hkcov*f./seq_ep./normfact;
+      % Final assembly (A54)
+      covg=fax'*Hk2cov*fax./seq_ep./normfact;
       % I know that I need to multiply by prod(dydx).^2, but I am not sure where
       % would be best. Doing so here works for now.
       covg=covg.*prod(dydx).^2;
@@ -591,6 +597,10 @@ if ~isstr(th)
      grads=NaN;
     end
   covg=ifinvslc(covg,ifinv);
+
+  % Optional output
+  varns={covg,grads};
+  varargout=varns(1:nargout);
 elseif strcmp(th,'demo1')
     % Makes some plots of the covariance, periodogram, and their partial 
     % derivatives  wrt the Matern parameters
@@ -846,16 +856,16 @@ elseif strcmp(th,'demo3')
       Um{ind}=dftmtx(size(Cmn{ind},2)); 
       % The DFT matrix (nxn)
       Un{ind}=dftmtx(size(Cmn{ind},1)); 
-      % The covariance of the periodogram via Isselis' rule
-      Hkcovf=abs(Um{ind}'*Cmn{ind}*Un{ind}).^2+...
+      % The covariance of the periodogram via Isserlis' rule
+      Hk2covf=abs(Um{ind}'*Cmn{ind}*Un{ind}).^2+...
         abs(Um{ind}'*Cmn{ind}*conj(Un{ind})).^2;
-      Hkcov{ind}=Hkcovf/prod(NyNx.*dydx);
+      Hk2cov{ind}=Hk2covf/prod(NyNx.*dydx);
     else
       NyNx3=[min([grd(1).NyNx(1) grd(2).NyNx(1)]),...
              min([grd(1).NyNx(2) grd(2).NyNx(2)])];
       dxxp{ind}=dxxp{1}(1:NyNx3(1),1:NyNx3(2))-dxxp{2}(1:NyNx3(1),1:NyNx3(2));
       Cmn{ind}=Cmn{1}(1:NyNx3(1),1:NyNx3(2))-Cmn{2}(1:NyNx3(1),1:NyNx3(2));
-      Hkcov{ind}=Hkcov{1}(1:NyNx3(1),1:NyNx3(2))-Hkcov{2}(1:NyNx3(1),1:NyNx3(2));
+      Hk2cov{ind}=Hk2cov{1}(1:NyNx3(1),1:NyNx3(2))-Hkcov{2}(1:NyNx3(1),1:NyNx3(2));
     end
 
     figure(ind);
