@@ -1,47 +1,36 @@
 function varargout=covgammiosl(th,params,method,ifinv);
 % [covg,grads]=COVGAMMIOSL(th,params,method,ifinv);
 %
-% Calculates the covariance of the score, required for calculation of estimator
-% covariance (see A54 etc, compare to eq. 139 of Simons & Olhede 2013, which
-% takes the covariance of the score to be the inverse of the Fisher information
-% matrix, but now with wavenumber correlation). It needs the covariance of the
-% periodogram, whose calculations are implemented by either
-% (1) repeated sampling of empirical periodograms taken in the argument of a
-% straight covariance calculation (parallel computation enabled), 
-% (2) calculating the exact, analytic expression (eq. 37 of Guillaumin et al.
-% (2022)) by applying Isserlis' rule and forming the DFTMTX method, which is fast 
-% but memory-intensive (limited to grids less than 2e4 elements on my Linux 
-% workstation), or (3) the exact, analytic expression from (2) but through
-% summation along the diagonals of the FFT of the model's autocovariance that
-% are looped over rather than stored in completion in memory, which extends the
-% grid-sizes we can work with from (2), but only if we are patient for a slower
-% calculation (parallel computation and GPU array are enabled when possible
-% and useful). Only developed for 2-dimensional random fields at this time.
-% It also needs derivatives of blurred spectra which can be calculated exactly.
+% Calculates the covariance of the SCORE, the first derivative of the
+% two-dimensional debiased spatial Whittle Matern log-likelihood, including
+% blurring and wavenumber correlation required for calculation of estimator
+% covariance (see eq. A54, and compare to eq. 139 of Simons & Olhede 2013, and
+% see eq. 37 of Guillaumin et al. 2022). A central ingredient is the covariance
+% of the (modified) PERIODOGRAM, and calculations are implemented as:
+%
+% (1) repeated SAMPLING of periodograms from newly simulated data (parallel);
+% (2) exact, direct evaluation using DFTMTX method (fast but memory-intensive);
+% (3) exact, direct autocovariance DIAGONALS summation (parallel and GPU array).
 %
 % INPUT:
 %
 % th        The Matern parameters, [s2 nu rh].
-% params    The parameter structure of the grid. blurs=Inf is theoretically
-%           implicit and explicitly enforced.
-% method    The analytical method for calculating the covariance of the score 
-%           (eq. 37 of Guillaumin et al. (2022)) with the key distinction being 
-%           how the covariance of the empirical periodogram is formed:
-%           1   SAMPLING - approximation simulating realizations for TH from which
+% params    The parameter structure of the grid
+% method    1   SAMPLING - approximation simulating realizations for TH from which
 %               we form many empirical periodograms; method can be run in parallel;
 %           2   DFTMTX - exact calculation of the covariance of the score by
 %               applying Isserlis' rule to express the covariance of the 
 %               empirical periodogram in terms of the DFT of the autocovariance,
 %               requiring the formation of the full cross-covariance matrix and
-%               its DFT in memory (NyNx x NyNx);
+%               its DFT in memory (NyNx by NyNx);
 %           3   DIAGONALS - the same calculation as method 2 but implemented to
 %               avoid forming matrices in memory by summing over the diagonals
 %               through intensive looping; method can be run in parallel and 
 %               the calculation of the diagonal offset built into 
-%               BLUROSY/SPATMAT ('efd' for tsto~=[0 0]) are optionally converted
-%               into GPU arrays.
-% ifinv     Indicates which parameters were inverted for and are required in the 
-%           covariance calculation as an array of three logical flags.
+%               BLUROSY/SPATMAT ('efd' for tsto~=[0 0]) are converted
+%               into GPU arrays when appropriate and useful.
+% ifinv         Indicates which Matern parameters are inverted for and are required in
+%               the covariance calculation as an array of three logical flags.
 %
 % OUTPUT:
 %
@@ -74,8 +63,8 @@ function varargout=covgammiosl(th,params,method,ifinv);
 % covg2 = covgammiosl(th,params,2,ifinv);
 % covg3 = covgammiosl(th,params,3,ifinv);
 %
-% Last modified by fjsimons-at-princeton.edu, 03/21/2025
-% Last modified by olwalbert-at-princeton.edu, 03/21/2025
+% Last modified by fjsimons-at-princeton.edu, 03/25/2025
+% Last modified by olwalbert-at-princeton.edu, 03/25/2025
 
 if ~isstr(th)
   % Set default for ifinv to assume that the covariance of the score for all
