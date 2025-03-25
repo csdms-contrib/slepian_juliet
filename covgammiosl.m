@@ -363,10 +363,7 @@ if ~isstr(th)
       % Partial derivative divided by square of periodogram, mthth/Sbar
       fax=dSbardth./Sbar.^2;
 
-      % Product of all partials in row-order: 
-      % [s2s2 s2nu s2rh nus2 nunu nurh rhs2 rhnu rhrh]
-      % f_seq=[f(:,1).*f f(:,2).*f f(:,3).*f];
-      % Arthur special ?
+      % Ask Arthur when we should (not) normalize; default is false
       normalize=0;
       if normalize
         Sbar_n=v2s(Sbar,params);
@@ -399,12 +396,14 @@ if ~isstr(th)
         dSbardth(:,:,ind)=tmp(:)*nf; 
       end
       dSbardth=squeeze(dSbardth);
-      f=dSbardth./Sbar.^2;
+      % Partial derivative divided by square of periodogram, mthth/Sbar
+      fax=dSbardth./Sbar.^2;
 
       % To offset the periodograms and their derivatives, we calculate the index
       % offset based on a NyNx grid
       Ny=NyNx(1);
       Nx=NyNx(2);
+
       % Ask Arthur when we should (not) normalize; default is false
       normalize=0;
       if normalize
@@ -467,7 +466,7 @@ if ~isstr(th)
             cad_l2=abs(cad).^2;
             cad_l2=cad_l2(:);
 
-            % We need to be a bit more verbose about this in parfor
+            % We need to be a bit more verbose about this in PARFOR
             if normalize
               seq_ep=Sbar_n(ep_ind1).*Sbar_n(ep_ind2);
               Sbar_n3=Sbar_n(ep_ind3);
@@ -478,107 +477,107 @@ if ~isstr(th)
             end
 
             % The partials indexed for the current `diagonal'
-            f1=f(ep_ind1,:);f2=f(ep_ind2,:);
+            f1=fax(ep_ind1,:); f2=fax(ep_ind2,:);
             % Product of all partials in row-order:
             % [s2s2 s2nu s2rh nus2 nunu nurh rhs2 rhnu rhrh]
             f_seq=[f1(:,1).*f2 f1(:,2).*f2 f1(:,3).*f2];
             s_1=s_1+sum(cdd_l2.*f_seq./seq_ep,1);
 
-            % Arthur tends to comment this out and double s_1 instead. Are s_1
-            % and s_2 always the same?
-            f1=f(ep_ind3,:);
+            % Arthur tends to comment this out and double s_1 instead.
+            % Are s_1 and s_2 always the same? Not quite, but they probably sum
+            % to the same thing in the end.
+            f1=fax(ep_ind3,:);
             f_seq2=[f1(:,1).*flipud(f1) f1(:,2).*flipud(f1) f1(:,3).*flipud(f1)];
             s_2=s_2+sum(cad_l2.*f_seq2./seq_ep2,1);
           end
         end
-      else 
-       % Useful for debugging; calculation time depends on grid-size
-       % Display progress?
-       dispprog=0;
-       for my=(-Ny+1:Ny-1)
-         if dispprog
-           disp(sprintf('%i%% complete',...
-                floor(((my+Ny-1)/(2*Ny)*100))))
-         end
-         for mx=(-Nx+1:Nx-1)                                                    
-           % Create two logical vectors for indexing the offset in diagonals
-           % of the FFT of the autocovariance
-           a=y<Ny-my&x<Nx-mx;                                                
-           b=y>=-my&x>=-mx;                                                  
-           ep_ind1=a&b;                                                      
-           ep_ind1=ep_ind1(:);
-           a=y>=my&x>=mx;                                                    
-           b=y<Ny+my&x<Nx+mx;                                                
-           ep_ind2=a&b;                                                      
-           ep_ind2=ep_ind2(:);
+      else
+          % Not a parallel run
+          % Useful for debugging; calculation time depends on grid-size
+          % Display progress?
+          dispprog=0;
+          for my=(-Ny+1:Ny-1)
+              if dispprog
+                  disp(sprintf('%i%% complete',...
+                               floor(((my+Ny-1)/(2*Ny)*100))))
+              end
+              for mx=(-Nx+1:Nx-1)                                                    
+                  % Create two logical vectors for indexing the offset in diagonals
+                  % of the FFT of the autocovariance
+                  a=y<Ny-my&x<Nx-mx;                                                
+                  b=y>=-my&x>=-mx;                                                  
+                  ep_ind1=a&b; ep_ind1=ep_ind1(:);
+                  a=y>=my&x>=mx;                                                    
+                  b=y<Ny+my&x<Nx+mx;                                                
+                  ep_ind2=a&b; ep_ind2=ep_ind2(:);
 
-           % Create a vector of logicals to index for offset in the 
-           % anti-diagonals of the FFT of the autocovariance
-           mx2=mx+Nx-1;
-           my2=my+Ny-1;
-           a=x<=mx2&y<=my2;
-           b=x>=mx2-Nx+1&y>=my2-Ny+1;
-           ep_ind3=a&b;
-           ep_ind3=ep_ind3(:);
+                  % Create a vector of logicals to index for offset in the 
+                  % anti-diagonals of the FFT of the autocovariance
+                  mx2=mx+Nx-1;
+                  my2=my+Ny-1;
+                  a=x<=mx2&y<=my2;
+                  b=x>=mx2-Nx+1&y>=my2-Ny+1;
+                  ep_ind3=a&b; ep_ind3=ep_ind3(:);
 
-           % We acquire the offset FFT of the autocovariance via BLUROSY, which
-           % we now provide method 'efd' and indices to calculate the offsets
-           % in frequency as the tsto input argument
-           fftcov_diag=blurosy(th,paramsSbar,xver,'efd',[my mx]);                        
-           fftcov_diag=v2s(fftcov_diag,params)*nf;                                           
-           cdd=fftcov_diag(max([1,my+1]):min([Ny+my,Ny]),...                         
-                           max([1,mx+1]):min([Nx+mx,Nx]));                           
-           cdd_l2=abs(cdd).^2;                                                  
-           cdd_l2=cdd_l2(:);                                                       
-                                                                                 
-           % Use the same framework to select the antidiagonals from BLUROSY
-           fftcov_anti=blurosy(th,paramsSbar,xver,'efd',[my2 mx2]);
-           fftcov_anti=v2s(fftcov_anti,params)*nf;
-           cad=fftcov_anti(max([1,my2-Ny+2]):min([my2+1,Ny]),...
-                           max([1,mx2-Nx+2]):min([mx2+1,Nx]));
-           cad_l2=abs(cad).^2;
-           cad_l2=cad_l2(:);
+                  % We acquire the offset FFT of the autocovariance via BLUROSY, which
+                  % we now provide method 'efd' and indices to calculate the offsets
+                  % in frequency as the tsto input argument
+                  fftcov_diag=blurosy(th,paramsSbar,xver,'efd',[my mx]);                        
+                  fftcov_diag=v2s(fftcov_diag,params)*nf;                                           
+                  cdd=fftcov_diag(max([1,my+1]):min([Ny+my,Ny]),...                         
+                                  max([1,mx+1]):min([Nx+mx,Nx]));                           
+                  cdd_l2=abs(cdd).^2;                                                  
+                  cdd_l2=cdd_l2(:);                                                       
+                  
+                  % Use the same framework to select the antidiagonals from BLUROSY
+                  fftcov_anti=blurosy(th,paramsSbar,xver,'efd',[my2 mx2]);
+                  fftcov_anti=v2s(fftcov_anti,params)*nf;
+                  cad=fftcov_anti(max([1,my2-Ny+2]):min([my2+1,Ny]),...
+                                  max([1,mx2-Nx+2]):min([mx2+1,Nx]));
+                  cad_l2=abs(cad).^2;
+                  cad_l2=cad_l2(:);
 
-           if normalize
-             seq_ep =Sbar_n(ep_ind1).*Sbar_n(ep_ind2);
-             ep_n3=ep_n(ep_ind3);
-             seq_ep2=ep_n3.*flip(ep_n3,1);
-           end
+                  if normalize
+                      seq_ep =Sbar_n(ep_ind1).*Sbar_n(ep_ind2);
+                      ep_n3=ep_n(ep_ind3);
+                      seq_ep2=ep_n3.*flip(ep_n3,1);
+                  end
 
-           % The partials indexed for the current `diagonal'
-           f1=f(ep_ind1,:);f2=f(ep_ind2,:);
-           % Product of all partials in row-order:
-           % [s2s2 s2nu s2rh nus2 nunu nurh rhs2 rhnu rhrh]
-           f_seq=[f1(:,1).*f2 f1(:,2).*f2 f1(:,3).*f2];
-           s_1=s_1+sum(cdd_l2.*f_seq./seq_ep,1);
+                  % The partials indexed for the current `diagonal'
+                  f1=fax(ep_ind1,:);f2=fax(ep_ind2,:);
+                  % Product of all partials in row-order:
+                  % [s2s2 s2nu s2rh nus2 nunu nurh rhs2 rhnu rhrh]
+                  f_seq=[f1(:,1).*f2 f1(:,2).*f2 f1(:,3).*f2];
+                  s_1=s_1+sum(cdd_l2.*f_seq./seq_ep,1);
 
-           % Arthur tends to comment this out and double s_1 instead. Are s_1
-           % and s_2 always the same?
-           f1=f(ep_ind3,:);
-           f_seq2=[f1(:,1).*flipud(f1) f1(:,2).*flipud(f1) f1(:,3).*flipud(f1)];
-           s_2=s_2+sum(cad_l2.*f_seq2./seq_ep2,1);
+                  % Arthur tends to comment this out and double s_1 instead. Are s_1
+                  % and s_2 always the same?
+                  f1=fax(ep_ind3,:);
+                  f_seq2=[f1(:,1).*flipud(f1) f1(:,2).*flipud(f1) f1(:,3).*flipud(f1)];
+                  s_2=s_2+sum(cad_l2.*f_seq2./seq_ep2,1);
 
-           % We want to study how different s_1 and s_2 are; we see that stepping
-           % through the offset periodogram yields very different values, which
-           % is expected due to different indices (ep_ind1 & ep_ind2 vs
-           % ep_ind3), but we are really interested in whether s_1 and s_2 are
-           % similar following the complete summation.
-           % disp(sprintf('s_1 - s_2: %g %g %g %g %g %g %g %g %g',s_1-s_2))
-         end
-       end
-     end
+                  % We want to study how different s_1 and s_2 are; we see that stepping
+                  % through the offset periodogram yields very different values, which
+                  % is expected due to different indices (ep_ind1 & ep_ind2 vs
+                  % ep_ind3), but we are really interested in whether s_1 and s_2 are
+                  % similar following the complete summation.
+                  % disp(sprintf('s_1 - s_2: %g %g %g %g %g %g %g %g %g',s_1-s_2))
+              end
+          end
+      end
      % Following several tests, we see that there is a very small difference 
-     % between s_1 and s_2 following summation (O(-10) - O(-16)), with 
-     % dependence on th.
+     % between s_1 and s_2 following summation (O(-10) - O(-16)), with
+     % dependence on th. Probably nothing to keep worrying about, and no gains expected
+     % whether you deal with it or not
      % disp(sprintf('s_1 - s_2: %g %g %g %g %g %g %g %g %g',s_1-s_2))
      s=reshape(s_1+s_2,np,np);
-     if isfield(params,'taper')&numel(params.taper)==prod(NyNx)
+     if isfield(params,'taper') & numel(params.taper)==prod(NyNx)
         normfact=(prod(params.NyNx)./sum(Tx(:).^2)).^2.*prod(params.NyNx).^2;
      else
         normfact=prod(params.NyNx).^2;
      end
      covg=s./normfact;
-     % wkspc=whos;sum([wkspc.bytes])
+     % wkspc=whos; sum([wkspc.bytes])
      grads=NaN;
     end
   covg=ifinvslc(covg,ifinv);
