@@ -78,8 +78,7 @@ if ~isstr(th)
 
   % The number of Matern parameters
   np=3;
-  % To save on calculation time, we will disable extra verification checks 
-  % in BLUROSY
+  % To save on calculation time, disable extra verification checks in BLUROSY
   xver=0;
 
   % Capture the mask and work it into calculations
@@ -152,9 +151,6 @@ if ~isstr(th)
       else
         Semps=zeros(numel(Sbar),numreals);
         for ind=1:numreals
-          % Generate an empirical periodogram through SGP simulation; SIMULOSL
-          % already takes the taper in to account and normalizes Semp
-          % appropriately
           [~,~,~,~,~,Semp]=simulosl(th,params,xver);
           Semps(:,ind)=Semp;
         end
