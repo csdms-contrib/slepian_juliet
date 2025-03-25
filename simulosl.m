@@ -103,8 +103,8 @@ if ~isstr(th0)
 
   % Here is the extra verification parameter
   defval('xver',1)
-  if xver==1 | xver==0
-    % Dump to screen
+  if xver==1
+      % Dump to screen
     osdisp(th0,params)
   end
 
