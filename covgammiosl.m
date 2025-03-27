@@ -1168,18 +1168,77 @@ elseif strcmp(th,'demo4')
     xlabel('x1-lag [m]');
 
     % Check this out this should be the covariance between periodogram terms
-    A=abs(EJJt_out./prod(NyNx)).^2.+abs(EJJht_out./prod(NyNx)).^2;
-    %clf
-    % Grab a 3x3 piece using BLOCK
-    %imagesc(log10(fftshift(blocktile(A,9,0,randi(81)))))
-    indi=0;
-    for index=1+[9+1]*[0:9-1]
-        indi=indi+1;
-        mm(indi)=max(max(fftshift(blocktile(A,3,0,index))));
-    end
-
-keyboard
+    A=Hk2cov;
     
+    % %clf
+    % % Grab a 3x3 piece using BLOCK
+    % %imagesc(log10(fftshift(blocktile(A,9,0,randi(81)))))
+    % indi=0;
+    % % step down the block diagonal
+    % for index=1+[NyNx(1)+1]*[0:NyNx(1)-1]
+    %     indi=indi+1;
+    %     % Attempt to find the k=k'
+    %     mm(indi)=max(max(fftshift(blocktile(A,NyNx(1),0,index))));
+    % end
+
+    % The first term of this is equal to mm(1), but later terms are larger
+    % because we are not accounting for the anti-diagonal structure of EJJt_out
+    Sbar=abs(blurosy(th,params,0,'efd',[0 0]))*(2*pi)^2;
+    Sbar2=abs(Sbar).^2;
+
+    % This is a subset of the k=kp but only one of them 
+    %mm.'./(diag(v2s(Sbar2))*2)
+    % Similarly, the diagonal of A is only twice Sbar^2 for the 0,0 element
+    %diag(A)./(Sbar2*2)
+    
+    % Hk2cov is the sum of two periodogram terms. The first, abs(EJJht_out).^2,
+    % is equivalent to the periodogram calculated from the blurred, shifted 
+    % spectral density with no offset
+    difer(diag(EJJht_out)./prod(NyNx)-Sbar)
+
+    % The second periodogram term we need to predict is EJJt_out
+    pSbar=zeros(prod(NyNx),1);
+    % Assumes square grid, Ny==Nx
+    if mod(NyNx(1),2)
+      % odd
+      seq=[0:2:floor(NyNx(1)/2).*2 -floor(NyNx(1)/2).*2:2:-2];
+    else
+      % even
+      seq=[0:2:NyNx(1) -NyNx(1)+2:2:-2];
+    end
+    % this running index...
+    rnd=0;
+    for jnd=seq
+      for ind=seq
+        rnd=rnd+1;
+        Sbaroff=blurosy(th,params,0,'efd',[ind jnd])*(2*pi)^2;
+        % ... finds the relevant k=k' term
+        pSbar(rnd)=Sbaroff(rnd);
+      end
+    end
+    difer(diag(EJJt_out)./prod(NyNx)-pSbar)
+
+    % The diagonal of the sum of the two predicted terms is the diagonal of A
+    diagpgmsum=v2s(Sbar2+abs(pSbar).^2);
+    difer(diag(A)-diagpgmsum(:))
+    % Bottom line: Hk2cov is the sum of a covariance of Fourier coefficients and
+    % a pseudocovariance of Fourier coefficients. The variances, aka their
+    % diagonals, can be predicted from the blurred spectral density.    
+
+    % This is more than we wanted to know but might some some day
+    % The first column (or equivalently the first row) of the wrapped diagonal
+    % of the sum of the predicted terms is mm
+    % difer(mm.'-diagpgmsum(:,1))
+
+     subplot(221); imagesc(log10(v2s(fftshift(Sbar.^2))))
+     axis image
+     subplot(222); imagesc(log10(v2s(fftshift(abs(pSbar.^2)))))
+     axis image
+     subplot(223); imagesc(log10(v2s(blurosy(th,params)*(2*pi)^2)))
+     axis image
+    
+    keyboard
+    % Cosmetics
     for ind=1:size(ah,2)
       ah(ind).XTick=1:numel(grdx);ah(ind).XTickLabel=grdx;
       ah(ind).YTick=1:numel(grdy);ah(ind).YTickLabel=grdy;
@@ -1188,7 +1247,7 @@ keyboard
     end
     ti=sgtitle(sprintf('th=[%0.2g %g %0.2g] | %ix%i',th,params.NyNx));
     movev(ah,-0.02)
-  keyboard
+
     saveas(gcf,...
       sprintf('covgammiosl_demo4_dftmtx_%ix%i_s2%inu%irh%i_%s.eps',...
         params.NyNx.*params.dydx,th.*[1 10 1],date),'epsc')
@@ -1738,12 +1797,12 @@ elseif strcmp(th,'demo8')
          leg1.AutoUpdate='off';
          % Reduce the amount of space each legend marker uses 
          legicms = findobj(legic,'Type','line');
-         for ind=1:size(legicms,1)
-           if size(legicms(ind).XData,1)==1
-              legicms(ind).XData=0.3;
+         for knd=1:size(legicms,1)
+           if size(legicms(knd).XData,1)==1
+              legicms(knd).XData=0.3;
            else
-              legicms(ind).XData(1)=0.2;
-              legicms(ind).XData(2)=0.4;
+              legicms(knd).XData(1)=0.2;
+              legicms(knd).XData(2)=0.4;
            end
          end
          % Move the legend to the left edge of the axis
