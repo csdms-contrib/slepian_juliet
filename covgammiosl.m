@@ -1104,13 +1104,13 @@ elseif strcmp(th,'demo4')
     % grid, covariance, Hk2cov) for very (unrealistically) small grids
   
     params=[];
-    params.NyNx=[9 9];
+    params.NyNx=[9 9]*4;
     params.dydx=[1 1];
     params.blurs=-1;
     params.taper=1;
 
     ifinv=[1 1 1];
-    th=[1 0.5 1];
+    th=[1 0.5 2];
   
     dydx=params.dydx;NyNx=params.NyNx;
     ys=0:NyNx(1)-1;xs=0:NyNx(2)-1;
@@ -1137,6 +1137,7 @@ elseif strcmp(th,'demo4')
   
     % While the first and second terms below sum to similar quantities, we can
     % quickly see wave-number dependent distinctions:
+    figure(1)
     clf 
     ah(1)=subplot(321); imagesc(dxxp); cb1=colorbar; 
     cb1.Label.String='euclidean distance [m]'; 
@@ -1152,6 +1153,7 @@ elseif strcmp(th,'demo4')
 
     ah(3)=subplot(323);
     imagesc(log(abs(EJJht_out./prod(NyNx)).^2));
+    cax=caxis; caxis(cax(2)-[10 0])
     cb3=colorbar; cb3.Label.String='term 1 log([|unit|^2/m])';
     %title('|(U(UCU'')*U)*|^2')
     t(3)=title('$|\mathrm{cov}\{H(\mathbf{k}),H^*(\mathbf{k''})\}|^2$');
@@ -1160,6 +1162,7 @@ elseif strcmp(th,'demo4')
 
     ah(4)=subplot(324);
     imagesc(log(abs(EJJt_out./prod(NyNx)).^2));
+    cax=caxis; caxis(cax(2)-[10 0])
     cb4=colorbar; cb4.Label.String='term 2 log([|unit|^2/m])';
     %title('|U(UCU'')U|^2')
     t(4)=title('$|\mathrm{cov}\{H(\mathbf{k}),H(\mathbf{k''})\}|^2$');
@@ -1169,6 +1172,7 @@ elseif strcmp(th,'demo4')
     % Ratio of Isserlis' terms for periodogram covariance
     ah(5)=subplot(325);
     imagesc(log(Hk2cov));
+    cax=caxis; caxis(cax(2)-[10 0])
     cb5=colorbar; cb5.Label.String='log periodogram covariance';
     t(5)=title('$\mathrm{cov}\{|H(\mathbf{k})|^2,|H(\mathbf{k''})|^2\}$');
     t(5).Interpreter='latex';
@@ -1235,7 +1239,7 @@ elseif strcmp(th,'demo4')
     % a pseudocovariance of Fourier coefficients. The variances, aka their
     % diagonals, can be predicted from the blurred spectral density.
 
-    figure
+    figure(2)
     clf
     
     % This is more than we wanted to know but might some some day
@@ -1243,18 +1247,21 @@ elseif strcmp(th,'demo4')
     % of the sum of the predicted terms is mm
     % difer(mm.'-diagpgmsum(:,1))
     % Don't v2s(fftshift, very different from fftshitf(v2s
-    ah(1)=subplot(221); imagesc(log10(fftshift(v2s(Sbar2))))
+    ah(1)=subplot(221); imagesc(decibel(fftshift(v2s(Sbar2))))
+    caxis([-40 0])
     t(1)=title('$|\mathrm{cov}\{H(\mathbf{k}),H^*(\mathbf{k})\}|^2$');
     t(1).Interpreter='latex';
     xlabel('k_x'); ylabel('k_y'); axis image
 
-    ah(2)=subplot(222); imagesc(log10(fftshift(v2s(pSbar2))))
+    ah(2)=subplot(222); imagesc(decibel(fftshift(v2s(pSbar2))))
+    caxis([-40 0])
     t(2)=title('$|\mathrm{cov}\{H(\mathbf{k}),H(\mathbf{k})\}|^2$');
     t(2).Interpreter='latex';
     xlabel('k_x'); ylabel('k_y'); axis image
 
     a=fftshift(v2s(Sbar2+pSbar2));
-    ah(3)=subplot(223); imagesc(log10(a));
+    ah(3)=subplot(223); imagesc(decibel(a));
+    caxis([-40 0])
     t(3)=title('$\mathrm{cov}\{|H(\mathbf{k})|^2,|H(\mathbf{k''})|^2\}$');
     t(3).Interpreter='latex';
     xlabel('k_x'); ylabel('k_y'); axis image
@@ -1263,8 +1270,10 @@ elseif strcmp(th,'demo4')
     % The non-correlated part of the covariance of the periodogram is not just
     % the square of the blurred theoretical spectrum
     b=v2s(blurosy(th,params)*(2*pi)^2).^2;
-    ah(4)=subplot(224); imagesc(log10(b))
-    t(4)=title(sprintf('%s [median ratio %5g\','$\bar{S}(\mathbf{k})^2$',median(abs(a(:)./b(:)))));
+    [~,i]=max(b(:)); b(i)=b(i)*2;
+    ah(4)=subplot(224); imagesc(decibel(b))
+    caxis([-40 0])
+    t(4)=title(sprintf('fixed %s [median ratio %5g]','$\bar{S}(\mathbf{k})^2$',median(abs(a(:)./b(:)))));
     t(4).Interpreter='latex';
     xlabel('k_x'); ylabel('k_y'); axis image
 
