@@ -87,8 +87,8 @@ function varargout=simulosl(th0,params,xver,varargin)
 % MLEOSL, LOADING, SIMULOS, EGGERS1, EGGERS2, EGGERS4, etc
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
-% Last modified by olwalbert-at-princeton.edu, 12/18/2023
-% Last modified by fjsimons-at-alum.mit.edu, 03/14/2025
+% Last modified by olwalbert-at-princeton.edu, 04/01/2025
+% Last modified by fjsimons-at-alum.mit.edu, 04/01/2025
 
 % Here is the true parameter vector and the only variable that gets used 
 defval('th0',[1e6 2.5 2e4]);
@@ -183,10 +183,10 @@ if ~isstr(th0)
     end
   else
     % Make the Matern covariance OBJECT as required - vectorized
-    %  Cmn=@(h) maternosy(sqrt([h(:,1)*params.dydx(1)].^2+[h(:,2)*params.dydx(2)].^2),th0);
+    %  Cmn=@(h) maternosy(sqrt([h(:,1)*params.dydx(2)].^2+[h(:,2)*params.dydx(1)].^2),th0);
 
      % Maybe add nugget here add only to zero lag
-     Cmn=@(h) maternosy(sqrt([h(:,1)*params.dydx(1)].^2+[h(:,2)*params.dydx(2)].^2),th0)+...
+     Cmn=@(h) maternosy(sqrt([h(:,1)*params.dydx(2)].^2+[h(:,2)*params.dydx(1)].^2),th0)+...
                 ([sqrt(h(:,1).^2+h(:,2).^2)]==0)*params.nugget*th0(1);
       
     % Double/triple up? 
@@ -805,21 +805,33 @@ elseif strcmp(th0,'demo7')
   th0=params; p=xver;
   % Just get some default parameters already 
   [Hx,th0,p]=simulosl;
+  % Set the spacings to something rectangular
+  p.dydx=p.dydx.*[1 3];
+  [Hx,th0,p]=simulosl(th0,p);
+  th0(3)=th0(3)*2;
+  
+  ntup=3;
+
   figure(1)
   clf
   % Show the periodicity
   subplot(121)
-  p.blurs=-1; h=reshape(simulosl(th0,p),p.NyNx); imagesc(repmat(h,3,3))
-  set(gca,'ytick',[1:p.NyNx(1):3*p.NyNx(1)]-0.5); longticks(gca)
-  set(gca,'xtick',[1:p.NyNx(2):3*p.NyNx(2)]-0.5); grid on
+  p.blurs=-1; h=reshape(simulosl(th0,p),p.NyNx);
+  % Plot in proper geographic dimension
+  imagef([0 ntup*p.dydx(1)*p.NyNx(1)],[ntup*p.dydx(2)*p.NyNx(2) 0],repmat(h,ntup,ntup))
+  % set(gca,'ytick',[1:p.NyNx(1):ntup*p.NyNx(1)]); longticks(gca)
+  % set(gca,'xtick',[1:p.NyNx(2):ntup*p.NyNx(2)]); grid on
   title(sprintf('blurs %i',p.blurs)); axis image
   subplot(122)
-  p.blurs=Inf; h=reshape(simulosl(th0,p),p.NyNx); imagesc(repmat(h,3,3))
-  set(gca,'ytick',[1:p.NyNx(1):3*p.NyNx(1)]-0.5); longticks(gca)
-  set(gca,'xtick',[1:p.NyNx(2):3*p.NyNx(2)]-0.5); grid on
+  p.blurs=Inf; h=reshape(simulosl(th0,p),p.NyNx);
+  % Plot in proper geographic dimension
+  imagef([0 ntup*p.dydx(1)*p.NyNx(1)],[ntup*p.dydx(2)*p.NyNx(2) 0],repmat(h,ntup,ntup))
+  %set(gca,'ytick',[1:p.NyNx(1):ntup*p.NyNx(1)]); longticks(gca)
+  %set(gca,'xtick',[1:p.NyNx(2):ntup*p.NyNx(2)]); grid on
   title(sprintf('blurs %i',p.blurs)); axis image
+
 elseif strcmp(th0,'demo8')
-    % The thing with Olivia Sept 26
+    % The thing with Olivia Sept 26 2024
     % simulosl Inf
     % mleosl -1
     % resimulate three times with both -1 and Inf
