@@ -458,12 +458,14 @@ if ~isstr(th)
           % Useful for debugging; calculation time depends on grid-size
           % Display progress?
           dispprog=0;
+          rnd=0;
           for my=(-Ny+1:Ny-1)
               if dispprog
                   disp(sprintf('%i%% complete',...
                                floor(((my+Ny-1)/(2*Ny)*100))))
               end
               for mx=(-Nx+1:Nx-1)                                                    
+                  rnd=rnd+1;
                   % Create two logical vectors for indexing the offset in diagonals
                   % of the FFT of the autocovariance
                   a=y<Ny-my&x<Nx-mx;                                                
@@ -486,17 +488,17 @@ if ~isstr(th)
                   % in frequency as the tsto input argument
                   fftcov_diag=blurosy(th,params,xver,'efd',[my mx]);                        
                   fftcov_diag=v2s(fftcov_diag,params)*nf;                                           
-                  cdd=fftcov_diag(max([1,my+1]):min([Ny+my,Ny]),...                         
-                                  max([1,mx+1]):min([Nx+mx,Nx]));                           
-                  cdd_l2=abs(cdd).^2;                                                  
+                  cdd{rnd}=fftcov_diag(max([1,my+1]):min([Ny+my,Ny]),...                         
+                                  max([1,mx+1]):min([Nx+mx,Nx]))
+                  cdd_l2=abs(cdd{rnd}).^2;                                                  
                   cdd_l2=cdd_l2(:);                                                       
                   
                   % Use the same framework to select the antidiagonals from BLUROSY
                   fftcov_anti=blurosy(th,params,xver,'efd',[my2 mx2]);
                   fftcov_anti=v2s(fftcov_anti,params)*nf;
-                  cad=fftcov_anti(max([1,my2-Ny+2]):min([my2+1,Ny]),...
-                                  max([1,mx2-Nx+2]):min([mx2+1,Nx]));
-                  cad_l2=abs(cad).^2;
+                  cad{rnd}=fftcov_anti(max([1,my2-Ny+2]):min([my2+1,Ny]),...
+                                  max([1,mx2-Nx+2]):min([mx2+1,Nx]))
+                  cad_l2=abs(cad{rnd}).^2;
                   cad_l2=cad_l2(:);
 
                   if normalize
@@ -527,6 +529,9 @@ if ~isstr(th)
               end
           end
       end
+      % for ind=1:floor(size(cdd,2)/2); difer(cdd{ind}-conj(cdd{end-ind+1}));
+      % end
+      keyboard
      % Following several tests, we see that there is a very small difference 
      % between s_1 and s_2 following summation (O(-10) - O(-16)), with
      % dependence on th. Probably nothing to keep worrying about, and no gains expected
@@ -1135,41 +1140,44 @@ elseif strcmp(th,'demo4')
     clf 
     ah(1)=subplot(321); imagesc(dxxp); cb1=colorbar; 
     cb1.Label.String='euclidean distance [m]'; 
-    title('Distance matrix')
-    ylabel('x2-lag [m]'); 
-    ah(2)=subplot(322); imagesc(Cmn); cb2=colorbar; 
+    t(1)=title('$||\mathbf{x}-\mathbf{x''}||$');
+    t(1).Interpreter='latex';
+    xlabel('\bfx'''); ylabel('\bfx'); axis image
+
+    ah(2)=subplot(322); imagesc(Cmn); caxis([0 1]); cb2=colorbar; 
     cb2.Label.String='covariance [unit^2]'; 
-    title('C(||x-x''||)')
+    t(2)=title('$C(||\mathbf{x}-\mathbf{x''}||)$');
+    t(2).Interpreter='latex';
+    xlabel('\bfx'''); ylabel('\bfx'); axis image
 
     ah(3)=subplot(323);
     imagesc(log(abs(EJJht_out./prod(NyNx)).^2));
-    cb3=colorbar;cb3.Label.String='log([|unit|^2/m])';
-    title('|(U(UCU'')*U)*|^2')
-    ylabel('x2-lag [m]'); 
+    cb3=colorbar; cb3.Label.String='term 1 log([|unit|^2/m])';
+    %title('|(U(UCU'')*U)*|^2')
+    t(3)=title('$|\mathrm{cov}\{H(\mathbf{k}),H^*(\mathbf{k''})\}|^2$');
+    t(3).Interpreter='latex';
+    xlabel('\bfk'''); ylabel('\bfk'); axis image
 
     ah(4)=subplot(324);
     imagesc(log(abs(EJJt_out./prod(NyNx)).^2));
-    cb4=colorbar;cb4.Label.String='log([|unit|^2/m])';
-    title('|U(UCU'')U|^2')
+    cb4=colorbar; cb4.Label.String='term 2 log([|unit|^2/m])';
+    %title('|U(UCU'')U|^2')
+    t(4)=title('$|\mathrm{cov}\{H(\mathbf{k}),H(\mathbf{k''})\}|^2$');
+    t(4).Interpreter='latex';
+    xlabel('\bfk'''); ylabel('\bfk'); axis image
 
     % Ratio of Isserlis' terms for periodogram covariance
     ah(5)=subplot(325);
-    imagesc(abs(EJJht_out./prod(NyNx)).^2./abs(EJJt_out./prod(NyNx)).^2);
-    cb5=colorbar;
-    cb5.Label.String='amplitude';
-    title('|(U(UCU'')*U)*|^2 / |U(UCU'')U|^2')
-    xlabel('x1-lag [m]'); ylabel('x2-lag [m]'); 
-
-    ah(6)=subplot(326);
-    imagesc(abs(EJJt_out./prod(NyNx)).^2./abs(EJJht_out./prod(NyNx)).^2);
-    cb6=colorbar;
-    cb6.Label.String='amplitude';
-    title('|U(UCU'')U|^2/|(U(UCU'')*U)*|^2')
-    xlabel('x1-lag [m]');
-
+    imagesc(log(Hk2cov));
+    cb5=colorbar; cb5.Label.String='log periodogram covariance';
+    t(5)=title('$\mathrm{cov}\{|H(\mathbf{k})|^2,|H(\mathbf{k''})|^2\}$');
+    t(5).Interpreter='latex';
+    xlabel('\bfk'''); ylabel('\bfk'); axis image
+    layout(ah(5),0.5,'m','x')
+    
     % Check this out this should be the covariance between periodogram terms
     A=Hk2cov;
-    
+
     % %clf
     % % Grab a 3x3 piece using BLOCK
     % %imagesc(log10(fftshift(blocktile(A,9,0,randi(81)))))
@@ -1186,11 +1194,11 @@ elseif strcmp(th,'demo4')
     Sbar=abs(blurosy(th,params,0,'efd',[0 0]))*(2*pi)^2;
     Sbar2=abs(Sbar).^2;
 
-    % This is a subset of the k=kp but only one of them 
+    % This is a subset of the k=kp but only one of them
     %mm.'./(diag(v2s(Sbar2))*2)
     % Similarly, the diagonal of A is only twice Sbar^2 for the 0,0 element
     %diag(A)./(Sbar2*2)
-    
+
     % Hk2cov is the sum of two periodogram terms. The first, abs(EJJht_out).^2,
     % is equivalent to the periodogram calculated from the blurred, shifted 
     % spectral density with no offset
@@ -1213,41 +1221,65 @@ elseif strcmp(th,'demo4')
         rnd=rnd+1;
         Sbaroff=blurosy(th,params,0,'efd',[ind jnd])*(2*pi)^2;
         % ... finds the relevant k=k' term
-        pSbar(rnd)=Sbaroff(rnd);
+        pSbar(rnd,:)=Sbaroff(rnd);
       end
     end
     difer(diag(EJJt_out)./prod(NyNx)-pSbar)
 
     % The diagonal of the sum of the two predicted terms is the diagonal of A
-    diagpgmsum=v2s(Sbar2+abs(pSbar).^2);
+    pSbar2=abs(pSbar).^2;
+
+    diagpgmsum=v2s(Sbar2+pSbar2);
     difer(diag(A)-diagpgmsum(:))
     % Bottom line: Hk2cov is the sum of a covariance of Fourier coefficients and
     % a pseudocovariance of Fourier coefficients. The variances, aka their
-    % diagonals, can be predicted from the blurred spectral density.    
+    % diagonals, can be predicted from the blurred spectral density.
 
+    figure
+    clf
+    
     % This is more than we wanted to know but might some some day
     % The first column (or equivalently the first row) of the wrapped diagonal
     % of the sum of the predicted terms is mm
     % difer(mm.'-diagpgmsum(:,1))
+    % Don't v2s(fftshift, very different from fftshitf(v2s
+    ah(1)=subplot(221); imagesc(log10(fftshift(v2s(Sbar2))))
+    t(1)=title('$|\mathrm{cov}\{H(\mathbf{k}),H^*(\mathbf{k})\}|^2$');
+    t(1).Interpreter='latex';
+    xlabel('k_x'); ylabel('k_y'); axis image
 
-     subplot(221); imagesc(log10(v2s(fftshift(Sbar.^2))))
-     axis image
-     subplot(222); imagesc(log10(v2s(fftshift(abs(pSbar.^2)))))
-     axis image
-     subplot(223); imagesc(log10(v2s(blurosy(th,params)*(2*pi)^2)))
-     axis image
+    ah(2)=subplot(222); imagesc(log10(fftshift(v2s(pSbar2))))
+    t(2)=title('$|\mathrm{cov}\{H(\mathbf{k}),H(\mathbf{k})\}|^2$');
+    t(2).Interpreter='latex';
+    xlabel('k_x'); ylabel('k_y'); axis image
+
+    a=fftshift(v2s(Sbar2+pSbar2));
+    ah(3)=subplot(223); imagesc(log10(a));
+    t(3)=title('$\mathrm{cov}\{|H(\mathbf{k})|^2,|H(\mathbf{k''})|^2\}$');
+    t(3).Interpreter='latex';
+    xlabel('k_x'); ylabel('k_y'); axis image
+
+    % Note that this is only the non-pseudo part of what we need
+    % The non-correlated part of the covariance of the periodogram is not just
+    % the square of the blurred theoretical spectrum
+    b=v2s(blurosy(th,params)*(2*pi)^2).^2;
+    ah(4)=subplot(224); imagesc(log10(b))
+    t(4)=title(sprintf('%s [median ratio %5g\','$\bar{S}(\mathbf{k})^2$',median(abs(a(:)./b(:)))));
+    t(4).Interpreter='latex';
+    xlabel('k_x'); ylabel('k_y'); axis image
+
+    % layout(ah(3),0.5,'m','x')
     
-    keyboard
-    % Cosmetics
-    for ind=1:size(ah,2)
-      ah(ind).XTick=1:numel(grdx);ah(ind).XTickLabel=grdx;
-      ah(ind).YTick=1:numel(grdy);ah(ind).YTickLabel=grdy;
-      ah(ind).XTickLabelRotation=0;ah(ind).YTickLabelRotation=90;
-      axes(ah(ind));longticks; axis image; box on
-    end
-    ti=sgtitle(sprintf('th=[%0.2g %g %0.2g] | %ix%i',th,params.NyNx));
-    movev(ah,-0.02)
+    % % Check if Hermitian
+    % Sbar2=fftshift(v2s(Sbar2));
+    % pSbar2=fftshift(v2s(pSbar2));
+    % hermcheck(Sbar2)
+    % hermcheck(pSbar2)
+    % % Check if positive definite 
+    % flg=defcheck(Sbar2); diferm(flg>1)
+    % pflg=defcheck(pSbar2); diferm(pflg>1)
 
+    keyboard
     saveas(gcf,...
       sprintf('covgammiosl_demo4_dftmtx_%ix%i_s2%inu%irh%i_%s.eps',...
         params.NyNx.*params.dydx,th.*[1 10 1],date),'epsc')
