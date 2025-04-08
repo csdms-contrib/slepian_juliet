@@ -1104,7 +1104,7 @@ elseif strcmp(th,'demo4')
     % grid, covariance, Hk2cov) for very (unrealistically) small grids
   
     params=[];
-    params.NyNx=[9 9]*4;
+    params.NyNx=[9 9];
     params.dydx=[1 1];
     params.blurs=-1;
     params.taper=1;
@@ -1169,7 +1169,7 @@ elseif strcmp(th,'demo4')
     t(4).Interpreter='latex';
     xlabel('\bfk'''); ylabel('\bfk'); axis image
 
-    % Ratio of Isserlis' terms for periodogram covariance
+    % Periodogram covariance
     ah(5)=subplot(325);
     imagesc(log(Hk2cov));
     cax=caxis; caxis(cax(2)-[10 0])
@@ -1177,6 +1177,9 @@ elseif strcmp(th,'demo4')
     t(5)=title('$\mathrm{cov}\{|H(\mathbf{k})|^2,|H(\mathbf{k''})|^2\}$');
     t(5).Interpreter='latex';
     xlabel('\bfk'''); ylabel('\bfk'); axis image
+
+    keyboard
+    
     layout(ah(5),0.5,'m','x')
     
     % Check this out this should be the covariance between periodogram terms
