@@ -30,10 +30,11 @@ function varargout=blurosy(th,params,xver,method,tsto,dth)
 %                   (1 is yes and 0 is no and everything in between)
 % xver    1 extra verification via BLURCHECK and alternative computations
 %         0 no checking at all
-% method  'ef' exact, efficient and fast [default]
+% method  'ef'  exact, efficient and fast [default]
 %         'efs' exact, efficient and exploiting symmetry
 %         'efd' exact, for diagonals calculation in JMATRIX method 3
 %               which requires tsto but should be close to ef/efs is tsto=[0 0]
+%               (except the result is fftshifted... )
 %               (remaining question: does that solve BLUROS_DEMO lingering issue)
 % tsto    An extra parameter slot to pass onto demo2
 %         OR the 2 element list of offsets for the frequency indices, [m1, m2]
@@ -76,8 +77,8 @@ function varargout=blurosy(th,params,xver,method,tsto,dth)
 % BLUROSY('demo3') % should produce no output
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 03/18/2025
-% Last modified by olwalbert-at-princeton.edu, 03/18/2025
+% Last modified by fjsimons-at-alum.mit.edu, 04/8/2025
+% Last modified by olwalbert-at-princeton.edu, 04/8/2025
 
 if ~isstr(th)
     % Defaults (avoiding DEFVAL to avoid costly EVALIN statements)
@@ -833,7 +834,6 @@ end
 % Use the tsto input argument for providing frequency index offsets required
 % for calculating the JMATRIX per-diagonal method (3; Eq. 17 of VoWE)
 if ~isempty(tsto) & size(tsto,2)==2
-    %%% OLW TODO: Confirm that this dual use of tsto will not harm demo2
     m1=tsto(1); m2=tsto(2);
     normalization_factor=prod(NyNx);
     two_n=NyNx.*2-1;
