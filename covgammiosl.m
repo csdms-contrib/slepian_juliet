@@ -206,7 +206,7 @@ if ~isstr(th)
       % Normalization factors in the case of masked and unit tapers
       if isfield(params,'taper') & numel(params.taper)==prod(params.NyNx)
          % Adjust for the size of an explicit taper as in SIMULOSL and MLEOSL
-         % OLW/FJS Need to think about implicatins of removing a zero wavenumber
+         % OLW/FJS Need to think about implications of removing a zero wavenumber
          normfact=(prod(params.NyNx)./sum(Tx(:).^2)).^2.*prod(params.NyNx).^2;
       else
          normfact=lk^2;
