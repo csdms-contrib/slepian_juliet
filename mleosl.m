@@ -1,5 +1,5 @@
 function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver)
-% [thhat,covFHh,lpars,scl,thini,params,Hk,k]=...
+% [thhat,covFHhJ,lpars,scl,thini,params,Hk,k]=...
 %          MLEOSL(Hx,thini,params,algo,bounds,aguess,ifinv,xver)
 %
 % Maximum-likelihood estimation for univariate Gaussian
@@ -49,11 +49,11 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver)
 %
 % thhat    The maximum-likelihood estimate of the vector [scaled]:
 %          [s2 nu rho], in units of variance, "nothing", and distance, see SIMULOSL
-% covFHh   The covariance estimates:
-%          covFHh{1} from Fisher matrix AT the estimate [FISHIOSL] (eq. 139)
-%          covFHh{2} from analytical Hessian matrix AT the estimate [HESSIOSL] (eq. 133)
-%          covFHh{3} from numerical Hessian matrix NEAR the estimate [FMINUNC/FMINCON]
-%          covFHh{4} from the full formula (eq. 138), which is not implemented yet
+% covFHhJ  The covariance estimates:
+%          covFHhJ{1} from Fisher matrix AT the estimate [FISHIOSL] (eq. 139)
+%          covFHhJ{2} from analytical Hessian matrix AT the estimate [HESSIOSL] (eq. 133)
+%          covFHhJ{3} from numerical Hessian matrix NEAR the estimate [FMINUNC/FMINCON]
+%          covFHhJ{4} from the full formula (eq. 138) at the estimate [COVTHOSL]
 % lpars    The logarithmic likelihood and its derivatives AT or NEAR the estimate
 %          lpars{1} the numerical logarithmic likelihood [FMINUNC/FMINCON]
 %          lpars{2} the numerical scaled gradient, or score [FMINUNC/FMINCON]
@@ -286,8 +286,7 @@ if ~isstr(Hx)
 
   % If we have the special case of nu->Inf, we will make a special matrix scale
   if isinf(thini(end-1)) && ifinv(end-1)==0
-    matsclInf=[matscl(1:end-2,1:end-2) matscl(1:end-2,end);...
-               matscl(  end,  1:end-2) matscl(  end,  end)];
+    matsclInf=matslice(matscl,[1 0 1]);
   end
 
   % Always demean the data sets - think about deplaning as well?
@@ -376,9 +375,8 @@ if ~isstr(Hx)
            % hes to avoid singularities when we later calculate the numerical 
            % covariance approximations
            if isinf(thini(end-1)) && ifinv(end-1)==0
-             grdInf=[grd(1:end-2) grd(end)]'; 
-             hesInf=[hes(1:end-2,1:end-2) hes(1:end-2,end);...
-                     hes(  end,  1:end-2) hes(  end,  end)];
+             grdInf=matslice(grd,ifinv);
+             hesInf=matslice(hes,ifinv);
            end
        else
            t0=clock;
@@ -457,9 +455,8 @@ if ~isstr(Hx)
               % hes to avoid singularities when we later calculate the numerical 
               % covariance approximations
               if isinf(thini(end-1)) && ifinv(end-1)==0
-                  grdInf=[grd(1:end-2) grd(end)]'; 
-                  hesInf=[hes(1:end-2,1:end-2) hes(1:end-2,end);...
-                          hes(  end,  1:end-2) hes(  end,  end)];
+                  grdInf=matslice(grd,ifinv);
+                  hesInf=matslice(hes,ifinv);
               end
           else
               [thhat,logli,eflag,oput,lmd,grd,hes]=...
@@ -534,10 +531,9 @@ if ~isstr(Hx)
         % In the special case of nu->Inf, we will retain a slice of grd and 
         % hes to avoid singularities when we later calculate the numerical 
         % covariance approximations
-        if isinf(thini(end-1)) && ifinv(end-1)==0
-            grdInf=[grd(1:end-2) grd(end)]'; 
-            hesInf=[hes(1:end-2,1:end-2) hes(1:end-2,end);...
-                    hes(  end,  1:end-2) hes(  end,  end)];
+        if isinf(thini(end-1)) && ifinv(end-1)==0 
+           grdInf=matslice(grd,ifinv);
+           hesInf=matslice(hes,ifinv);
         end
       case 'klose'
        % Simply a "closing" run to return the options
