@@ -113,8 +113,8 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 12/16/2024
-% Last modified by olwalbert-at-princeton.edu, 12/16/2024
+% Last modified by fjsimons-at-alum.mit.edu, 04/08/2025
+% Last modified by olwalbert-at-princeton.edu, 04/08/2025
 
 if ~isstr(Hx)
   defval('algo','unc')
@@ -593,10 +593,9 @@ if ~isstr(Hx)
   end
     
   % Fisher matrix AT the estimate, and covariance derived from it
-  [F,covF]=fishiosl(k,sclh.*thhat,xver);
+  [F,covF]=fishiosl(k,sclh.*thhat,params,xver);
   if isinf(thini(end-1)) && ifinv(end-1)==0
-    FInf=[F(1:end-2,1:end-2) F(1:end-2,end);
-          F(  end  ,1:end-2) F(  end,  end)];
+    FInf=matslice(F,ifinv);
     covF=inv(FInf)/df;
   end
 
@@ -608,8 +607,7 @@ if ~isstr(Hx)
 
   % For the special case of nu->Inf, we will neglect terms involving nu
   if isinf(thini(end-1)) && ifinv(end-1)==0
-      HInf=[H(1:end-2,1:end-2) H(1:end-2,end);
-            H(  end  ,1:end-2) H(  end,  end)];
+      HInf=matslice(H,ifinv);
       covH=inv(-HInf)/df;
   end
 
@@ -622,6 +620,16 @@ if ~isstr(Hx)
     covFHF=inv(F)*[-H./matscls]*inv(F)/df;
     covFhF=inv(F)*[hes./matscl]*inv(F)/df;
   end
+
+  % Calculate the variance of the estimates using either the sampling (1), 
+  % full dftmtx (2), or per-diagonal method (3) in COVGAMMIOSL
+  covmethod=1;
+  % %% OLW: The scaling is off in comparison to the analytical and numerical
+  % covariances; df should probably make an appearance, or is it the scaling?
+  covFJF=covthosl(sclh.*thhat,params,covmethod,ifinv);
+  % This should ensure that COVFJF is a 3x3 whether we inverted for all
+  % parameters or not; only needed for display purposes later
+  covFJF=matslice(covFJF,ifinv,-1);
 
   % Analytical calculations of the gradient and the Hessian poorly represent
   % the blurring (though it's much better than not trying at all), and thus,
@@ -663,6 +671,8 @@ if ~isstr(Hx)
     disp(sprintf(sprintf(' Cov (Analy Fish.) : %s',str3),trilos(covF)))
     disp(sprintf(sprintf(' Cov ( FishHFish.) : %s',str3),trilos(covFHF)))
     disp(sprintf(sprintf(' Cov ( FishhFish.) : %s',str3),trilos(covFhF)))
+    disp(sprintf(sprintf(' Cov ( FishJFish.) : %s',str3),trilos(covFJF)))
+
     disp(sprintf('%s',repmat('_',119,1)))
     disp(sprintf(sprintf('%s : %s ',str0,str2),...
 	         'Numer Hessi std',sqrt(diag(covh))))
@@ -674,6 +684,8 @@ if ~isstr(Hx)
 	         ' FishHFish. std',sqrt(diag(covFHF))))
     disp(sprintf(sprintf('%s : %s\n ',str0,str2),...
 	         ' FishhFish. std',sqrt(diag(covFhF))))
+    disp(sprintf(sprintf('%s : %s\n ',str0,str2),...
+	         ' FishJFish. std',sqrt(diag(covFJF))))
   end
 
   % Talk!
@@ -697,9 +709,10 @@ if ~isstr(Hx)
   end
 
   % Reorganize the output into cell arrays
-  covFHh{1}=covF;
-  covFHh{2}=covH;
-  covFHh{3}=covh;
+  covFHhJ{1}=covF;
+  covFHhJ{2}=covH;
+  covFHhJ{3}=covh;
+  covFHhJ{4}=covFJF;
   % Likelihood attributes
   lpars{1}=logli;
   lpars{2}=grd;
@@ -711,7 +724,7 @@ if ~isstr(Hx)
   lpars{8}=momx;
   lpars{9}=vr;
   % Generate output as needed
-  varns={thhat,covFHh,lpars,sclh,thini,params,Hk,k};
+  varns={thhat,covFHhJ,lpars,sclh,thini,params,Hk,k};
   varargout=varns(1:nargout);
 elseif strcmp(Hx,'demo1')
   more off
@@ -821,7 +834,7 @@ elseif strcmp(Hx,'demo1')
         % writing the numerical versions. Be aware that covFHh{3} is the
         % current favorite covariance estimate on the parameters!
 	% Print optimization results and diagnostics to different file with OSWDIAG
-	oswdiag(fids(4),fmts,lpars,thhat,thini,scl,ts,var(Hx),covFHh{3})
+	oswdiag(fids(4),fmts,lpars,thhat,thini,sclh,ts,var(Hx),covFHhJ{3})
       end
     end
   end
@@ -846,9 +859,9 @@ elseif strcmp(Hx,'demo1')
     % If you are working within the squared exponential case, or if you ended on
     % a nonsensical estimate, we will have to intervene and forgo the
     % calculation of the Fisher-derived covariance at the truth
-    if ~any(isnan(k(:))) && ~isinf(th0(2))
+    if ~any(isnan(k(:))) && ~isinf(th0(end-1))
         % Now compute the Fisher and Fisher-derived covariance at the truth
-        [F0,covF0]=fishiosl(k,th0);
+        [F0,covF0]=fishiosl(k,th0,params,xver);
         matscl=[sclth0(:)*sclth0(:)'];
     else
         [F0,covF0,matscl,avhsz]=deal(nan(3,3));
@@ -868,6 +881,7 @@ elseif strcmp(Hx,'demo2')
   defval('thini',[]);
   datum=thini;
   defval('datum',date)
+  defval('ifinv',[1 1 1]);
 
   % The number of parameters to solve for
   np=3;
@@ -905,7 +919,14 @@ elseif strcmp(Hx,'demo2')
 
   % Print the figure!
   disp(' ')
-  figna=figdisp([],sprintf('%s_%s',Hx,datum),[],2);
+  % Figure not printing consistently; force MATLAB to revisit the figures drawn
+  % prior to save
+  figure(2)
+  figna=figdisp([],sprintf('%s_%s_2',Hx,datum),[],1);
+  disp('pause to save')
+  pause(3)
+  figure(1)
+  figna=figdisp([],sprintf('%s_%s_1',Hx,datum),[],1);
   
   % Being extra careful or not?
   defval('xver',0)
@@ -989,7 +1010,7 @@ elseif strcmp(Hx,'demo5')
   if any(isnan(k(:))); return; end
   
   % Fisher and Fisher-derived covariance at the truth
-  [F0,covF0]=fishiosl(k,th0);
+  [F0,covF0]=fishiosl(k,th0,params,xver);
   % Fisher and Fisher-derived covariance at the estimate
   % covF=covFHh{1};
   % Those two are close of course, and of not much intrinsic interest anymore
