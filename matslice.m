@@ -1,5 +1,5 @@
-function B=ifinvslc(A,ifinv,r)
-% B=IFINVSLC(A,IFINV,R)
+function B=matslice(A,ifinv,r)
+% B=matslice(A,IFINV,R)
 %
 % Slices the input matrix to remove the row(s) and column(s) that pertain to a
 % fixed (not inverted) value. 
@@ -21,18 +21,18 @@ function B=ifinvslc(A,ifinv,r)
 % EXAMPLE:
 %
 % A=rand(3); ifinv=[1 0 1];
-% B=ifinvslc(A,ifinv);
+% B=matslice(A,ifinv);
 % disp(sprintf('Size check: %s',string(all(size(B)==[2,2]))))
 % 
 % A=rand(3,1);
-% B=ifinvslc(A,ifinv);
+% B=matslice(A,ifinv);
 % disp(sprintf('Size check: %s',string(all(size(B)==[2,1]))))
 %
 % A=rand(1,3);
-% B=ifinvslc(A,ifinv);
+% B=matslice(A,ifinv);
 % disp(sprintf('Size check: %s',string(all(size(B)==[1,2]))))
 % C=B;
-% B=ifinvslc(C,ifinv,-1);
+% B=matslice(C,ifinv,-1);
 % disp(sprintf('Size check: %s',string(all(size(B)==size(A)))))
 %
 % Last modified by olwalbert-at-princeton.edu, 01/28/2025
