@@ -1,5 +1,5 @@
-function varargout=mAosl(k,th,xver,params)
-% [mth,mththp,A]=mAosl(k,th,xver,params)
+function varargout=mAosl(k,th,params,xver)
+% [mth,mththp,A,k]=mAosl(k,th,params,xver)
 %
 % Calculates auxiliary derivative quantities for Olhede & Simons (2013)
 % in the SINGLE-FIELD case. With some obvious redundancy for A.
@@ -11,21 +11,23 @@ function varargout=mAosl(k,th,xver,params)
 %          th(1)=s2  The first Matern parameter [variance in unit^2]
 %          th(2)=nu  The second Matern parameter [differentiability]
 %          th(3)=rh  The third Matern parameter [range in m]
-% xver     Excessive verification [0 or 1]
 % params   blurs 0 No wavenumber blurring
 %                1 No wavenumber blurring, effectively
 %                N Convolutional blurring, errors 
 %               -1 Exact blurring
 %              Inf Exact blurring, effectively
+% xver     Excessive verification [0 or 1]
 %
 % OUTPUT:
 %
 % mth      The first-partials "means" for GAMMIOSL, HESSIOSL, as a cell
 % mththp   The second-partials parameters for GAMMIOSL, HESSIOSL, as a cell
 % A        The "A" matrices for GAMMIOSL, HESSIOSL, as a cell
+% k        The actual wavenumbers being returned (could be different than requested
+%          if blurring is being performed, which recomputed k)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 03/18/2025
-% Last modified by olwalbert-at-princeton.edu, 03/18/2025
+% Last modified by fjsimons-at-alum.mit.edu, 04/8/2025
+% Last modified by olwalbert-at-princeton.edu, 04/8/2025
 
 % Extra verification?
 defval('xver',1)
@@ -46,7 +48,7 @@ if isinf(params.blurs); params.blurs=-1; end
 if params.blurs==-1
     % We calculate the derivatives of the blurred spectral density from the 
     % blurred autocovariance via MATERNOSY which is called by SPATMAT
-    dSbards2=blurosy(th,params,[],[],[],1);
+    [dSbards2,kk]=blurosy(th,params,[],[],[],1);
     dSbardnu=blurosy(th,params,[],[],[],2);
     dSbardrh=blurosy(th,params,[],[],[],3);
     % Get the exactly blurred spectrum
@@ -58,8 +60,9 @@ if params.blurs==-1
     if nargout>1
         % We will have to build in second partials for mththp and A, e.g. for HESSIOSL
         % but we won't be needing them, and they are also never needed for FISHIOSL
-        warning('Returning UNBLURRED values for calculations of mththp and A')
-        [~,mththp,A]=mAosl(k,th,xver,params);
+        % warning('Returning UNBLURRED values for calculations of mththp and A')
+        params.blurs=0;
+        [~,mththp,A]=mAosl(k,th,params,xver);
     else
         xver=0;
         mththp=NaN;
@@ -129,12 +132,13 @@ else
             mththp=NaN;
         end
     end
+    kk=k;
 end
 
 % Full output and extra verification
 if nargout>2 || xver==1
   % How many wavenumbers?
-  lk=length(k(:));
+  lk=length(kk(:));
   
   % Initialize
   A=cellnan(length(th),lk,3);
@@ -165,5 +169,5 @@ else
 end
 
 % As much output as you desire
-varns={mth,mththp,A};
+varns={mth,mththp,A,kk};
 varargout=varns(1:nargout);
