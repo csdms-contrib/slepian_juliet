@@ -1,5 +1,5 @@
-function [F,covF,cF]=fishiosl(k,th,xver,params)
-% [F,covF,cF]=FISHIOSL(k,th,xver,params)
+function [F,covF,cF]=fishiosl(k,th,params,xver)
+% [F,covF,cF]=FISHIOSL(k,th,params,xver)
 %
 % Calculates the entries in the Fisher matrix of Olhede & Simons (2013, eq. 135)
 % for the Whittle-likelihood under the UNIVARIATE ISOTROPIC MATERN model, after
@@ -15,7 +15,6 @@ function [F,covF,cF]=fishiosl(k,th,xver,params)
 %          th(1)=s2   The first Matern parameter [variance in unit^2]
 %          th(2)=nu   The second Matern parameter [differentiability]
 %          th(3)=rho  The third Matern parameter [range in m]
-% xver     Excessive verification [0 or 1, which also computes F(k)]
 % params   Parameters of this experiment, the ones that are needed are:
 %          dydx  sampling interval in the y and x directions [m m]
 %          NyNx  number of samples in the y and x directions
@@ -24,6 +23,7 @@ function [F,covF,cF]=fishiosl(k,th,xver,params)
 %                N Convolutional blurring, errors 
 %               -1 Exact blurring
 %              Inf Exact blurring, effectively
+% xver     Excessive verification [0 or 1, which also computes F(k)]
 %
 % OUTPUT:
 %
@@ -45,8 +45,8 @@ function [F,covF,cF]=fishiosl(k,th,xver,params)
 % [L,Lg,LH]=logliosl(k,th0,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by fjsimons-at-alum.mit.edu, 03/18/2025
-% Last modified by olwalbert-at-princeton.edu, 03/18/2025
+% Last modified by fjsimons-at-alum.mit.edu, 04/8/2025
+% Last modified by olwalbert-at-princeton.edu, 04/8/2025
 
 % Early setup exactly as in HESSIOSL
 defval('xver',1)
@@ -63,7 +63,7 @@ k=k(~~k);
 lk=length(k(:));
 
 % First compute the auxiliary parameters
-mth=mAosl(k,th,xver,params);
+mth=mAosl(k,th,params,xver);
 
 % Initialize
 cF=nan(npp,1);
