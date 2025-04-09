@@ -16,7 +16,7 @@ function B=matslice(A,keepdim,r)
 %
 % SEE ALSO:
 % 
-% VARIANCEOFESTIMATES, MLEOSL
+% MLEOSL, COVTHOSL
 %
 % EXAMPLE:
 %
