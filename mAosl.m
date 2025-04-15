@@ -26,8 +26,8 @@ function varargout=mAosl(k,th,params,xver)
 % k        The actual wavenumbers being returned (could be different than requested
 %          if blurring is being performed, which recomputed k)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 04/8/2025
-% Last modified by olwalbert-at-princeton.edu, 04/8/2025
+% Last modified by fjsimons-at-alum.mit.edu, 04/15/2025
+% Last modified by olwalbert-at-princeton.edu, 04/15/2025
 
 % Extra verification?
 defval('xver',1)
@@ -62,7 +62,7 @@ if params.blurs==-1
         % but we won't be needing them, and they are also never needed for FISHIOSL
         % warning('Returning UNBLURRED values for calculations of mththp and A')
         params.blurs=0;
-        [~,mththp,A]=mAosl(k,th,params,xver);
+        [~,mththp,A]=mAosl(kk,th,params,xver);
     else
         xver=0;
         mththp=NaN;
