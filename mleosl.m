@@ -791,7 +791,7 @@ elseif strcmp(Hx,'demo1')
     % Form the maximum-likelihood estimate, pass on the params, use th0
     % as the basis for the perturbed initial values. Remember hes is scaled.
     t0=clock;
-    [thhat,covFHh,lpars,scl,thini,p,Hk,k]=mleosl(Hx,[],p,algo,[],th1,ifinv,xver);
+    [thhat,covFHhJ,lpars,scl,thini,p,Hk,k]=mleosl(Hx,[],p,algo,[],th1,ifinv,xver);
     ts=etime(clock,t0);
 
     % Initialize the THZRO file... note that the bounds may change
