@@ -81,17 +81,5 @@ covF=inv(F);
 % I will leave out the degrees of freedom for now for comparison
 % covFF=inv(F)/df;
 
-covth=covF*jmat*covF;
+covth=covF*covg*covF;
 
-% (sclh.*thhat,params,meth,ifinv);
-
-
-% J=covgammiosl(sclh.*thhat,params,meth,ifinv);
-
-
-
-% % obviously
-
-% varianceoftheestimates
-
-% % (mleoslcov could be )
