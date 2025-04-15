@@ -75,7 +75,7 @@ lk=length(k(:));
 Xk=hformos(S,Hk,[],xver);
 
 % First compute the auxiliary parameters
-[mth,mththp]=mAosl(k,th,xver);
+[mth,mththp]=mAosl(k,th,params,xver);
 
 % Initialize
 cH=nan(npp,1);
