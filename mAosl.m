@@ -57,12 +57,21 @@ if params.blurs==-1
     mth{1}=dSbards2./Sbar;
     mth{2}=dSbardnu./Sbar;
     mth{3}=dSbardrh./Sbar;
+
+    % If we'd made too many...
+    if prod(size(k))~=prod(size(kk)) && all(kk(~~kk)==k)
+        % ... cut them to the same size
+        for ind=1:np
+            mth{ind}=mth{ind}(~~kk);
+        end
+    end
+    
     if nargout>1
         % We will have to build in second partials for mththp and A, e.g. for HESSIOSL
         % but we won't be needing them, and they are also never needed for FISHIOSL
         % warning('Returning UNBLURRED values for calculations of mththp and A')
         params.blurs=0;
-        [~,mththp,A]=mAosl(kk,th,params,xver);
+        [~,mththp,A]=mAosl(k,th,params,xver);
     else
         xver=0;
         mththp=NaN;
