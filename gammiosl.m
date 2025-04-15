@@ -67,13 +67,6 @@ Xk=hformos(S,Hk,[],xver);
 
 % First compute the auxiliary parameters
 [mth,~,~,kkm]=mAosl(k,th,params,xver);
-% If we'd made too many...
-if prod(size(k))~=prod(size(kkm)) && all(kkm(~~kk)==k)
-    % ... cut them to the same size
-    for ind=1:np
-        mth{ind}=mth{ind}(~~kk);
-    end
-end
 
 % The number of nonzero wavenumbers
 lk=length(k(:));
