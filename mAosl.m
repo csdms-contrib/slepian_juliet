@@ -32,6 +32,9 @@ function varargout=mAosl(k,th,params,xver)
 % Extra verification?
 defval('xver',1)
 
+% The number of parameters to solve for
+np=length(th);
+
 % If we didn't ask for blurring, make sure it's explicitly unblurred
 defstruct('params',{'blurs'},0)
 
