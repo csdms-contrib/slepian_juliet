@@ -836,7 +836,7 @@ elseif strcmp(th,'demo2')
     [~,~,~,k]=simulosl(th1,simparams,1);
     F1=fishiosl(k,th1,params);
     F1=matslice(F1,ifinv);
-    covF1=inv(F1);
+    invF1=inv(F1);
     [~,covg1grads]=covgammiosl(th1,params,1,ifinv);
     numsims=size(covg1grads,1);
     covg1s2s2=zeros(numsims,1); 
@@ -848,7 +848,8 @@ elseif strcmp(th,'demo2')
     for ind=2:numsims
         covg1=real(cov(covg1grads(1:ind,:)))./prod(params.NyNx).^2;
         covg1=matslice(covg1,[1 0 1]);
-        cov1=covF1*covg1*covF1;
+        % The main parameter estimate covariance
+        cov1=invF1*covg1*invF1;
         covg1s2s2(ind,:)=covg1(1,1);
         covg1s2rh(ind,:)=covg1(1,end);
         covg1rhrh(ind,:)=covg1(end,end);
@@ -864,7 +865,7 @@ elseif strcmp(th,'demo2')
     cov3=covthosl(th1,params,covg3,ifinv);
 
     % Plot
-    clf;
+    clf
     % Color friendly palette
     clrs=["#1B9E77","#D95F02","#7570B3"];
 
