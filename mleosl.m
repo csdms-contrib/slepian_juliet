@@ -815,6 +815,7 @@ elseif strcmp(Hx,'demo1')
     % Maybe just print it and decide later? No longer e>0 as a condition.
     % e in many times is 0 even though the solution was clearly found, in
     % other words, this condition IS a way of stopping with the solution
+    keyboard
     try
       % Maybe I'm too restrictive in throwing these out? Maybe the
       % Hessian can be slightly imaginary and I could still find thhat
@@ -834,7 +835,7 @@ elseif strcmp(Hx,'demo1')
         % writing the numerical versions. Be aware that covFHh{3} is the
         % current favorite covariance estimate on the parameters!
 	% Print optimization results and diagnostics to different file with OSWDIAG
-	oswdiag(fids(4),fmts,lpars,thhat,thini,sclh,ts,var(Hx),covFHhJ{3})
+	oswdiag(fids(4),fmts,lpars,thhat,thini,scl,ts,var(Hx),covFHhJ{3})
       end
     end
   end
