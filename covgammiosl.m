@@ -634,19 +634,19 @@ elseif strcmp(th,'demo1')
    % Calculate parameter covariance for each method, storing the cross-parameter
    % covariance as unique variables
    covg1=covgammiosl(th0,p,1,ifinv);
-   cov1=varianceofestimates(th0,p,covg1,ifinv);
+   cov1=covthosl(th0,p,covg1,ifinv);
    cov1s2nu=matslice(cov1,[1 1 0]);
    cov1s2rh=matslice(cov1,[1 0 1]);
    cov1nurh=matslice(cov1,[0 1 1]);
 
    covg2=covgammiosl(th0,p,2,ifinv);
-   cov2=varianceofestimates(th0,p,covg2,ifinv);
+   cov2=covthosl(th0,p,covg2,ifinv);
    cov2s2nu=matslice(cov2,[1 1 0]);
    cov2s2rh=matslice(cov2,[1 0 1]);
    cov2nurh=matslice(cov2,[0 1 1]);
 
    covg3=covgammiosl(th0,p,3,ifinv);
-   cov3=varianceofestimates(th0,p,covg3,ifinv);
+   cov3=covthosl(th0,p,covg3,ifinv);
    cov3s2nu=matslice(cov3,[1 1 0]);
    cov3s2rh=matslice(cov3,[1 0 1]);
    cov3nurh=matslice(cov3,[0 1 1]);
@@ -815,8 +815,8 @@ elseif strcmp(th,'demo2')
     % th1=[1 1/2 5]; 
     % th1=[10 1/2 10]; 
     th1=[5 1/2 7]; 
-    params=[];params.NyNx=[94 97];params.dydx=[1 1];
-    params.blurs=-1;params.taper=1;
+    params=[]; params.NyNx=[94 97]; params.dydx=[1 1];
+    params.blurs=-1; params.taper=1;
     ifinv=[1 0 1];
     datum=date;
     try 
@@ -832,7 +832,7 @@ elseif strcmp(th,'demo2')
     % For the covgammiosl sampling method, we want to study the effect of increasing
     % number of samples and will recalculate the variance using F1inv depending
     % on the number of samples
-    simparams=params;simparams.blurs=Inf;
+    simparams=params; simparams.blurs=Inf;
     [~,~,~,k]=simulosl(th1,simparams,1);
     F1=fishiosl(k,th1,params);
     F1=matslice(F1,ifinv);
@@ -860,8 +860,8 @@ elseif strcmp(th,'demo2')
     % method (3)
     covg2=covgammiosl(th1,params,2,ifinv);
     covg3=covgammiosl(th1,params,3,ifinv);
-    cov2=varianceofestimates(th1,params,covg2,ifinv);
-    cov3=varianceofestimates(th1,params,covg3,ifinv);
+    cov2=covthosl(th1,params,covg2,ifinv);
+    cov3=covthosl(th1,params,covg3,ifinv);
 
     % Plot
     clf;
@@ -1063,9 +1063,9 @@ elseif strcmp(th,'demo3')
 
     covg2=covgammiosl(th1,params,2,ifinv);
     covg3=covgammiosl(th1,params,3,ifinv);
-    cov2=varianceofestimates(th1,params,covg2,ifinv);
+    cov2=covthosl(th1,params,covg2,ifinv);
     cov2=trilos(cov2);
-    cov3=varianceofestimates(th1,params,covg3,ifinv);
+    cov3=covthosl(th1,params,covg3,ifinv);
     cov3=trilos(cov3);
 
     % Labels
@@ -1410,13 +1410,13 @@ elseif strcmp(th,'demo6')
      covemp=nancov(thhats(:,:,ind));
      % Calculate the 'sample' covariance
      covg1  =covgammiosl(th1,params,1,ifinv);
-     cov1c=varianceofestimates(th1,params,covg1,ifinv);
+     cov1c=covthosl(th1,params,covg1,ifinv);
      % Calculate the 'dftmtx' covariance
      covg2  =covgammiosl(th1,params,2,ifinv);
-     cov2c=varianceofestimates(th1,params,covg2,ifinv);
+     cov2c=covthosl(th1,params,covg2,ifinv);
      % Calculate the 'diagonals' covariance
      covg3  =covgammiosl(th1,params,3,ifinv);
-     cov3c=varianceofestimates(th1,params,covg3,ifinv);
+     cov3c=covthosl(th1,params,covg3,ifinv);
      % Store the unique values in [s2s2 nunu rhrh s2nu s2rh nurh] order
      covempt(ind,:)=trilos(covemp);
      cov1t(ind,:)  =trilos(cov1c);
@@ -1634,13 +1634,13 @@ elseif strcmp(th,'demo7')
      covemp=nancov(thhats(:,:,ind));
      % Calculate parameter covariance according to the 'sample' method
      covg1  =covgammiosl(th1,params,1,ifinv);
-     cov1c=varianceofestimates(th1,params,covg1,ifinv);
+     cov1c=covthosl(th1,params,covg1,ifinv);
      % Calculate parameter covariance according to the 'dftmtx' method
      covg2  =covgammiosl(th1,params,2,ifinv);
-     cov2c=varianceofestimates(th1,params,covg2,ifinv);
+     cov2c=covthosl(th1,params,covg2,ifinv);
      % Calculate parameter covariance according to the 'diagonals' method
      covg3  =covgammiosl(th1,params,3,ifinv);
-     cov3c=varianceofestimates(th1,params,covg3,ifinv);
+     cov3c=covthosl(th1,params,covg3,ifinv);
      % Store the unique values in [s2s2 nunu rhrh s2nu s2rh nurh] order
      covempt(ind,:)=trilos(covemp);
      cov1t(ind,:)  =trilos(cov1c);
@@ -1898,9 +1898,9 @@ elseif strcmp(th,'demo8')
      covg1 =covgammiosl(th1,params,1,ifinv);
      covg2 =covgammiosl(th1,params,2,ifinv);
      covg3 =covgammiosl(th1,params,3,ifinv);
-     cov1c=varianceofestimates(th1,params,covg1,ifinv);
-     cov2c=varianceofestimates(th1,params,covg2,ifinv);
-     cov3c=varianceofestimates(th1,params,covg3,ifinv);
+     cov1c=covthosl(th1,params,covg1,ifinv);
+     cov2c=covthosl(th1,params,covg2,ifinv);
+     cov3c=covthosl(th1,params,covg3,ifinv);
      cov1t=trilos(cov1c);
      cov2t=trilos(cov2c);
      cov3t=trilos(cov3c);
