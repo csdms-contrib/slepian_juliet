@@ -38,8 +38,8 @@ function g=gammiosl(k,th,params,Hk,xver)
 % [L,Lg,LH]=logliosl(k,th0,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 % 
-% Last modified by olwalbert-at-princeton.edu, 12/17/2024
-% Last modified by fjsimons-at-alum.mit.edu, 12/17/2024
+% Last modified by olwalbert-at-princeton.edu, 04/8/2024
+% Last modified by fjsimons-at-alum.mit.edu, 04/8/2024
 
 % params.blurs=Inf can only refer to spatial-domain generation and at
 % this point we are already in the spectral domain; reset not returned
@@ -53,19 +53,30 @@ np=length(th);
 % We need the (blurred) power spectrum and its ratio to the observations
 [S,kk]=maternosp(th,params,xver);
 
+if xver==1
+    diferm(kk(:),k(:))         
+end
+
 % Exclude the zero wavenumbers
 Hk=Hk(~~k);
 S = S(~~kk); 
 k = k(~~k);
 
-% The number of nonzero wavenumbers
-lk=length(k(:));
-
 % The statistics of Xk are computed in LOGLIOSL
 Xk=hformos(S,Hk,[],xver);
 
 % First compute the auxiliary parameters
-mth=mAosl(k,th,xver);
+[mth,~,~,kkm]=mAosl(k,th,params,xver);
+% If we'd made too many...
+if prod(size(k))~=prod(size(kkm)) && all(kkm(~~kk)==k)
+    % ... cut them to the same size
+    for ind=1:np
+        mth{ind}=mth{ind}(~~kk);
+    end
+end
+
+% The number of nonzero wavenumbers
+lk=length(k(:));
 
 % Initialize
 g=nan(np,1);
