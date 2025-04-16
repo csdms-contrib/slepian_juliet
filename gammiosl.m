@@ -38,8 +38,8 @@ function g=gammiosl(k,th,params,Hk,xver)
 % [L,Lg,LH]=logliosl(k,th0,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 % 
-% Last modified by olwalbert-at-princeton.edu, 04/8/2024
-% Last modified by fjsimons-at-alum.mit.edu, 04/8/2024
+% Last modified by olwalbert-at-princeton.edu, 04/16/2024
+% Last modified by fjsimons-at-alum.mit.edu, 04/16/2024
 
 % params.blurs=Inf can only refer to spatial-domain generation and at
 % this point we are already in the spectral domain; reset not returned
@@ -66,7 +66,7 @@ k = k(~~k);
 Xk=hformos(S,Hk,[],xver);
 
 % First compute the auxiliary parameters
-[mth,~,~,kkm]=mAosl(k,th,params,xver);
+mth=mAosl(k,th,params,xver);
 
 % The number of nonzero wavenumbers
 lk=length(k(:));
@@ -81,7 +81,7 @@ if xver==0
     % Eq. (A53) in doi: 10.1093/gji/ggt056
     g(ind)=-nanmean(-mth{ind}.*[1-Xk]);
   end
-elseif xver==1 
+elseif xver==1
   % Initialize; no cell since all of them depend on the wave vectors
   gk=nan(lk,np);
   % Do save the wavenumber-dependent entities
@@ -92,7 +92,7 @@ elseif xver==1
     % A somewhat redundant alternative way of computing these things
     diferm(gk(:,ind),mth{ind}-hformos(S,Hk,mth{ind}),7);
     % Pick up the additional necessities for a third way...
-    [~,~,A]=mAosl(k,th,xver);
+    [~,~,A]=mAosl(k,th,params,xver);
     diferm(gk(:,ind),mth{ind}+hformos(S,Hk,A{ind}),7);
   end
 end
