@@ -8,7 +8,7 @@ function [L,g,H,momx,vr,Lk]=logliosl(k,th,params,Hk,xver)
 % INPUT:
 %
 % k        The wavenumbers at which these are being evaluated [rad/m]
-% th       The three-parameter vector argument
+% th       The three-parameter vector argument [not scaled]
 %          th(1)=s2   The first Matern parameter [variance in unit^2]
 %          th(2)=nu   The second Matern parameter [differentiability]
 %          th(3)=rho  The third Matern parameter [range in m]
@@ -125,7 +125,7 @@ if nargout>=2
 end
 
 if nargout>=3
-    % FJS needs ksel fix
+   % FJS needs ksel fix
   % Get the appropriately scaled Hessian values here
   H=hessiosl(k,th,params,Hk,xver);
 end
