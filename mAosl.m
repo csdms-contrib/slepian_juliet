@@ -26,8 +26,8 @@ function varargout=mAosl(k,th,params,xver)
 % k        The actual wavenumbers being returned (could be different than requested
 %          if blurring is being performed, which recomputed k)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 04/15/2025
-% Last modified by olwalbert-at-princeton.edu, 04/15/2025
+% Last modified by fjsimons-at-alum.mit.edu, 04/16/2025
+% Last modified by olwalbert-at-princeton.edu, 04/16/2025
 
 % Extra verification?
 defval('xver',1)
@@ -159,11 +159,15 @@ if nargout>2 || xver==1
   % Eq. (A28) in doi: 10.1093/gji/ggt056
   if prod(size(mth{1}))==1
       A{1}=-repmat(mth{1},lk,3);
+  else
+      A{1}=-repmat(mth{1},1,3);
   end
   % Eq. (A29) in doi: 10.1093/gji/ggt056
   if nu==Inf
       if prod(size(mth{2}))==1
           A{2}=-repmat(mth{2},lk,3);
+      else
+          A{2}=-repmat(mth{2},1,3);
       end
   else
       A{2}=-repmat(mth{2},1,3);
