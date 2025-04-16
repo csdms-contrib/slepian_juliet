@@ -68,19 +68,19 @@ if params.blurs==-1
             mth{ind}=mth{ind}(~~kk);
         end
     end
-    
     if nargout>1
         % We will have to build in second partials for mththp and A, e.g. for HESSIOSL
         % but we won't be needing them, and they are also never needed for FISHIOSL
         % warning('Returning UNBLURRED values for calculations of mththp and A')
         params.blurs=0;
-        [~,mththp,A]=mAosl(k,th,params,xver);
+        [~,mththp]=mAosl(k,th,params,xver);
     else
         xver=0;
         mththp=NaN;
         A=NaN;
     end
 else
+    % It's not blurred
     if isinf(nu)
         % When we are considering the special case of the limit of the spectral
         % density as nu approaches infinity, we must calculate the first and second
@@ -110,6 +110,8 @@ else
             mththp=NaN;
         end
     else
+        % It's not blurred
+
         % Auxiliary variable
         avark=4*nu/pi^2/rh^2+k(:).^2;
 
@@ -154,12 +156,15 @@ if nargout>2 || xver==1
   
   % Initialize
   A=cellnan(length(th),lk,3);
-
   % Eq. (A28) in doi: 10.1093/gji/ggt056
-  A{1}=-repmat(mth{1},lk,3);
+  if prod(size(mth{1}))==1
+      A{1}=-repmat(mth{1},lk,3);
+  end
   % Eq. (A29) in doi: 10.1093/gji/ggt056
   if nu==Inf
-    A{2}=-repmat(mth{2},lk,3);
+      if prod(size(mth{2}))==1
+          A{2}=-repmat(mth{2},lk,3);
+      end
   else
       A{2}=-repmat(mth{2},1,3);
   end
