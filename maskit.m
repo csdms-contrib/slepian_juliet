@@ -41,8 +41,8 @@ function varargout=maskit(v,p,scl,w,opt)
 % maskit('demo3',[],rand) % Illustrating the nomenclature
 % maskit('demo4') % Illustrates shifting the center of the mask by setting p.mymx
 %
-% Last modified by owalbert-princeton.edu, 04/15/2025
-% Last modified by fjsimons-at-alum.mit.edu, 04/15/2025
+% Last modified by owalbert-princeton.edu, 04/16/2025
+% Last modified by fjsimons-at-alum.mit.edu, 04/16/2025
 
 % The default is the demo, for once
 defval('v','demo1')
@@ -154,12 +154,12 @@ elseif strcmp(v,'demo2')
     p.NyNx=[188 233]+randi(20,[1 2]);
     % Something larger without overdoing it, check weirdness
     % If you want to generate the same hash you need to keep the same dimensions
-    %    p.NyNx=[196 243];
+    % p.NyNx=[196 243];
     % p.NyNx=[193 247];
-    p.NyNx=[193 236];
+    p.NyNx=[193 237];
 
-    % Do all the tests or not
-    xver=1;
+    % Do all the tests or not - FJS AND OLW TO REVIEW
+    xver=0;
     % Decide on the length of the pause between displays, if any, 
     if xver==1
         pz=2;
@@ -194,7 +194,7 @@ elseif strcmp(v,'demo2')
         % Should we preallocate?
         
         % Run the experiment!
-        for index=1:N
+        parfor index=1:N
             clc; disp(sprintf('\n Simulating all fields \n'))
 
             % Simulate first field
@@ -369,7 +369,7 @@ elseif strcmp(v,'demo4')
     [~,Imymx]=maskit(rand(p.NyNx),p,mscl);
 
     % Plot the original grid centered mask and the shifted mask
-    clf;
+    clf
     subplot(211);imagesc(I)
     subplot(212);imagesc(Imymx)
     title(sprintf('vertical shift: %i; horizontal shift: %i',p.mymx))
