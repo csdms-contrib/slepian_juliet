@@ -45,8 +45,8 @@ function [H,covH,cH]=hessiosl(k,th,params,Hk,xver)
 % [L,Lg,LH]=logliosl(k,th0,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by olwalbert-at-princeton.edu, 12/17/2024
-% Last modified by fjsimons-at-alum.mit.edu, 12/17/2024
+% Last modified by olwalbert-at-princeton.edu, 04/16/2024
+% Last modified by fjsimons-at-alum.mit.edu, 04/16/2024
 
 % params.blurs=Inf can only refer to spatial-domain generation and at
 % this point we are already in the spectral domain; reset not returned
