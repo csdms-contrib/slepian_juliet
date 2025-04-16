@@ -10,6 +10,9 @@ function varargout=maskit(v,p,scl,w,opt)
 %           NyNx  number of samples in the y and x directions
 %           mask an index matrix with a mask, OR:
 %                 a region name that will be scaled to fit
+%           mymx  a vector of indices in y and x that describe where to center
+%                 the mask relative to the grid's center; e.g., mymx=[0 0]
+%                 places the mask at the center of the grid
 % scl     A scale between 0 and 1 with the fractional area that the
 %         bounding box of the domain occupies; due to strict
 %         inequality at maximum always leaves one pixel rim; and
@@ -36,9 +39,10 @@ function varargout=maskit(v,p,scl,w,opt)
 % maskit('demo2') % A geographical region merging two fields, with estimation
 % maskit('demo2','england') % 'amazon', 'orinoco', for geographical variability
 % maskit('demo3',[],rand) % Illustrating the nomenclature
+% maskit('demo4') % Illustrates shifting the center of the mask by setting p.mymx
 %
-% Last modified by owalbert-princeton.edu, 09/03/2024
-% Last modified by fjsimons-at-alum.mit.edu, 06/11/2024
+% Last modified by owalbert-princeton.edu, 04/15/2025
+% Last modified by fjsimons-at-alum.mit.edu, 04/15/2025
 
 % The default is the demo, for once
 defval('v','demo1')
@@ -62,10 +66,40 @@ if ~isstr(v)
         
         % Determine the mask
         I=inpolygon(X,Y,cr(:,1),cr(:,2));
+        % Optionally shift the center of the mask relative to the center of the
+        % grid
+        if isfield(p,'mymx')
+          % Shift positive vertical shift up, positive horizontal right in the 
+          % axis ij convention
+          % If we accidentally asked for a shift that is larger than the grid,
+          % reset this value to the grid length
+          p.mymx(p.mymx>p.NyNx) =p.NyNx(p.mymx>p.NyNx);
+          p.mymx(p.mymx<-p.NyNx)=p.NyNx(p.mymx<-p.NyNx);
+          % The shifted mask
+          Is=zeros(p.NyNx);
+          Is(abs(min(0,p.mymx(1)))+1:p.NyNx(1)-max(0,p.mymx(1)),... 
+             max(0,p.mymx(2))+1     :p.NyNx(2)-abs(min(0,p.mymx(2))))=...
+          I (max(0,p.mymx(1))+1     :p.NyNx(1)-abs(min(0,p.mymx(1))),...
+             abs(min(0,p.mymx(2)))+1:p.NyNx(2)-max(0,p.mymx(2)));
+          I=Is;
+        end
     else
         % You already have it
         cr=NaN;
         I=p.mask;
+        % Optionally shift the center of the mask relative to the center of the
+        % grid; same calculation as above.
+        if isfield(p,'mymx')
+          p.mymx(p.mymx>p.NyNx) =p.NyNx(p.mymx>p.NyNx);
+          p.mymx(p.mymx<-p.NyNx)=p.NyNx(p.mymx<-p.NyNx);
+          % The shifted mask
+          Is=zeros(p.NyNx);
+          Is(abs(min(0,p.mymx(1)))+1:p.NyNx(1)-max(0,p.mymx(1)),... 
+             max(0,p.mymx(2))+1     :p.NyNx(2)-abs(min(0,p.mymx(2))))=...
+          I (max(0,p.mymx(1))+1     :p.NyNx(1)-abs(min(0,p.mymx(1))),...
+             abs(min(0,p.mymx(2)))+1:p.NyNx(2)-max(0,p.mymx(2)));
+          I=Is;
+        end
     end
 
     % Apply the mask to v, w and merge into vw as desired
@@ -78,9 +112,8 @@ if ~isstr(v)
         if nargout>4
             % Construct a new field with the SECOND field inside the mask and the FIRST outside
             vw=nan(size(v));
-            % avoid complaints about indices needing to
-            %  be logicals in the case mask uses zeros
-            vw(~~I(:))=w(~~I(:));
+            vw(~~I(:))=w(~~I(:)); % avoid complaints about indices needing to
+                                   %  be logicals in the case mask uses zeros
             vw(~I(:)) =v(~I(:));
         end
     end
@@ -126,7 +159,7 @@ elseif strcmp(v,'demo2')
     p.NyNx=[193 236];
 
     % Do all the tests or not
-    xver=0;
+    xver=1;
     % Decide on the length of the pause between displays, if any, 
     if xver==1
         pz=2;
@@ -161,7 +194,7 @@ elseif strcmp(v,'demo2')
         % Should we preallocate?
         
         % Run the experiment!
-        parfor index=1:N
+        for index=1:N
             clc; disp(sprintf('\n Simulating all fields \n'))
 
             % Simulate first field
@@ -178,10 +211,6 @@ elseif strcmp(v,'demo2')
 
             % So HG is the mixed field
             v=Hm; w=Gm; vw=HG;
-
-            % As appropriate you'll force the use of BLUROSY in MATERNOSP in LOGLIOSL in MLEOSL
-            % This is confusing PARFOR but works with FOR
-            % p.blurs=-1;
 
             % Make a close initial guess?
             thini1(index,:)=th1+(-1).^randi(2,[1 3]).*th1/1000;
@@ -204,6 +233,7 @@ elseif strcmp(v,'demo2')
             p1=p; p1.taper=0;
             pause(pz); clc; disp(sprintf('\n Estimating first whole field \n'))
             [thhat4(index,:),~,~,scl4(index,:)]=mleosl(Hx,thini1(index,:),p1,opt.algo,[],[],opt.ifinv,xver);
+
             pause(pz); clc ; disp(sprintf('\n Estimating second whole field \n'))
             [thhat5(index,:),~,~,scl5(index,:)]=mleosl(Gx,thini2(index,:),p1,opt.algo,[],[],opt.ifinv,xver);
 
@@ -229,10 +259,6 @@ elseif strcmp(v,'demo2')
 
             % Pause so you can watch live (big pause if xver==0)
             pause(pz)
-
-            % This is unnecessary for PARFOR but works with FOR
-            % Reset to the original values
-            %p.blurs=Inf; p.taper=0;
         end
         % Save all the output that you'll need later, may add more later
         save(fnams,'th1','th2','p','thhat1','thhat2','scl1','scl2',...
@@ -323,6 +349,34 @@ elseif strcmp(v,'demo3')
     ah(3)=subplot(223); plotit(w,p,cr,sprintf('%i %% w',round(100*scl)))
     ah(4)=subplot(224); plotit(vw,p,cr,'vw')
     movev(ah(4),0.25)
+elseif strcmp(v,'demo4')
+    % Demonstration of setting p.mymx for MASKIT: positive p.mymx(1) translates
+    % the mask up, positive p.mymx(2) translates mask to the right in the axis 
+    % ij convention
+    % Select grid parameters at random
+    p=[];p.NyNx=randi(120,[1,2])+36;p.dydx=[1 1];p.blurs=-1;
+    p.mask='france';
+    mscl=(randi(80)+20)/100;
+
+    % Create the mask without mymx
+    [v,I,w,vw,scl,cr]=maskit(rand(p.NyNx),p,mscl);
+
+    % Set mymx at random
+    p.mymx=randi(60,[1 2]);
+    % Randomly select direction of shift
+    p.mymx=p.mymx.*sign(randn(1,2));
+    % Create the mask with mymx
+    [~,Imymx]=maskit(rand(p.NyNx),p,mscl);
+
+    % Plot the original grid centered mask and the shifted mask
+    clf;
+    subplot(211);imagesc(I)
+    subplot(212);imagesc(Imymx)
+    title(sprintf('vertical shift: %i; horizontal shift: %i',p.mymx))
+
+    % Alternatively, if we wanted to allow the mask to wrap around,
+    % mymx=mod(floor(p.mymx),p.NyNx./2);
+    % I=circshift(I,p.mymx.*[-1 1]);
 end
 
 % Variable output
