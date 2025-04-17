@@ -1312,7 +1312,7 @@ elseif strcmp(th,'demo4')
     [~,i]=max(b(:)); b(i)=b(i)*2;
     ah(4)=subplot(224); imagesc(decibel(b))
     caxis([-40 0])
-    t(4)=title(sprintf('fixed %s [median ratio %5g]','$\bar{S}(\mathbf{k})^2$',median(abs(a(:)./b(:)))));
+    t(4)=title(sprintf('fixed %s [median ratio %5g]','$\bar{S}^2(\mathbf{k})$',median(abs(a(:)./b(:)))));
     t(4).Interpreter='latex';
     ah(4).XTick=[1 params.NyNx(1)];
     ah(4).YTick=[1 params.NyNx(2)];
