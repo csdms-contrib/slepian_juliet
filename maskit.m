@@ -178,7 +178,7 @@ elseif strcmp(v,'demo2')
     % Number of processors, must agree with your machine
     NumWorkers=8;
     % Number of identical experiments to run experiments
-    N=1*NumWorkers;
+    N=16*NumWorkers;
 
     % Save some output for later? Make new filename hash from all relevant input
     fname=hash([struct2array(orderfields(p)) struct2array(orderfields(opt)) th1 th2 N],'SHA-1');
@@ -296,7 +296,7 @@ elseif strcmp(v,'demo2')
         % Reset to the original value
         p.blurs=Inf;
     end
-    
+    keyboard
     % Make a visual for good measure
     figure(3)
     clf
@@ -304,27 +304,27 @@ elseif strcmp(v,'demo2')
     ah(3)=subplot(223); plotit(Gx,p,cr,th2)
     ah(4)=subplot(224); plotit(HG,p,cr,[])
     movev(ah(4),0.25)
-    figdisp(sprintf('%s_1',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
+    figdisp(sprintf('%s_1',pref(sprintf('%s_%s.mat','maskit',fname))),[],[],2)
 
     % Then plot the estimates using MLEPLOS, remember second field is the inserted one
     % So this is the ANTI region
     figure(1)
     mleplos(thhat1.*scl1,th1,[],[],[],[],[],p,sprintf('anti %s',p.mask),[],opt.ifinv)
     figure(1)
-    figdisp(sprintf('%s_2a',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
+    figdisp(sprintf('%s_2a',pref(sprintf('%s_%s.mat','maskit',fname))),[],[],2)
     clf
     figure(2)
-    figdisp(sprintf('%s_2b',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
+    figdisp(sprintf('%s_2b',pref(sprintf('%s_%s.mat','maskit',fname))),[],[],2)
     clf
     % And this is the SELECTED region
     figure(1)
     mleplos(thhat2.*scl2,th2,[],[],[],[],[],p,p.mask,[],opt.ifinv)
     pause(1)
     figure(1)
-    figdisp(sprintf('%s_3a',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
+    figdisp(sprintf('%s_3a',pref(sprintf('%s_%s.mat','maskit',fname))),[],[],2)
     clf
     figure(2)
-    figdisp(sprintf('%s_3b',pref(sprintf('%s_%s.mat','MASKIT',fname))),[],[],2)
+    figdisp(sprintf('%s_3b',pref(sprintf('%s_%s.mat','maskit',fname))),[],[],2)
 
     % With PARFOR none of the once-used are available out of the loop but in
     % this demo2 you don't want any output anyway, so put in empties
