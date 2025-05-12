@@ -2,6 +2,7 @@ function varargout=sgp(params,Cnm)
 % [f1,f2,x,y]=SGP(params,Cnm)
 %
 % Simulating stationary Gaussian field over a two-dimensional grid
+% using invariant embedding.
 %
 % INPUT:
 %
