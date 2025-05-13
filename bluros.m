@@ -2,7 +2,7 @@ function varargout=bluros(S,params,xver)
 % [Sbar,k,c2,Fejk]=BLUROS(S,params,xver)
 %
 % Blurring of a spectral matrix with the periodogram of a spatial windowing
-% function (for now only the BOXCAR, hence the Fejer kernel), in the
+% function (for now only the boxcar, hence the Fejer kernel), in the
 % approximate, discretized, convolutional manner. The wavenumber-dependent input
 % is given on a grid that was specified to be an integer refinement from an
 % original that remains the target. The result is obtained by subsampling (or
@@ -50,7 +50,8 @@ function varargout=bluros(S,params,xver)
 %
 % BLUROS('demo2',pp,bb) a very simple run test with graphical output
 % 
-% Last modified by fjsimons-at-alum.mit.edu, 02/25/2025
+% Last modified by fjsimons-at-alum.mit.edu, 12/19/2023
+% Last modified by olwalbert-at-princeton.edu, 02/25/2025
 
 if ~isstr(S)
   % disp('Ich bin so lang nicht bei dir g''west')
@@ -186,6 +187,7 @@ if ~isstr(S)
     % This works out how the blurred grid is a superset of the blurred grid!
     sx=1+mod(NyNx(2),2)*floor(blurs/2);
     sy=1+mod(NyNx(1),2)*floor(blurs/2);
+    disp(sprintf('for %ix%i with blurs %i, sx: %i, sy: %i',NyNx,blurs,sx,sy))
     
     if round(blurs)==blurs &&  ...
           [sum(abs(kx2(sx:blurs:end)-kx))+sum(abs(ky2(sy:blurs:end)-ky))]<eps
@@ -246,7 +248,7 @@ if ~isstr(S)
     Sbar(:,in)=Hh(:);
     
     % Make sure the zero wavenumber gets the correct value, the zero-wavenumber
-    if xver==1 || xver==2
+    if xver==1 
       % We need the indicial zero-wavenumber location for the REFINED grid
       kzx2=floor(NyNx2(2)/2)+1; kzy2=floor(NyNx2(1)/2)+1;
       % We need the running zero-wavenumber location for the REFINED grid
@@ -260,7 +262,7 @@ if ~isstr(S)
     end
   end
 
-  if xver==1 || xver==2
+  if xver==1 
     % Check that no extrapolation was demanded, effectively
     % but know that griddedInterpolant would have EXTRApolated fine
     difer(sum(isnan(Sbar(:))),[],2,NaN)
@@ -322,9 +324,8 @@ end
 function bluros_demo(pp,bb)
 % bluros_demo(pp,bb)
 %
-% This function compares the various ways of blurring, make sure you run it in a
-% variety of combinations in both even and odd numbers, and test growing sizes
-% and growing refinement parameters.
+% This function compares the various ways of blurring, make sure you
+% run it in a variety of combinations in both even and odd numbers.
 %
 % INPUT:
 %
@@ -332,6 +333,7 @@ function bluros_demo(pp,bb)
 % bb       A MATERNOSP blurring densitfication (e.g. 3, or randi(10))
 %
 % Last modified by fjsimons@alum.mit.edu, 09/21/2023
+% Last modified by olwalbert@princeton.edu, 02/25/2025
 
 % Some random input values, but the product must be high!
 defval('pp',randi(100))
@@ -343,9 +345,11 @@ pp=2*round(pp/2);
 % Supply the grid size and spacing and the Matern covariance parameters
 p.NyNx=[pp pp];
 p.dydx=1e3*[1 1];
-p.dydx=[10 10]
+%p.dydx=[10 10];
+%p.dydx=[1 1];
 th=1e6*[1 0.0000025 0.02];
-th=[589 3 86]
+%th=[589 3 86];
+%th=[2 0.5 5];
 
 % Perform the blurring of the spectral matrix using different techniques
 % Convolutionally blurred with the specified refinement parameter
@@ -358,28 +362,36 @@ p.taper=choix{randi(3)};
 p.blurs=-1; S3=blurosy(th,p,1,'ef');
 % Exactly blurred, fast (here you could use MATERNOSP)
 p.blurs=-1; S4=blurosy(th,p,1,'efs'); S5=maternosp(th,p,1); diferm(S4,S5,-2)
+% Exactly blurred, using the method written for calculating off-diagonal
+% covariance with no offset, shifted for centered zero-wavenumber
+p.blurs=-1; S6=blurosy(th,p,1,'efd',[0 0]);
+S6=fftshift(v2s(realize(S6),p));S6=S6(:);
 
 % Make the plots for visual inspection! 
 figure(1)
 clf
-[ah,ha,H]=krijetem(subnum(2,3));
+[ah,ha,H]=krijetem(subnum(2,4));
 
 % Inspect the blurred spectra on a decibel scale (axis adjusted later)
+fs=9;
 axes(ah(1))
 imagesc(reshape(decibel(S2),p.NyNx)); 
-t(1)=title(sprintf('[%i %i] BLUROS-%i   [S2]',p.NyNx,bb));
+t(1)=title(sprintf('[%i %i] BLUROS-%i [S2]',p.NyNx,bb),'FontSize',fs);
 axes(ah(2))
 imagesc(reshape(decibel(S3),p.NyNx)); 
-t(2)=title(sprintf('[%i %i] BLUROSY-ef  [S3]',p.NyNx));
+t(2)=title('BLUROSY-ef  [S3]','FontSize',fs);
 axes(ah(3))
 imagesc(reshape(decibel(S4),p.NyNx)); 
-t(3)=title(sprintf('[%i %i] BLUROSY-efs [S4]',p.NyNx));
+t(3)=title('BLUROSY-efs [S4]','FontSize',fs);
+axes(ah(4))
+imagesc(reshape(decibel(S6),p.NyNx)); 
+t(4)=title('BLUROSY-efd [S6]','FontSize',fs);
 
 % Move that title
 movev(t,-pp/20)
 
 % Plot the zero-wavenumber as a cross, to keep track
-[kor,dci,dcn,kx,ky]=knums(p); for in=1:3; axes(ah(in));
+[kor,dci,dcn,kx,ky]=knums(p); for in=1:4; axes(ah(in));
 hold on; plot(dci(1),dci(2),'k+'); axis image ; hold off;
 set(ah(in),'xtick',unique([1 dci(2) p.NyNx(2)]),...
 	   'ytick',unique([1 dci(1) p.NyNx(1)])); end
@@ -390,34 +402,46 @@ kz=[dci(2)-1]*p.NyNx(1)+dci(1);
 [m2,i2]=max(S2); diferm(i2-kz)
 [m3,i3]=max(S3); diferm(i3-kz)
 [m4,i4]=max(S4); diferm(i4-kz)
+[m6,i6]=max(S6); diferm(i6-kz)
 
 %disp(sprintf('\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Moving into the plus-one territory %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n'))
 
 % Whatever you just did, add one to the dimension to hit the
 % odd/even pairs
 p.NyNx=p.NyNx+1;
+% If you randomly selected a taper of ones the size of the grid, be sure to
+% update for the new grid size
+if numel(choix)>1;p.taper=ones(p.NyNx);end
 % Convolutionally blurred
 p.blurs= bb; S21=maternosp(th,p,1); 
 % Exact blurred slow (do not use MATERNOSP; it defaults BLUROSY's default 'efs')
 p.blurs=-1; S31=blurosy(th,p,1,'ef');
 % Exact blurred fast (here you could use MATERNOSP)
 p.blurs=-1; S41=blurosy(th,p,1,'efs'); S51=maternosp(th,p,1); diferm(S41,S51,-2)
+% Exactly blurred, using the method written for calculating off-diagonal
+% covariance with no offset, shifted for centered zero-wavenumber
+p.blurs=-1; S61=blurosy(th,p,1,'efd',[0 0]);
+S61=fftshift(v2s(realize(S61),p));S61=S61(:);
 
-axes(ah(4))
-imagesc(reshape(decibel(S21),p.NyNx)); 
-t2(1)=title(sprintf('[%i %i] BLUROS-%i   [S21]',p.NyNx,bb));
+
 axes(ah(5))
-imagesc(reshape(decibel(S31),p.NyNx))
-t2(2)=title(sprintf('[%i %i] BLUROSY-ef  [S31]',p.NyNx));
+imagesc(reshape(decibel(S21),p.NyNx)); 
+t2(1)=title(sprintf('[%i %i] BLUROS-%i [S21]',p.NyNx,bb),'FontSize',fs);
 axes(ah(6))
+imagesc(reshape(decibel(S31),p.NyNx))
+t2(2)=title('BLUROSY-ef  [S31]','FontSize',fs);
+axes(ah(7))
 imagesc(reshape(decibel(S41),p.NyNx)); 
-t2(3)=title(sprintf('[%i %i] BLUROSY-efs [S41]',p.NyNx));
+t2(3)=title('BLUROSY-efs [S41]','FontSize',fs);
+axes(ah(8))
+imagesc(reshape(decibel(S61),p.NyNx)); 
+t2(4)=title('BLUROSY-efs [S61]','FontSize',fs);
 
 % Move that title
 movev(t2,-pp/20)
 
 % Wavenumber crosses
-[kor,dci,dcn,kx,ky]=knums(p); for in=4:6; axes(ah(in));
+[kor,dci,dcn,kx,ky]=knums(p); for in=5:8; axes(ah(in));
 hold on; plot(dci(1),dci(2),'k+'); axis image ; hold off; 
 set(ah(in),'xtick',unique([1 dci(2) p.NyNx(2)]),...
            'ytick',unique([1 dci(1) p.NyNx(1)])); end
@@ -427,32 +451,41 @@ kz2=[dci(1)-1]*p.NyNx(1)+dci(2);
 [m21,i21]=max(S21); diferm(i21-kz2)
 [m31,i31]=max(S31); diferm(i31-kz2)
 [m41,i41]=max(S41); diferm(i41-kz2)
+[m61,i61]=max(S61); diferm(i61-kz2)
 
 % Just tell us what the maxima are, so we can fix down the line
 disp('Rounded maxima of every panel')
-disp(sprintf('%i: %i %i %i\n%i: %i %i %i',...
-	     round([pp m2 m3 m4 pp+1 m21 m31 m41])))
+disp(sprintf('%i: %i %i %i %i\n%i: %i %i %i %i',...
+	     round([pp m2 m3 m4 m6 pp+1 m21 m31 m41 m61])))
 
 % Total amounts of spectral energy, somehow?
 % disp(sprintf('%i: %i %i %i\n%i: %i %i %i',...
-%	     round([pp sum(S2(:)) sum(S3(:)) sum(S4(:)) pp+1 sum(S21(:)) ...
-%                    sum(S31(:)) sum(S41(:))])))
+%	     round([pp sum(S2(:)) sum(S3(:)) sum(S4(:)) sum(S6(:)) pp+1 sum(S21(:)) ...
+%                    sum(S31(:)) sum(S41(:)) sum(S61(:))])))
 
 % Align plots
 longticks(ah); serre(H',1/2,'down')
-for in=1:6; axes(ah(in)); caxis([-75 0]); end
+for in=1:8; axes(ah(in)); caxis([-75 0]); end
 
 % Print it baby
 figdisp([],sprintf('1_%3.3i_%2.2i',pp,bb),[],2)
 
 % Second plot that compares the ratios of the computed quantities
 figure(2)
+% Select whether to compare method 'ef', 'efs', or 'efd' to the convolutional
+% blurring
+choix={3,4,6};
+cnum=choix{randi(3)};
+Sc=eval(sprintf('S%i',cnum));
+ic=eval(sprintf('i%i',cnum));
+Sc1=eval(sprintf('S%i1',cnum));
+ic1=eval(sprintf('i%i1',cnum));
 clf
-[ah2,ha2,H2]=krijetem(subnum(2,2));
+[ah2,ha2,H2]=krijetem(subnum(2,3));
 axes(ah2(1))
-plot(S2./S3,'.'); 
-t3(1)=title(sprintf('[%i %i] BLUROS-%i S2/S3',[pp pp],bb));
-hold on; plot(i2,S2(i2)/S3(i3),'o'); hold off
+plot(S2./Sc,'.'); 
+t3(1)=title(sprintf('[%i %i] BLUROS-%i S2/S%i',[pp pp],bb,cnum));
+hold on; plot(i2,S2(i2)/Sc(ic),'o'); hold off
 set(ah2(1),'xtick',unique([1 kz pp^2]),'xgrid','on')
 axes(ah2(2))
 plot(S3./S4,'.'); 
@@ -460,16 +493,25 @@ t3(2)=title(sprintf('[%i %i] S3/S4',[pp pp]));
 hold on; plot(i3,S3(i3)/S4(i4),'o'); hold off
 set(ah2(2),'xtick',unique([1 kz pp^2]),'xgrid','on')
 axes(ah2(3))
-plot(S21./S31,'.'); 
-t3(3)=title(sprintf('[%i %i] BLUROS-%i S21/S31',[pp pp]+1,bb));
-hold on; plot(i21,S21(i21)/S31(i31),'o'); hold off
-set(ah2(3),'xtick',[1 kz2 [pp+1]^2],'xgrid','on')
+plot(S4./S6,'.'); 
+t3(3)=title(sprintf('[%i %i] S4/S6',[pp pp]));
+hold on; plot(i4,S4(i4)/S6(i6),'o'); hold off
+set(ah2(3),'xtick',unique([1 kz pp^2]),'xgrid','on')
 axes(ah2(4))
-plot(S31./S41,'.'); 
-t3(4)=title(sprintf('[%i %i] S31/S41',[pp pp]+1));
-hold on; plot(i31,S31(i31)/S41(i41),'o'); hold off
+plot(S21./Sc1,'.'); 
+t3(4)=title(sprintf('[%i %i] BLUROS-%i S21/S%i1',[pp pp]+1,bb,cnum));
+hold on; plot(i21,S21(i21)/Sc1(ic1),'o'); hold off
 set(ah2(4),'xtick',[1 kz2 [pp+1]^2],'xgrid','on')
-
+axes(ah2(5))
+plot(S31./S41,'.'); 
+t3(5)=title(sprintf('[%i %i] S31/S41',[pp pp]+1));
+hold on; plot(i31,S31(i31)/S41(i41),'o'); hold off
+set(ah2(5),'xtick',[1 kz2 [pp+1]^2],'xgrid','on')
+axes(ah2(6))
+plot(S41./S61,'.'); 
+t3(6)=title(sprintf('[%i %i] S41/S61',[pp pp]+1));
+hold on; plot(i41,S41(i41)/S61(i61),'o'); hold off
+set(ah2(6),'xtick',[1 kz2 [pp+1]^2],'xgrid','on')
 % Align plots
 longticks(ah2); 
 
@@ -482,11 +524,42 @@ for index=1:length(ah2)
   set(ah2(index),'ylim',[min(0.75,min(yl)*0.9)-[min(yl)<range(yl)/20]*range(yl)/20 max(yl)*1.1])
   set(ah2(index),'ylim',[0 2])
 end
-
 % Print it baby
 figdisp([],sprintf('2_%3.3i_%2.2i',pp,bb),[],2)
 
-% STILL WORTH TESTING AGAINST efd with tsto [0 0]
+figure(3)
+clf
+[ah3,ha3,H3]=krijetem(subnum(2,6));
+choix=[2,3,4,6];
+combs=nchoosek(choix,2);
+for jnd=1:6
+  cnum=combs(jnd,1);
+  ccnum=combs(jnd,2);
+  Sc=eval(sprintf('S%i',cnum));
+  Scc=eval(sprintf('S%i',ccnum));
+  axes(H3(1,jnd))
+  imagesc(v2s(decibel(Sc./Scc))) 
+  if jnd==1
+    title(sprintf('[%i %i] S%i/S%i',[pp pp],cnum,ccnum));
+  else
+    title(sprintf('S%i/S%i',cnum,ccnum));
+  end
+  Scl=eval(sprintf('S%i1',cnum));
+  Sccl=eval(sprintf('S%i1',ccnum));
+  axes(H3(2,jnd))
+  imagesc(v2s(decibel(Scl./Sccl))) 
+  if jnd==1
+    title(sprintf('[%i %i] S%il/S%il',[pp pp]+1,cnum,ccnum));
+  else
+    title(sprintf('S%il/S%il',cnum,ccnum));
+  end
+end
+longticks(ah3); 
+for in=1:numel(combs); axes(ah3(in)); set(ah3(in),'xtick',unique([1 dci(2) p.NyNx(2)]),...
+'ytick',unique([1 dci(1) p.NyNx(1)])); axis image; serre(H3',3/4,'down'); end
+t3=sgtitle(sprintf('BLUROS-%i; th=[%i %0.2g %i]; dydx=[%i %i]',bb,th,p.dydx));
+
+figdisp([],sprintf('3_%3.3i_%2.2i',pp,bb),[],2)
 
 % A CONSIDERATION AT SOME POINT BUT NOW LARGELY FORGOTTEN
 
