@@ -20,6 +20,7 @@ function tracecheck(L,A,mv,tol,meth)
 % MAOSL
 % 
 % Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
+% Last modified by olwalbert-at-princeton.edu, 02/26/2025
 
 for j=1:length(A)
   % Checks a random wavenumber
@@ -42,12 +43,14 @@ for j=1:length(A)
    otherwise
     error('Specify valid method')
   end
-  
-  if ~isnan(mrand) && ~isnan(chekit)
+
+  if ~isnan(mrand) && ~isnan(chekit) && mrand~=0
     % This may by chance be at zero wavenumber in which case we skip the
-    % test. Check RELATIVE accuracy, do not return an output to DIFER!
-    % Maybe should only check the leading terms for the tiny ones (D)
-    % since that's where the finite precision is going to be pretty bad
+    % test. We also see poor behavior here for the nu->Inf special case where mv is
+    % always zero and relac will be NaN. Check RELATIVE accuracy, do not return
+    % an output to DIFER!  % Maybe should only check the leading terms for the
+    % tiny ones (for D) since that's where the finite precision is going to be
+    % pretty bad
     relac=(chekit-chekot)/chekot;
     difer(relac,tol,[],NaN)
   else
