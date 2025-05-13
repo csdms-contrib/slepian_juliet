@@ -31,7 +31,7 @@ function varargout=blurosy(th,params,xver,method,tsto,dth)
 % xver    1 extra verification via BLURCHECK and alternative computations
 %         0 no checking at all
 % method  'ef'  exact, efficient and fast [default]
-%         'efs' exact, efficient and exploiting symmetry
+%         'efs' exact, efficient and exploiting symmetry, for symmetric tapers only
 %         'efd' exact, for diagonals calculation in JMATRIX method 3
 %               which requires tsto but should be close to ef/efs is tsto=[0 0]
 %               (except the result is fftshifted... )
@@ -77,8 +77,8 @@ function varargout=blurosy(th,params,xver,method,tsto,dth)
 % BLUROSY('demo3') % should produce no output
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 04/8/2025
-% Last modified by olwalbert-at-princeton.edu, 04/8/2025
+% Last modified by fjsimons-at-alum.mit.edu, 05/13/2025
+% Last modified by olwalbert-at-princeton.edu, 05/13/2025
 
 if ~isstr(th)
     % Defaults (avoiding DEFVAL to avoid costly EVALIN statements)
@@ -731,7 +731,7 @@ elseif strcmp(th,'demo3')
     % subplot(221); imagesc(log10(v2s(Sbar1,p))); axis square
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [Cyy,t]=spatmat(ydim,xdim,th,params,xver,dth,tsto)
 % [Cyy,t]=spatmat(ydim,xdim,th,params,xver,dth,tsto)
 %
@@ -757,8 +757,6 @@ if prod(size(params.taper))>1
     % $MFILES/retired/QR?.m/map_*.m/whittle_*/expected_* etc
     Tx=double(params.taper);
 
-    % If you are here with 'efs' the taper is explicit AND not
-    % symmetric, so must do something else
     if all([length(ydim) length(xdim)]==NyNx)
         % Produce the autocorrelation sequence eq. (12)
         t=zeros(size(Tx));
