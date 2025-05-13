@@ -91,7 +91,7 @@ function varargout=covgammiosl(th,params,method,ifinv);
 % covgammiosl('demo8')
 %
 % Last modified by fjsimons-at-princeton.edu, 04/08/2025
-% Last modified by olwalbert-at-princeton.edu, 04/08/2025
+% Last modified by olwalbert-at-princeton.edu, 05/12/2025
 
 if ~isstr(th)
   % Set default for ifinv to assume that the covariance of the score for all
@@ -138,7 +138,8 @@ if ~isstr(th)
   for thnd=1:np
     if ifinv(thnd)
         % Only calculate partials for the parameters requested by ifinv
-        dSbardthnd=blurosy(th,params,xver,'efs',[],thnd);
+        % Only if the taper has advanced symmetry can we use efs
+        dSbardthnd=blurosy(th,params,xver,'ef',[],thnd);
         % Store as vectors
         dSbardth(:,:,thnd)=dSbardthnd;
     end
@@ -159,7 +160,7 @@ if ~isstr(th)
 
       % Simulate repetitively for the same parameters using circulant embedding,
       % returning the empirical periodogram of each realization, Semp
-      runinpar=0;
+      runinpar=1;
       % Simulate via circulant embedding
       simparams=params; simparams.blurs=Inf;
       if runinpar==1
@@ -204,13 +205,8 @@ if ~isstr(th)
       % But in GAMMIOSL the zero wavenumber was excluded but in here not
       
       % Normalization factors in the case of masked and unit tapers
-      if isfield(params,'taper') & numel(params.taper)==prod(params.NyNx)
-         % Adjust for the size of an explicit taper as in SIMULOSL and MLEOSL
-         % OLW/FJS Need to think about implications of removing a zero wavenumber
-         normfact=(prod(params.NyNx)./sum(Tx(:).^2)).^2.*prod(params.NyNx).^2;
-      else
-         normfact=lk^2;
-      end
+      normfact=lk^2;
+
       % Straight calculation of the covariance of the score
       covg=cov(kgrads)./normfact;
     case 2
@@ -302,7 +298,6 @@ if ~isstr(th)
       % SECOND term in right hand side of A57 "Hermitian  transpose"
       EJJht_out=conj(tensorprod(Um,tensorprod(Un,conj(EJJht_in),1,2),1,2));
       EJJht_out=reshape(permute(EJJht_out,[3 1 2]),[prod(NyNx) prod(NyNx)]);
-      diferm(EJJht_out-EJJht_out.')
 
       % The second term of the covariance of the periodogram via Isserlis' rule 
       % (eq. 9 of VoWE; also see Walden+1994)
@@ -311,7 +306,6 @@ if ~isstr(th)
       % FIRST term in right hand side of A57 "transpose"
       EJJt_out=tensorprod(Um,tensorprod(Un,EJJht_in,1,2),1,2);
       EJJt_out=reshape(permute(EJJt_out,[3 1 2]),[prod(NyNx) prod(NyNx)]);
-      diferm(EJJht_out-EJJht_out') 
       
       % Sum and normalize the quantities above; eq. 8 of Walden+1994
       Hk2cov=(abs(EJJht_out).^2+abs(EJJt_out).^2)./sum(Tx,"all").^2;
@@ -343,11 +337,7 @@ if ~isstr(th)
       end 
 
       % Normalization factors for both non-unit and unit tapers
-      if isfield(params,'taper')&numel(params.taper)==prod(NyNx)
-        normfact=(prod(params.NyNx)./sum(Tx(:).^2)).^2.*prod(params.NyNx).^2;
-      else
-        normfact=prod(NyNx).^2;
-      end
+      normfact=prod(NyNx).^2;
 
       % Final assembly (A54)
       covg=fax'*Hk2cov*fax./seq_ep./normfact;
@@ -556,11 +546,7 @@ if ~isstr(th)
      s=reshape(s_1+s_2,np,np);
 
      % Normalization factors in the case of masked and unit tapers
-     if isfield(params,'taper') & numel(params.taper)==prod(NyNx)
-        normfact=(prod(params.NyNx)./sum(Tx(:).^2)).^2.*prod(params.NyNx).^2;
-     else
-         normfact=prod(params.NyNx).^2;
-     end
+     normfact=prod(params.NyNx).^2;
      covg=s./normfact;
      % wkspc=whos; sum([wkspc.bytes])
   end % end of method cases
@@ -613,45 +599,123 @@ elseif strcmp(th,'demo1')
    % cross-plots with error ellipses for the four methods of calculating
    % parameter covariance, and as correlation plots 
    ifinv=[1 1 1]; 
+   % If the grid size is too large, we cannot use the dftmtx method. Set limit
+   glim=120^2;
 
    try
      % Load a previous simulation suite
-     datum='18-Feb-2025';
+     datum=date;%'18-Feb-2025';
      % mleosl('demo2',datum)
      [th0,thhats,p,covX,covavhs,thpix,~,~,~,~,momx,covXpix,covF0]=osload(datum,100);
      if isinf(p.blurs); p.blurs=-1; end
      if ~isfield(p,'taper'); p.taper=1; end
    catch
-     % Or calculate a new one
-     p=[];p.NyNx=[56 56];p.dydx=[1 1];p.blurs=-1;p.taper=1;
-     th0=[3 1.5 5];
-     numreals=300;
-     mleosl('demo1',numreals,[3 1.5 5],p)
-     datum=date;
-     thhats=load(sprintf('mleosl_thhat_%s',datum));
-   end
+     try
+       % Load a mat file of just thhats from working directory 
+       % p.NyNx=[117 124];p.dydx=[1e3 1e3];p.blurs=Inf;th0=[1e2 1.5 2.8e3];
+       % p.taper=1;
+       % % Calculations for a full observed field:
+       % pth='FigsFull/'
+       % p.mask='full'; datum='30-Apr-2025';
+       % % Calculations for the structured field with 66.7% observed:
+       % pth='FigsStructure_66_7prc/'
+       % p.mask='structure'; datum='10-May-2025';% '30-Apr-2025';
+       % Calculations for the random field with 66.7% observed:
+       % pth='FigsRandomDltn_66_7prc/'
+       % p.mask='random'; datum='09-May-2025'; % '30-Apr-2025';
+       % % Calculations for France with 66.7% observed:
+       % pth='FigsFrance_66_7prc/'
+       % p.mask='france'; datum='09-May-2025';
+       % % Calculations for doves with 66.7% observed:
+       % pth='FigsDoves_66_7prc/';
+       % p.mask='doves'; datum='12-May-2025';
+       % % Calculations for New Jersey with 66.7% observed:
+       pth='FigsNewJersey_66_7prc/';
+       p.mask='newjersey'; datum='12-May-2025';
+       % Load everything we will need for regenerating the figures
+       load(sprintf('%scovgammiosl_demo1vars_%s_%s.mat',pth,p.mask,datum))
+     catch
+       % Or calculate a new one
+       % To match the paper example with blurosy demo 2,
+       p.NyNx=[117 124];p.dydx=[1e3 1e3];p.blurs=Inf;
+       th0=[1e2 1.5 2.8e3];
 
-   % Calculate parameter covariance for each method, storing the cross-parameter
-   % covariance as unique variables
-   covg1=covgammiosl(th0,p,1,ifinv);
-   cov1=covthosl(th0,p,covg1,ifinv);
+       if ~isfield(p,'mask')
+         p.taper=1;
+       elseif strcmp(p.mask,'france')
+         scl=1.197; % corresponds to 66.7% data observed for bounded france on this grid size
+         [~,I]=maskit(rand(p.NyNx),p,scl);
+         p.taper=I;
+       elseif strcmp(p.mask,'random')
+         scl=0.667; % 66.7% data observed
+         [~,I]=muckit(rand(p.NyNx),p,scl);
+         p.taper=I;
+       elseif strcmp(p.mask,'structure')
+         I=load('MYMASKS/gebcostruct.mat'); % 66.7% data observed
+         I=double(I.gebcostruct);
+         p.taper=I;
+       elseif strcmp(p.mask,'newjersey')
+         scl=1.445; % 66.7% data observed
+         [~,I]=maskit(rand(p.NyNx),p,scl);
+         p.taper=I;
+       elseif strcmp(p.mask,'doves')
+         scl=2.03; % 66.7% data observed
+         [~,I]=maskit(rand(p.NyNx),p,scl);
+         p.taper=flipud(fliplr(I));
+       end
+       numreals=200;
+       simp=p;simp.blurs=Inf;
+       p.blurs=-1;
+       for mnd=1:numreals
+         thhat=NaN;
+         while isnan(thhat)
+           Hx=simulosl(th0,simp,0);
+           [thhat,~,~,scl]=mleosl(Hx,[],p,[],[],th0,[1 1 1],0);
+         end
+         thhats(mnd,:)=thhat.*scl;
+       end
+       % Calculate parameter covariance for each method, storing the cross-parameter
+       % covariance as unique variables
+       covg1=covgammiosl(th0,p,1,ifinv);
+       cov1=varianceofestimates(th0,p,covg1,ifinv);
+
+       if prod(p.NyNx)<glim
+         covg2=covgammiosl(th0,p,2,ifinv);
+         cov2=varianceofestimates(th0,p,covg2,ifinv);
+         cov2s2nu=matslice(cov2,[1 1 0]);
+         cov2s2rh=matslice(cov2,[1 0 1]);
+         cov2nurh=matslice(cov2,[0 1 1]);
+       else
+         cov2=NaN;
+       end
+
+       covg3=covgammiosl(th0,p,3,ifinv);
+       cov3=varianceofestimates(th0,p,covg3,ifinv);
+
+       % Unbiased outlier removal
+       mdout=0;
+       if mdout
+         thhats=madout(thhats,1);
+       end
+       cove=cov(thhats);
+
+       % Save
+       if isfield(p,'mask')
+         save(sprintf('%scovgammiosl_demo1vars_%s_%s.mat',pth,p.mask,date),...
+              'thhats','p','cove','cov1','cov2','cov3','th0')
+       else
+         save(sprintf('covgammiosl_demo1vars_full_%s.mat',date),...
+              'thhats','p','cove','cov1','cov2','cov3','th0')
+       end
+     end
+   end
+   % Slice it up
    cov1s2nu=matslice(cov1,[1 1 0]);
    cov1s2rh=matslice(cov1,[1 0 1]);
    cov1nurh=matslice(cov1,[0 1 1]);
-
-   covg2=covgammiosl(th0,p,2,ifinv);
-   cov2=covthosl(th0,p,covg2,ifinv);
-   cov2s2nu=matslice(cov2,[1 1 0]);
-   cov2s2rh=matslice(cov2,[1 0 1]);
-   cov2nurh=matslice(cov2,[0 1 1]);
-
-   covg3=covgammiosl(th0,p,3,ifinv);
-   cov3=covthosl(th0,p,covg3,ifinv);
    cov3s2nu=matslice(cov3,[1 1 0]);
    cov3s2rh=matslice(cov3,[1 0 1]);
    cov3nurh=matslice(cov3,[0 1 1]);
-
-   cove=cov(thhats);
    coves2nu=matslice(cove,[1 1 0]);
    coves2rh=matslice(cove,[1 0 1]);
    covenurh=matslice(cove,[0 1 1]);
@@ -675,12 +739,15 @@ elseif strcmp(th,'demo1')
    [V,D]=eig(cov1nurh);
    a13=sqrt(s)*V*sqrt(D)*[cos(t);sin(t)];
    
-   [V,D]=eig(cov2s2nu);
-   a21=sqrt(s)*V*sqrt(D)*[cos(t);sin(t)];
-   [V,D]=eig(cov2s2rh);
-   a22=sqrt(s)*V*sqrt(D)*[cos(t);sin(t)];
-   [V,D]=eig(cov2nurh);
-   a23=sqrt(s)*V*sqrt(D)*[cos(t);sin(t)];
+   if prod(p.NyNx)<glim
+     % If the grid size is too large, we cannot use the dftmtx method
+     [V,D]=eig(cov2s2nu);
+     a21=sqrt(s)*V*sqrt(D)*[cos(t);sin(t)];
+     [V,D]=eig(cov2s2rh);
+     a22=sqrt(s)*V*sqrt(D)*[cos(t);sin(t)];
+     [V,D]=eig(cov2nurh);
+     a23=sqrt(s)*V*sqrt(D)*[cos(t);sin(t)];
+   end
    
    [V,D]=eig(cov3s2nu);
    a31=sqrt(s)*V*sqrt(D)*[cos(t);sin(t)];
@@ -699,45 +766,73 @@ elseif strcmp(th,'demo1')
    clf;
    % Color friendly palette
    clrs=["#1B9E77","#D95F02","#7570B3"];
+   % for consistency between experiments that we are studying, set same limits
+   shxlim={[20 200],[20 200],[0.8 2.6]};
+   shylim={[0.8 2.6],[1900 3800],[1900 3800]};
    % Plot of s2 vs nu
    subplot(131)
    plot(thhats(:,1),thhats(:,2),'ko')
    hold on
    e1(1)=plot(a11(1,:)+mobs1(1),a11(2,:)+mobs1(2),'Color',clrs(1),'LineWidth',1);
-   e2(1)=plot(a21(1,:)+mobs1(1),a21(2,:)+mobs1(2),'Color',clrs(2),'LineWidth',1);
+   if prod(p.NyNx)<glim
+     % If the grid size is too large, we cannot use the dftmtx method
+     e2(1)=plot(a21(1,:)+mobs1(1),a21(2,:)+mobs1(2),'Color',clrs(2),'LineWidth',1);
+   end
    e3(1)=plot(a31(1,:)+mobs1(1),a31(2,:)+mobs1(2),'Color',clrs(3),'LineWidth',1);
    ee(1)=plot(ae1(1,:)+mobs1(1),ae1(2,:)+mobs1(2),'Color','k','LineWidth',1);
    longticks
    xlabel('variance, $\sigma^2$','Interpreter','latex')
    ylabel('smoothness, $\nu$','Interpreter','latex')
+   xlim(shxlim{1})
+   ylim(shylim{1})
+
    % Plot of s2 vs rho 
    subplot(132)
    plot(thhats(:,1),thhats(:,3),'ko')
    hold on
    e1(2)=plot(a12(1,:)+mobs2(1),a12(2,:)+mobs2(2),'Color',clrs(1),'LineWidth',1);
-   e2(2)=plot(a22(1,:)+mobs2(1),a22(2,:)+mobs2(2),'Color',clrs(2),'LineWidth',1);
+   if prod(p.NyNx)<glim
+     % If the grid size is too large, we cannot use the dftmtx method
+     e2(2)=plot(a22(1,:)+mobs2(1),a22(2,:)+mobs2(2),'Color',clrs(2),'LineWidth',1);
+   end
    e3(2)=plot(a32(1,:)+mobs2(1),a32(2,:)+mobs2(2),'Color',clrs(3),'LineWidth',1);
    ee(2)=plot(ae2(1,:)+mobs2(1),ae2(2,:)+mobs2(2),'Color','k','LineWidth',1);
    longticks
    xlabel('variance, $\sigma^2$','Interpreter','latex')
    ylabel('range, $\rho$','Interpreter','latex')
+   xlim(shxlim{2})
+   ylim(shylim{2})
+
    % Plot of nu vs rho 
    subplot(133)
    plot(thhats(:,2),thhats(:,3),'ko')
    hold on
    e1(3)=plot(a13(1,:)+mobs3(1),a13(2,:)+mobs3(2),'Color',clrs(1),'LineWidth',1);
-   e2(3)=plot(a23(1,:)+mobs3(1),a23(2,:)+mobs3(2),'Color',clrs(2),'LineWidth',1);
+   if prod(p.NyNx)<glim
+     % If the grid size is too large, we cannot use the dftmtx method
+     e2(3)=plot(a23(1,:)+mobs3(1),a23(2,:)+mobs3(2),'Color',clrs(2),'LineWidth',1);
+   end
    e3(3)=plot(a33(1,:)+mobs3(1),a33(2,:)+mobs3(2),'Color',clrs(3),'LineWidth',1);
    ee(3)=plot(ae3(1,:)+mobs3(1),ae3(2,:)+mobs3(2),'Color','k','LineWidth',1);
    longticks
    xlabel('smoothness, $\nu$','Interpreter','latex')
    ylabel('range, $\rho$','Interpreter','latex')
-   [leg1,legic]=legend(sprintf('%i \\theta',size(thhats,1)),'sample','dftmtx',...
-            'diagonals','empirical','box','off')
+   xlim(shxlim{3})
+   ylim(shylim{3})
+
+   if prod(p.NyNx)<glim
+     % If the grid size is too large, we cannot use the dftmtx method
+     [leg1,legic]=legend(sprintf('%i \\theta',size(thhats,1)),'sampling','dftmtx',...
+            'diagonals','empirical','box','off');
+   else
+     % Only 3 methods to report
+     [leg1,legic]=legend(sprintf('%i \\theta',size(thhats,1)),'sampling',...
+            'diagonals','empirical','box','off');
+   end
    % Find the 'line' objects
    legicms = findobj(legic,'Type','line');
    for ind=1:size(legicms,1)
-     if size(legicms(ind).XData,1)==1
+     if size(legicms(ind).XData,2)==1
         legicms(ind).XData=0.3;
      else
         legicms(ind).XData(1)=0.2;
@@ -746,77 +841,127 @@ elseif strcmp(th,'demo1')
    end
    % Resize the marker in the legend
    %set(legicls,'MarkerSize',20);
-   sti=sgtitle(sprintf('$\sigma^2=%0.2f, \nu=%0.2f, \rho=%0.2f$ m; %im x %im',...
-           th0,p.NyNx.*p.dydx),'Interpreter','latex');
-
-   % Pause to confirm the figure is nice before saving
-   keyboard
-   saveas(gcf,...
-     sprintf('covgammiosl_demo1_3pcrossplots_%ix%i_s2%inu%irh%i_%s.eps',...
-       p.NyNx.*p.dydx,th0.*[1 10 1],date),'epsc')
+   sti=sgtitle(sprintf('$%s%0.2f%s%0.2f%s%0.2f$%s%i%s%i%s',...
+      '\sigma^2=',th0(1),' \mathrm{[unit]}^2, \nu=',th0(2),', \rho=',th0(3),...
+      ' m; ',p.NyNx(1).*p.dydx(1),' m x ',p.NyNx(2).*p.dydx(2),'m'),... 
+      'Interpreter','latex');
+   % Save figure
+   if isvarname('pth')
+     saveas(gcf,...
+       sprintf('%scovgammiosl_demo1_3pcrossplots_%ix%i_s2%inu%irh%i_%s_%s.eps',...
+         pth,p.NyNx.*p.dydx,th0.*[1 10 1],p.mask,date),'epsc')
+   else 
+     saveas(gcf,...
+       sprintf('covgammiosl_demo1_3pcrossplots_%ix%i_s2%inu%irh%i_%s_%s.eps',...
+         p.NyNx.*p.dydx,th0.*[1 10 1],p.mask,date),'epsc')
+   end
    
-   % Plot the normalized covariance heatmaps for the four methods
+   % Plot the normalized covariance heatmaps for number of cov calc methods
+   ncovhm=2;
+keyboard
    figure()
    kelicol
    cmrange=[-1 1];
    labs={'s2','nu','rho'};
    labs=matslice(labs,ifinv);
    np=sum(ifinv);
-   % The empirical covariance
-   ah(1)=subplot(221);
-   im(1)=imagesc(matslice(cove,ifinv)./...
-         [diag(sqrt(matslice(cove,ifinv)))*...
-          diag(sqrt(matslice(cove,ifinv)))'],...
-          cmrange);
-   title('empirical')
-   axis image
-   % The sample covariance
-   ah(2)=subplot(222);
-   im(2)=imagesc(cov1./[diag(sqrt(cov1))*diag(sqrt(cov1))'],cmrange);
-   title('sample')
-   axis image
-   % The diagonals covariance
-   ah(3)=subplot(223);
-   im(3)=imagesc(cov2./[diag(sqrt(cov2))*diag(sqrt(cov2))'],cmrange);
-   title('diagonals')
-   axis image
-   % The dftmtx covariance
-   ah(4)=subplot(224);
-   im(4)=imagesc(cov3./[diag(sqrt(cov3))*diag(sqrt(cov3))'],cmrange);
-   title('dftmtx')
-   axis image
-   % Labels, colorbar, positioning, title
-   set(ah(:),'xtick',1:np,'XTickLabel',labs)
-   set(ah(:),'ytick',1:np,'YTickLabel',labs)
-   longticks(ah(:))
-   cb=colorbar;
-   cb.Label.String='normalized';
-   moveh(ah(2),-0.04)
-   movev(ah(1),-0.02)
-   ah(2).Position(4)=ah(1).Position(4);ah(2).Position(3)=ah(1).Position(3);
-   ah(2).Position(2)=ah(1).Position(2);
-   ti=sgtitle(sprintf('\\sigma^2=%0.2f, \\nu=%0.2f, \\rho=%0.2f; %im x %im',...
-           th0,p.NyNx.*p.dydx))
+   if ncovhm>2
+     % The empirical covariance
+     ah(1)=subplot(221);
+     im(1)=imagesc(matslice(cove,ifinv)./...
+           [diag(sqrt(matslice(cove,ifinv)))*...
+            diag(sqrt(matslice(cove,ifinv)))'],...
+            cmrange);
+     title('empirical')
+     axis image
+     % The sample covariance
+     ah(2)=subplot(222);
+     im(2)=imagesc(cov1./[diag(sqrt(cov1))*diag(sqrt(cov1))'],cmrange);
+     title('sampling')
+     axis image
+     % The diagonals covariance
+     ah(3)=subplot(223);
+     im(3)=imagesc(cov3./[diag(sqrt(cov3))*diag(sqrt(cov3))'],cmrange);
+     title('diagonals')
+     axis image
 
-   % Pause to confirm the figure is nice before saving
-   keyboard
-   saveas(gcf,...
-     sprintf('covgammiosl_demo1_3pcorrplots_%ix%i_s2%inu%irh%i_%s.eps',...
-       p.NyNx.*p.dydx,th0.*[1 10 1],date),'epsc')
+     % The dftmtx covariance
+     if prod(p.NyNx)<glim
+       % If the grid size is too large, we cannot use the dftmtx method
+       ah(4)=subplot(224);
+       im(4)=imagesc(cov2./[diag(sqrt(cov2))*diag(sqrt(cov2))'],cmrange);
+       title('dftmtx')
+       axis image
+     end
+     % Labels, colorbar, positioning, title
+     set(ah(:),'xtick',1:np,'XTickLabel',labs)
+     set(ah(:),'ytick',1:np,'YTickLabel',labs)
+     longticks(ah(:))
+     cb=colorbar;
+     cb.Label.String='normalized';
+     moveh(ah(2),-0.04)
+     movev(ah(1),-0.02)
+     ah(2).Position(4)=ah(1).Position(4);ah(2).Position(3)=ah(1).Position(3);
+     ah(2).Position(2)=ah(1).Position(2);
+     if prod(p.NyNx)<glim
+       ah(4).Position(1)=(ah(2).Position(1)+ah(4).Position(1))/2+0.001;
+     else
+       ah(3).Position(1)=(ah(1).Position(1)+ah(3).Position(1))/2+0.001;
+     end
+   else
+     % The empirical covariance
+     ah(1)=subplot(121);
+     im(1)=imagesc(matslice(cove,ifinv)./...
+           [diag(sqrt(matslice(cove,ifinv)))*...
+            diag(sqrt(matslice(cove,ifinv)))'],...
+            cmrange);
+     title('empirical')
+     axis image
+     % The diagonals covariance
+     ah(2)=subplot(122);
+     im(2)=imagesc(cov3./[diag(sqrt(cov3))*diag(sqrt(cov3))'],cmrange);
+     title('predicted')
+     axis image
+
+     % Labels, colorbar, positioning, title
+     set(ah(:),'xtick',1:np,'XTickLabel',labs)
+     set(ah(:),'ytick',1:np,'YTickLabel',labs)
+     longticks(ah(:))
+     cb=colorbar;
+     cb.Label.String='normalized';
+     ah(2).Position(3)=ah(1).Position(3);
+     moveh([ah(:)],-0.05)
+   end
+
+   ti=sgtitle(sprintf('$%s%0.2f%s%0.2f%s%0.2f$%s%i%s%i%s',...
+      '\sigma^2=',th0(1),' \mathrm{[unit]}^2, \nu=',th0(2),', \rho=',th0(3),...
+      ' m; ',p.NyNx(1).*p.dydx(1),' m x ',p.NyNx(2).*p.dydx(2),'m'),... 
+      'Interpreter','latex');
+
+   % Save figure
+   if isvarname('pth')
+     saveas(gcf,...
+       sprintf('%scovgammiosl_demo1_3pcorrplots_%ix%i_s2%inu%irh%i_%s_%s.eps',...
+         pth,p.NyNx.*p.dydx,th0.*[1 10 1],p.mask,date),'epsc')
+   else 
+     saveas(gcf,...
+       sprintf('covgammiosl_demo1_3pcorrplots_%ix%i_s2%inu%irh%i_%s_%s.eps',...
+         p.NyNx.*p.dydx,th0.*[1 10 1],p.mask,date),'epsc')
+   end
 elseif strcmp(th,'demo2')
     % Evaluating COVGAMMIOSL for inversion of only two parameters for direct
     % comparison with diagnostics I created for Arthur's jmatrix_sample. 
     % Outputted figure plots kdes of the covariance marginals over histograms of
     % parameter estimates, error ellipses calculated from the parameter 
     % covariances on a cross-plot of parameter estimates, and the asymptotic
-    % behavior of the SAMPLE method for increasing number of simulated periodograms
+    % behavior of the SAMPLING method for increasing number of simulated periodograms
     
     % We need to acquire an MLEOSL suite, either by loading or fresh calculation
     % th1=[1 1/2 5]; 
     % th1=[10 1/2 10]; 
     th1=[5 1/2 7]; 
-    params=[]; params.NyNx=[94 97]; params.dydx=[1 1];
-    params.blurs=-1; params.taper=1;
+    params=[];params.NyNx=[94 97];params.dydx=[1 1];
+    params.blurs=-1;params.taper=1;
     ifinv=[1 0 1];
     datum=date;
     try 
@@ -832,11 +977,11 @@ elseif strcmp(th,'demo2')
     % For the covgammiosl sampling method, we want to study the effect of increasing
     % number of samples and will recalculate the variance using F1inv depending
     % on the number of samples
-    simparams=params; simparams.blurs=Inf;
+    simparams=params;simparams.blurs=Inf;
     [~,~,~,k]=simulosl(th1,simparams,1);
     F1=fishiosl(k,th1,params);
     F1=matslice(F1,ifinv);
-    invF1=inv(F1);
+    covF1=inv(F1);
     [~,covg1grads]=covgammiosl(th1,params,1,ifinv);
     numsims=size(covg1grads,1);
     covg1s2s2=zeros(numsims,1); 
@@ -848,8 +993,7 @@ elseif strcmp(th,'demo2')
     for ind=2:numsims
         covg1=real(cov(covg1grads(1:ind,:)))./prod(params.NyNx).^2;
         covg1=matslice(covg1,[1 0 1]);
-        % The main parameter estimate covariance
-        cov1=invF1*covg1*invF1;
+        cov1=covF1*covg1*covF1;
         covg1s2s2(ind,:)=covg1(1,1);
         covg1s2rh(ind,:)=covg1(1,end);
         covg1rhrh(ind,:)=covg1(end,end);
@@ -861,11 +1005,11 @@ elseif strcmp(th,'demo2')
     % method (3)
     covg2=covgammiosl(th1,params,2,ifinv);
     covg3=covgammiosl(th1,params,3,ifinv);
-    cov2=covthosl(th1,params,covg2,ifinv);
-    cov3=covthosl(th1,params,covg3,ifinv);
+    cov2=varianceofestimates(th1,params,covg2,ifinv);
+    cov3=varianceofestimates(th1,params,covg3,ifinv);
 
     % Plot
-    clf
+    clf;
     % Color friendly palette
     clrs=["#1B9E77","#D95F02","#7570B3"];
 
@@ -884,7 +1028,7 @@ elseif strcmp(th,'demo2')
     nepl(1)=plot(sigvec,normpdf(sigvec,mobs(:,1),sqrt(covemp(1,1))),...
             'k','LineWidth',2,'DisplayName','empirical');
     nspl(1)=plot(sigvec,normpdf(sigvec,th1(:,1),sqrt(cov1s2s2(end))),...
-            'Color',clrs{1},'LineWidth',2,'DisplayName','sample');
+            'Color',clrs{1},'LineWidth',2,'DisplayName','sampling');
     ndpl(1)=plot(sigvec,normpdf(sigvec,th1(:,1),sqrt(cov2(1,1))),':',...
             'Color',clrs{2},'LineWidth',2,'DisplayName','diagonals');
     nfpl(1)=plot(sigvec,normpdf(sigvec,th1(:,1),sqrt(cov3(1,1))),'--',...
@@ -989,7 +1133,7 @@ elseif strcmp(th,'demo2')
 
     ah(2)=subplot(222);
     im(2)=imagesc(cov1./[diag(sqrt(cov1))*diag(sqrt(cov1))'],cmrange);
-    title('sample')
+    title('sampling')
     axis image
 
     ah(3)=subplot(223);
@@ -1064,9 +1208,9 @@ elseif strcmp(th,'demo3')
 
     covg2=covgammiosl(th1,params,2,ifinv);
     covg3=covgammiosl(th1,params,3,ifinv);
-    cov2=covthosl(th1,params,covg2,ifinv);
+    cov2=varianceofestimates(th1,params,covg2,ifinv);
     cov2=trilos(cov2);
-    cov3=covthosl(th1,params,covg3,ifinv);
+    cov3=varianceofestimates(th1,params,covg3,ifinv);
     cov3=trilos(cov3);
 
     % Labels
@@ -1081,12 +1225,12 @@ elseif strcmp(th,'demo3')
       axes(ah(ind))
       if varofcov
         pl1(ind)=errorbar(2:25:numsims,mn1(ind,2:25:end),var1(ind,2:25:end),...
-          "o",'MarkerSize',2,'Color',clrs{1},'DisplayName','sample');
+          "o",'MarkerSize',2,'Color',clrs{1},'DisplayName','sampling');
         pl1(ind).CapSize = 0;
         set(gca,'YScale','log')
       else
         pl1(ind)=plot(2:numsims,cov1(ind,2:end),'-','Color',clrs{1},...
-          'LineWidth',2,'DisplayName','sample');
+          'LineWidth',2,'DisplayName','sampling');
       end
       hold on
       % pl2(ind)=yline(covemp(ind),'-','Color','k');
@@ -1121,15 +1265,20 @@ elseif strcmp(th,'demo3')
 elseif strcmp(th,'demo4')
     % Visualization of the construction of terms for the DFTMTX method (distance 
     % grid, covariance, Hk2cov) for very (unrealistically) small grids
-  
-    params=[];
-    params.NyNx=[9 9];
-    params.dydx=[1 1];
-    params.blurs=-1;
-    params.taper=1;
+    % We have the option to provide TH in the PARAMS input slot and PARAMS in
+    % the METHOD input slot; each will be appropriately renamed
+    defval('params',[1 0.5 2]) 
+    defval('method',[]) 
+    defval('ifinv',[1 1 1])
+    th=params;
+    params=method;
 
-    ifinv=[1 1 1];
-    th=[1 0.5 2];
+    if isempty(params)
+      params.NyNx=[9 9];
+      params.dydx=[1 1];
+      params.blurs=-1;
+      params.taper=1;
+    end
   
     dydx=params.dydx;NyNx=params.NyNx;
     ys=0:NyNx(1)-1;xs=0:NyNx(2)-1;
@@ -1140,6 +1289,9 @@ elseif strcmp(th,'demo4')
     lagy=grdy-grdy';
     dxxp=sqrt(lagx.^2+lagy.^2);
     Cmn=maternosy(dxxp,th);
+    if numel(params.taper)>1
+      Cmn=Cmn.*params.taper(:).*params.taper(:)';
+    end
     Cm_n_mn=reshape(Cmn,[NyNx(1) NyNx(2) prod(NyNx)]);
     Um=dftmtx(size(Cm_n_mn,1));
     Un=dftmtx(size(Cm_n_mn,2));
@@ -1150,6 +1302,8 @@ elseif strcmp(th,'demo4')
     EJJht_out=reshape(permute(...
                 conj(tensorprod(Um,tensorprod(Un,conj(EJJht_in),1,2),1,2)),...
               [3 1 2]),[prod(NyNx) prod(NyNx)]);
+    diferm(EJJht_out-EJJht_out.') 
+    diferm(EJJht_out-EJJht_out') 
     % This will be going to the "pSbar"
     EJJt_out=reshape(permute(...
                tensorprod(Um,tensorprod(Un,EJJht_in,1,2),1,2),...
@@ -1312,7 +1466,7 @@ elseif strcmp(th,'demo4')
     [~,i]=max(b(:)); b(i)=b(i)*2;
     ah(4)=subplot(224); imagesc(decibel(b))
     caxis([-40 0])
-    t(4)=title(sprintf('fixed %s [median ratio %5g]','$\bar{S}^2(\mathbf{k})$',median(abs(a(:)./b(:)))));
+    t(4)=title(sprintf('fixed %s [median ratio %5g]','$\bar{S}(\mathbf{k})^2$',median(abs(a(:)./b(:)))));
     t(4).Interpreter='latex';
     ah(4).XTick=[1 params.NyNx(1)];
     ah(4).YTick=[1 params.NyNx(2)];
@@ -1344,6 +1498,7 @@ elseif strcmp(th,'demo6')
    % parameter.
    params=[];params.dydx=[1 1];params.blurs=-1;params.taper=1;ifinv=[1 1 1];
    numreals=200;
+   np=3;
 
    % Labels
    labs={'\sigma^2,\sigma^2', '\nu,\nu', '\rho,\rho', '\sigma^2,\nu',...
@@ -1353,79 +1508,129 @@ elseif strcmp(th,'demo6')
 
    % For now, small values so that we have a chance at forming the data vector
    % and finding an estimate for small grids 
-   rh=2;
-   th1=[1 0.5 rh];
-   % Sample in logspace
-   loggs=logspace(0,1,10);
+   rh=6;
+   th1=[3 0.5 rh];
+   % Sample growing grid length as multiples of pi rho from logspace 
+   loggs=logspace(0.5,1,5);
    thhats=zeros(numreals,3,size(loggs,2));
+   keyboard
+   % for the full field: datum='30-Apr-2025';
+   % for 'random' 66.7% of field: 
+   datum='11-May-2025'; params.mask='random';
    try
-     % If we have already calculate the estimates, load them. Note that we may
-     % need to append a date to the file name
-     datum='26-Mar-2025';%date;
-     thhats=load(sprintf('covgammiosl_demo6_empthhats_%s.mat',datum),'thhats');
-     thhats=thhats.thhats;
+     % If we have already calculated the estimates, load them
+     demo6vars=load(sprintf('covgammiosl_demo6_calcs_%s.mat',datum));
+     thhats=demo6vars.thhats;
+     cov1t=demo6vars.cov1t;
+     try
+       % We might not have been able to calculate this depending on the grid
+       % size
+       cov2t=demo6vars.cov2t;
+       incdft=1;
+     catch
+       incdft=0;
+     end
+     cov3t=demo6vars.cov3t;
+     covempt=demo6vars.covempt;
+     Ns=demo6vars.Ns;
    catch
      for ind=1:size(loggs,2)
        % Create a larger grid with length linearly increasing in pi rho
        gs=rh*pi*loggs(ind); 
        params.NyNx=[floor(gs) floor(gs)];
+       if isfield(params,'mask'); if strcmp(params.mask,'random'); 
+           [~,I]=muckit(randn(params.NyNx),params,0.667); 
+           tapersv{ind}=I;
+           params.taper=tapersv{ind};
+       end; end
        % Simulate via circulant embedding
        simparams=params;simparams.blurs=Inf;
        for mnd=1:numreals
-         Hx=simulosl(th1,simparams,0);
          thhat=NaN;
          while isnan(thhat)
+           Hx=simulosl(th1,simparams,0);
            [thhat,~,~,scl]=mleosl(Hx,[],params,[],[],th1,ifinv,0);
          end
          thhats(mnd,:,ind)=thhat.*scl;
        end
      end
-     keyboard
-     for ind=1:size(loggs,2)
-       % Consider trimming, some results are truly bad on small grids
-       [thhatst{ind},trimi]=trimit(thhats(:,:,ind),97);
-       for jnd=1:(numreals-size(trimi,1))
-         Hx=simulosl(th1,simparams,0);
-         thhat=NaN;
-         while isnan(thhat)
-           [thhat,~,~,scl]=mleosl(Hx,[],params,[],[],th1,ifinv,0);
+     mdout=1;
+     if mdout
+       % Apply MADOUT to robustly remove outliers; if outliers are removed,
+       % continue simulating until acquiring NUMREALS estimates
+       for ind=1:size(loggs,2)
+         gs=rh*pi*loggs(ind); 
+         params.NyNx=[floor(gs) floor(gs)];
+         if isfield(params,'mask'); if strcmp(params.mask,'random'); 
+             [~,I]=muckit(randn(params.NyNx),params,0.667); 
+             tapersv{ind}=I;
+             params.taper=tapersv{ind};
+         end; end
+         % Simulate via circulant embedding
+         simparams=params;simparams.blurs=Inf;
+         thhatst{ind}=madout(thhats(:,:,ind),1);
+         while size(thhatst{ind},1)<numreals
+           for jnd=1:(numreals-size(thhatst{ind},1))
+             Hx=simulosl(th1,simparams,0);
+             thhat=NaN;
+             while isnan(thhat)
+               [thhat,~,~,scl]=mleosl(Hx,[],params,[],[],th1,ifinv,0);
+             end
+             thhatspls(jnd,:)=thhat.*scl;
+           end
+           % Recreate thhats(:,:,ind) with the recalculated estimates
+           thhats(:,:,ind)=[thhatst{ind};thhatspls];
+           thhatspls=[];
+           thhatst{ind}=madout(thhats(:,:,ind),1);
          end
-         thhats2(jnd,:)=thhat.*scl;
        end
-       % Recreate thhats(:,:,ind) with the recalculated estimates
-       thhats(:,:,ind)=[thhatst{ind};thhats2];
      end
-     % Consider saving your calculations by setting 'svthhats' in the debugger
-     keyboard
-     svthhats=1;
-     if svthhats
-       save(sprintf('covgammiosl_demo6_empthhats_%s.mat',date),'thhats')
+     % Calculate parameter covariance up to 4 different ways. We may choose not to
+     % include the dftmtx method in favor of looking at larger grids (the
+     % diagonals method will provide identical results) 
+     incdft=0;
+     for ind=1:size(loggs,2)
+       gs=rh*pi*loggs(ind);
+       params.NyNx=[floor(gs) floor(gs)];
+       if isfield(params,'mask'); if strcmp(params.mask,'random'); 
+           params.taper=tapersv{ind};
+       end; end
+       % Number of samples, prod(NyNx / dydx)
+       Ns(ind)=prod(params.NyNx./params.dydx);
+       % Calculate the empirical covariance from the ensemble
+       covemp=nancov(thhats(:,:,ind));
+       % Calculate the 'sampling' covariance
+       covg1  =covgammiosl(th1,params,1,ifinv);
+       cov1c=varianceofestimates(th1,params,covg1,ifinv);
+       if incdft
+         % Calculate the 'dftmtx' covariance
+         covg2  =covgammiosl(th1,params,2,ifinv);
+         cov2c=varianceofestimates(th1,params,covg2,ifinv);
+       end
+       % Calculate the 'diagonals' covariance
+       covg3  =covgammiosl(th1,params,3,ifinv);
+       cov3c=varianceofestimates(th1,params,covg3,ifinv);
+       % Store the unique values in [s2s2 nunu rhrh s2nu s2rh nurh] order
+       covempt(ind,:)=trilos(covemp);
+       cov1t(ind,:)  =trilos(cov1c);
+       if incdft; cov2t(ind,:)  =trilos(cov2c); end
+       cov3t(ind,:)  =trilos(cov3c);
+     end
+     % Consider saving your calculations by setting 'svcalcs'
+     svcalcs=1;
+     if svcalcs
+       save(sprintf('covgammiosl_demo6_calcs_%s.mat',date),...
+            'thhats','cov1t','cov3t','covempt','params','th1','Ns')
      end
    end
 
-   % Form the covariance matrices
-   for ind=1:size(loggs,2)
-     gs=rh*pi*loggs(ind);
-     params.NyNx=[floor(gs) floor(gs)];
-     % Calculate the empirical covariance from the ensemble
-     covemp=nancov(thhats(:,:,ind));
-     % Calculate the 'sample' covariance
-     covg1  =covgammiosl(th1,params,1,ifinv);
-     cov1c=covthosl(th1,params,covg1,ifinv);
-     % Calculate the 'dftmtx' covariance
-     covg2  =covgammiosl(th1,params,2,ifinv);
-     cov2c=covthosl(th1,params,covg2,ifinv);
-     % Calculate the 'diagonals' covariance
-     covg3  =covgammiosl(th1,params,3,ifinv);
-     cov3c=covthosl(th1,params,covg3,ifinv);
-     % Store the unique values in [s2s2 nunu rhrh s2nu s2rh nurh] order
-     covempt(ind,:)=trilos(covemp);
-     cov1t(ind,:)  =trilos(cov1c);
-     cov2t(ind,:)  =trilos(cov2c);
-     cov3t(ind,:)  =trilos(cov3c);
+   if incdft
+     cmnylim=[minmax([abs(covempt) abs(cov1t) abs(cov2t) abs(cov3t)])];
+   else
+     cmnylim=[minmax([abs(covempt) abs(cov1t) abs(cov3t)])];
    end
-   cmnylim=[minmax([abs(covempt) abs(cov1t) abs(cov2t) abs(cov3t)])];
    cmnylimrng=round(log10(cmnylim),0);
+
    clf;
    [ah,ha,H]=krijetem(subnum(3,3));
    for jnd=1:6
@@ -1434,46 +1639,51 @@ elseif strcmp(th,'demo6')
      % 10 between cmnylim
      hold on
      rnd=0;
-     for ind=cmnylimrng(1):cmnylimrng(2)+1
+     lNs=[min(Ns)-1000 Ns(2:end-1) max(Ns)+10000];
+     pNs=log10(Ns);
+     for ind=cmnylimrng(1)-5:cmnylimrng(2)+5
        rnd=rnd+1;
-       refd(rnd)=loglog(loggs,10^(ind)./floor(rh.*pi.*loggs),...
+       %refd(rnd)=loglog(loggs,10^(ind)./floor(rh.*pi.*loggs),...
+       refd(rnd)=loglog(lNs,10^(ind)./lNs,...
                  'Color',[0.8 0.8 0.8],'HandleVisibility','off');
      end
      % Fit a slope to the covariance calculations as a function of grid length
      % in log-log
-     mbfemp(jnd,:) =polyfit(log10(loggs),log10(abs(covempt(:,jnd))),1);
-     mbfcov1(jnd,:)=polyfit(log10(loggs),log10(abs(cov1t(:,jnd))),1);
-     mbfcov2(jnd,:)=polyfit(log10(loggs),log10(abs(cov2t(:,jnd))),1);
-     mbfcov3(jnd,:)=polyfit(log10(loggs),log10(abs(cov3t(:,jnd))),1);
-     predemp(jnd,:) =polyval(mbfemp(jnd,:), log10(loggs));
-     predcov1(jnd,:)=polyval(mbfcov1(jnd,:),log10(loggs));
-     predcov2(jnd,:)=polyval(mbfcov2(jnd,:),log10(loggs));
-     predcov3(jnd,:)=polyval(mbfcov3(jnd,:),log10(loggs));
+     mbfemp(jnd,:) =polyfit(log10(Ns),log10(abs(covempt(:,jnd))),1);
+     mbfcov1(jnd,:)=polyfit(log10(Ns),log10(abs(cov1t(:,jnd))),1);
+     mbfcov3(jnd,:)=polyfit(log10(Ns),log10(abs(cov3t(:,jnd))),1);
+     predemp(jnd,:) =polyval(mbfemp(jnd,:), pNs);
+     predcov1(jnd,:)=polyval(mbfcov1(jnd,:),pNs);
+     predcov3(jnd,:)=polyval(mbfcov3(jnd,:),pNs);
      % Plot the absolute covariance so that negative correlations do not 
      % mislead
-     ll1(ind)=loglog(loggs,abs(covempt(:,jnd)),'ko',...
+     ll1(ind)=loglog(Ns,abs(covempt(:,jnd)),'ko',...
             'DisplayName',sprintf('empirical, %0.1f',abs(mbfemp(jnd,1))));
-     ll2(ind)=loglog(loggs,abs(cov1t(:,jnd)),'^','MarkerEdgeColor',clrs{1},...
+     ll2(ind)=loglog(Ns,abs(cov1t(:,jnd)),'^','MarkerEdgeColor',clrs{1},...
             'MarkerFaceColor',clrs{1},...
-            'DisplayName',sprintf('sample, %0.1f',abs(mbfcov1(jnd,1))));
-     ll3(ind)=loglog(loggs,abs(cov2t(:,jnd)),'s','MarkerEdgeColor',clrs{2},...
-            'MarkerFaceColor',clrs{2},...
-            'DisplayName',sprintf('dftmtx, %0.1f',abs(mbfcov2(jnd,1))));
-     ll4(ind)=loglog(loggs,abs(cov3t(:,jnd)),'*','MarkerEdgeColor',clrs{3},...
+            'DisplayName',sprintf('sampling, %0.1f',abs(mbfcov1(jnd,1))));
+     if incdft
+       mbfcov2(jnd,:)=polyfit(log10(Ns),log10(abs(cov2t(:,jnd))),1);
+       predcov2(jnd,:)=polyval(mbfcov2(jnd,:),pNs);
+       ll3(ind)=loglog(Ns,abs(cov2t(:,jnd)),'s','MarkerEdgeColor',clrs{2},...
+              'MarkerFaceColor',clrs{2},...
+              'DisplayName',sprintf('dftmtx, %0.1f',abs(mbfcov2(jnd,1))));
+     end
+     ll4(ind)=loglog(Ns,abs(cov3t(:,jnd)),'*','MarkerEdgeColor',clrs{3},...
             'MarkerFaceColor',clrs{3},...
             'DisplayName',sprintf('diagonals, %0.1f',abs(mbfcov3(jnd,1))));
      % Plot the best fit lines
-     loglog(loggs,10.^(predemp(jnd,:)),'Color','k','HandleVisibility','off');
-     loglog(loggs,10.^(predcov1(jnd,:)),'Color',clrs{1},'HandleVisibility','off');
-     loglog(loggs,10.^(predcov2(jnd,:)),'Color',clrs{2},'HandleVisibility','off');
-     loglog(loggs,10.^(predcov3(jnd,:)),'Color',clrs{3},'HandleVisibility','off');
+     loglog(Ns,10.^(predemp(jnd,:)),'Color','k','HandleVisibility','off');
+     loglog(Ns,10.^(predcov1(jnd,:)),'Color',clrs{1},'HandleVisibility','off');
+     if incdft
+       loglog(Ns,10.^(predcov2(jnd,:)),'Color',clrs{2},'HandleVisibility','off');
+     end
+     loglog(Ns,10.^(predcov3(jnd,:)),'Color',clrs{3},'HandleVisibility','off');
    end
    for jnd=1:6
      axes(ah(jnd));
      % List slopes in the legend and explain in a figure caption
      [leg1(jnd),legic]=legend('interpreter','tex','BackgroundAlpha',0,'box','off');
-     % [leg1(jnd),legic]=legend([ll1(jnd) ll2(jnd) ll3(jnd) ll4(jnd)],...
-     %                  'interpreter','tex','BackgroundAlpha',0,'box','off');
      % Have the legend markers take up less space
      legicms = findobj(legic,'Type','line');
      for ind=1:size(legicms,1)
@@ -1490,64 +1700,98 @@ elseif strcmp(th,'demo6')
      if jnd==1|jnd==4
         ylabel('$|\mathrm{cov}\{\theta_i,\theta_j\}|$','Interpreter','latex')
      end
-     if jnd>3
-     %   xlabel('Length ($\pi\rho$)','Interpreter','latex')
-     end
-     title(sprintf('%s',labs{jnd}))
+     title(sprintf('$%s$',labs{jnd}),'Interpreter','latex')
      longticks
      ah(jnd).XRuler.TickLabelGapOffset=-2;
      box on
      ylim([cmnylim(1) 100*cmnylim(2)])
-     xlim([1 10])
-     set(gca,'Yscale','log','Xscale','log')
+     xlim(minmax(Ns).*[0.9 1.1])
+     xtks=round(Ns/1e3)*1e3;
+     xtklbs=append(string(round(Ns./1e3)),'e3');
+     set(gca,'Yscale','log','Xscale','log',...
+         'XTick',xtks,'XTickLabel',xtklbs,'XMinorTick','off',...
+         'XLim',minmax(xtks).*[0.99 1.15])
+     % We will want a second x-axis that quotes the length in units of pi rho
+     xlb='Length [$\pi\rho$]';
+     if jnd<4
+       [axx(jnd),xl(jnd),yl(jnd)]=...
+         xtraxis(ah(jnd),minmax(loggs),minmax(loggs),xlb);
+       xl(jnd).Interpreter='latex';
+     %  movev(ti(jnd),15);
+     else
+       [axx(jnd),xl(jnd),yl(jnd)]=...
+         xtraxis(ah(jnd),loggs,loggs,[]);
+     end
+     set(axx(jnd),'Xscale','log',...
+         'XTick',minmax(loggs),'XTickLabel',round(minmax(loggs)),'XLim',minmax(loggs))
+     longticks
+     ah(jnd).XRuler.TickLabelGapOffset=-2;
+     ah(jnd).XTickLabelRotation=0;
+     axx(jnd).XRuler.TickLabelGapOffset=-3;
    end      
     
-   % Plot the bias of the estimates from the empirical study
-   axes(ah(7));
-   % semilogx(loggs,squeeze(mean(thhats(:,1,:))-th1(1)),'ko')
-   % Errorbars in terms of standard error for the number of realizations
-   pl1(1)=errorbar(loggs,squeeze(mean(thhats(:,1,:)-th1(1))),...
-                   squeeze(sqrt(var(thhats(:,1,:)-th1(1))/numreals)),'ko');
-   pl1(1).CapSize=0;
-   % Add the 0-line where the estimate equals the truth
-   yline(0)
-   ylabel('$\langle\hat{\theta}\rangle-\theta_0$','interpreter','latex');
-   ti(7)=title('\sigma^2','FontWeight','bold','Interpreter','tex');
-   %
-   axes(ah(8));
-   % semilogx(loggs,squeeze(mean(thhats(:,2,:))-th1(2)),'ko')
-   pl1(2)=errorbar(loggs,squeeze(mean(thhats(:,2,:)-th1(2))),...
-                   squeeze(sqrt(var(thhats(:,2,:)-th1(2))/numreals)),'ko');
-   pl1(2).CapSize=0;
-   yline(0)
-   ti(8)=title('\nu','FontWeight','bold','Interpreter','tex');
-   ylim([-0.1,max(mean(thhats(:,2,:))-th1(2))+0.1])
-   %
-   axes(ah(9));
-   pl1(3)=errorbar(loggs,squeeze(mean(thhats(:,3,:)-th1(3))),...
-                   squeeze(sqrt(var(thhats(:,3,:)-th1(3))/numreals)),'ko');
-   pl1(3).CapSize=0;
-   yline(0)
-   ti(9)=title('\rho','FontWeight','bold','Interpreter','tex');
-   %
+   labs2={'$\sigma^2$','$\nu$','$\rho$'};
+   for ind=1:np
+     rnd=6+ind;
+     % Plot the relative bias of the estimates from the empirical study
+     relbsme(:,ind)=squeeze(mean(thhats(:,ind,:)-th1(ind)))/th1(ind);
+     relbssd(:,ind)=squeeze(sqrt(var(thhats(:,ind,:)-th1(ind),"omitnan"))/...
+                    th1(ind));
+     axes(ah(rnd))
+     % Errorbar in terms of the standard deviation 
+     pl1(ind)=errorbar(Ns,relbsme(:,ind),relbssd(:,ind),'ko');
+     pl1(ind).CapSize=0;
+     % Add the 0-line where the estimate equals the truth
+     yline(0)
+     if ind==1
+       ylabel('$(\langle\hat{\theta}\rangle-\theta_0)/\theta_0$','interpreter','latex')
+     elseif ind==2
+       ylim([-0.1,max(mean(thhats(:,ind,:))-th1(ind))+0.1])
+     end
+     ti(rnd)=title(labs2{ind},'Interpreter','latex');
+   end
+   % Cosmetics, including second xaxis
+   byl=max(abs([ylim(ah(7)) ylim(ah(8)) ylim(ah(9))]));
+   byl=[-byl byl];
    for jnd=7:9
      axes(ah(jnd))
      longticks
-     xlabel('Length ($\pi\rho$)','Interpreter','latex')
+     set(gca,'Xscale','log',...
+         'XTick',xtks,'XTickLabel',xtklbs,'XMinorTick','off',...
+         'XLim',minmax(xtks).*[0.99 1.15],'YLim',byl)
+     xla='$Ny \times Nx$ Samples';
+     xlabel(xla,'Interpreter','latex')
+     % We will want a second x-axis that quotes the length in units of pi rho
+     xlb='Length [$\pi\rho$]';
+     xxtks=round(loggs);
+     xxtkl=[min(xxtks) repelem({''},numel(xxtks)-2) max(xxtks)];
+     if jnd<4
+       [axx(jnd),xl(jnd),yl(jnd)]=...
+         xtraxis(ah(jnd),minmax(loggs),minmax(loggs),xlb);
+     else
+       [axx(jnd),xl(jnd),yl(jnd)]=...
+         xtraxis(ah(jnd),minmax(loggs),minmax(loggs),[]);
+     end
+     set(axx(jnd),'Xscale','log','XLim',minmax(loggs).*[0.9 1.1],...
+         'XTick',xxtks,'XTickLabel',xxtkl,'XMinorTick','off')
      ah(jnd).XRuler.TickLabelGapOffset=-2;
-     set(gca,'XScale','log')
+     ah(jnd).XTickLabelRotation=0;
+     axx(jnd).XRuler.TickLabelGapOffset=-3;
+     ylim([-1. max(relbsme,[],"all")*1.1])
    end
    %
 
    % Super title to display the parameters
-   ti=sgtitle(...
-              sprintf('$%s%0.2f%s%0.2f%s%0.2f$%s','\sigma^2=',th1(1),...
-                  ' \mathrm{[unit]}^2, \nu=',th1(2),', \rho=',th1(3),' m'),...
+   ti=sgtitle(sprintf('$%s%0.2f%s%0.2f%s%0.2f$%s%0.1f%s%0.1f',...
+                  '\sigma^2=',th1(1),' \mathrm{[unit]}^2, \nu=',th1(2),...
+                  ', \rho=',th1(3),' m $|$ dy=',params.dydx(1),...
+                  ', dx=',params.dydx(2)),...
               'Interpreter','latex');
    % Shift the figure objects to make space for the title
-   movev([ah(1:3) leg1(1) leg1(2) leg1(3)],-0.03)
-   movev([ah(4:6) leg1(4) leg1(5) leg1(6)],-0.01)
-   movev(ah(7:9),0.01)
+   movev([ah(1:3) axx(1:3)],-0.03)
+   movev([ah(4:6) axx(4:6)],-0.01)
+   movev([leg1(1) leg1(2) leg1(3) leg1(4) leg1(5) leg1(6)],0.02)
+   movev([ah(7:9) axx(7:9)],0.01)
 
    % Save the figure
    keyboard
@@ -1561,7 +1805,8 @@ elseif strcmp(th,'demo7')
    % to as FIXED-DOMAIN ASYMPTOTICS by Stein, 1999), where sample size is
    % increased within a bounded domain (i.e., NyNx.*dydx is fixed)
    params=[];params.blurs=-1;params.taper=1;ifinv=[1 1 1];
-   numreals=100;
+   numreals=200;
+   np=3;
 
    % Labels
    labs={'\sigma^2,\sigma^2', '\nu,\nu', '\rho,\rho', '\sigma^2,\nu',...
@@ -1570,44 +1815,66 @@ elseif strcmp(th,'demo7')
    clrs=["#1B9E77","#D95F02","#7570B3"];
 
    % Set the Matern parameters 
-   rh=2;
-   th1=[1 0.5 rh];
+   rh=16;%6;
+   th1=[3 0.5 rh];
    % Make a square grid with fixed grid length, gy
-   gy=120;
+   gy=256;
    gygx=[gy gy];
    % Calculate factors of gy to choose multiple instances of NyNx and dydx with
    % the same gygx
    facs=1:ceil(sqrt(gy));
    dy=facs(rem(gy,facs)==0);
    ny=sort(gy./dy,'descend'); 
-   % Confirm that each set of ny and dy results in the fixed grid size
-   diferm(ny.*dy-gy)
    % We should only take stock from experiments that have a sufficiently large
    % number of samples to begin with, which we will impose as 3 times pi*rho
    % (still pretty small)
-   dy=dy(ny>=pi*rh*3);
-   ny=ny(ny>=pi*rh*3);
-   % This looks the nicest for gy==120
-   if gy==120
-     dy=[1 2 3 4 6];
-     ny=[120 60 40 30 20];
-   end
+   dy=[dy(ny>=pi*rh)];
+   %dy=[0.5 dy(ny>=pi*rh*3)];
+   ny=sort(gy./dy,'descend'); 
+   Ns=sort((gy./dy).^2,'descend');
+   % Confirm that each set of ny and dy results in the fixed grid size
+   diferm(ny.*dy-gy)
 
-   % We need an MLEOSL suite
+   % We need a suite of estimates; set msk to full for a  unit taper, or random 
+   % for a 66.7% observed field with the specified mask
+   msk='random'; %'full';
    try
      % In case we already calculated the estimates, we will try loading them
-     datum=date;
-     thhats=load(sprintf('covgammiosl_demo7_empthhats_%s.mat',datum),'thhats');
-     thhats=thhats.thhats;
-     if gy==120&strcmp(datum,'07-Apr-2025')
-       thhats=thhats(:,:,[1:4,6]);
+     datum='11-May-2025';
+     % full case: '01-May-2025';%'30-Apr-2025';
+     % for random case: '11-May-2025';
+     demo7calcs=load(sprintf('covgammiosl_demo7_calcs_%s_%s.mat',datum,msk));
+     thhats=demo7calcs.thhats;
+     covempt=demo7calcs.covempt;
+     cov1t=demo7calcs.cov1t;
+     try
+       cov2t=demo7calcs.cov2t;
+       if isnan(cov2t); incdft=0; else; incdft=1; end
+     catch
+       incdft=0;
      end
-     keyboard
+     cov3t=demo7calcs.cov3t;
+     ny=demo7calcs.ny;
+     dy=demo7calcs.dy;
+     params=demo7calcs.params;
+     th1=demo7calcs.th1;
+     Ns=sort((gy./dy).^2,'descend');
+     gy=256;
    catch
      for ind=1:size(dy,2)
        % Set spacing and number of samples
        params.NyNx=[ny(ind) ny(ind)];
        params.dydx=[dy(ind) dy(ind)];
+       if strcmp(msk,'random')
+         % recalculate the mask taper based on grid size; hold constant for each
+         % realization at this size so that the analytic covariance calculation
+         % is specific to the same mask
+         mcl=0.667;
+         params.mask=msk;
+         [~,I]=muckit(randn(params.NyNx),params,mcl);
+         tapersv{ind}=I;
+         params.taper=tapersv{ind};
+       end
        % Simulate via circulant embedding
        simparams=params;simparams.blurs=Inf;
        for mnd=1:numreals
@@ -1618,40 +1885,85 @@ elseif strcmp(th,'demo7')
          end
          thhats(mnd,:,ind)=thhat.*scl;
        end
+       mdout=0;
+       if mdout
+         % Apply MADOUT to robustly remove outliers; if outliers are removed,
+         % continue simulating until acquiring NUMREALS estimates
+         thhatst{ind}=madout(thhats(:,:,ind),1);
+         while size(thhatst{ind},1)<numreals
+           for jnd=1:(numreals-size(thhats,1))
+             Hx=simulosl(th1,simparams,0);
+             thhat=NaN;
+             while isnan(thhat)
+               [thhat,~,~,scl]=mleosl(Hx,[],params,[],[],th1,ifinv,0);
+             end
+             thhatspls(jnd,:)=thhat.*scl;
+           end
+           % Recreate thhats(:,:,ind) with the recalculated estimates
+           thhats(:,:,ind)=[thhatst{ind};thhatspls];
+           thhatspls=[];
+           thhatst{ind}=madout(thhats(:,:,ind),1);
+         end
+         thhats(:,:,ind)=thhatst{ind};
+       end
      end
-     % Consider saving your calculations by setting 'svthhats' in the debugger
-     keyboard
-     svthhats=1;
-     if svthhats
-       save(sprintf('covgammiosl_demo7_empthhats_%s.mat',date),'thhats')
+     % Calculate parameter covariance up to 4 different ways. We may choose not to
+     % include the dftmtx method in favor of looking at larger grids (the
+     % diagonals method will provide identical results) 
+     incdft=0;
+     for ind=1:size(dy,2)
+       % Set spacing and number of samples
+       params.NyNx=[ny(ind) ny(ind)];
+       params.dydx=[dy(ind) dy(ind)];
+       if strcmp(msk,'random')
+         params.taper=tapersv{:,ind};
+       end
+       % Calculate the empirical covariance from the ensemble of estimates
+       covemp=nancov(thhats(:,:,ind));
+       % Calculate parameter covariance according to the 'sampling' method
+       covg1  =covgammiosl(th1,params,1,ifinv);
+       cov1c=varianceofestimates(th1,params,covg1,ifinv);
+       if incdft
+         % Calculate parameter covariance according to the 'dftmtx' method
+         covg2  =covgammiosl(th1,params,2,ifinv);
+         cov2c=varianceofestimates(th1,params,covg2,ifinv);
+       end
+       % Calculate parameter covariance according to the 'diagonals' method
+       covg3  =covgammiosl(th1,params,3,ifinv);
+       cov3c=varianceofestimates(th1,params,covg3,ifinv);
+       % Store the unique values in [s2s2 nunu rhrh s2nu s2rh nurh] order
+       covempt(ind,:)=trilos(covemp);
+       cov1t(ind,:)  =trilos(cov1c);
+       if incdft; cov2t(ind,:)  =trilos(cov2c); end
+       cov3t(ind,:)  =trilos(cov3c);
      end
-   end
-   % Form the covariance matrices
-   for ind=1:size(dy,2)
-     % Set spacing and number of samples
-     params.NyNx=[ny(ind) ny(ind)];
-     params.dydx=[dy(ind) dy(ind)];
-     % Calculate the empirical covariance from the ensemble of estimates
-     covemp=nancov(thhats(:,:,ind));
-     % Calculate parameter covariance according to the 'sample' method
-     covg1  =covgammiosl(th1,params,1,ifinv);
-     cov1c=covthosl(th1,params,covg1,ifinv);
-     % Calculate parameter covariance according to the 'dftmtx' method
-     covg2  =covgammiosl(th1,params,2,ifinv);
-     cov2c=covthosl(th1,params,covg2,ifinv);
-     % Calculate parameter covariance according to the 'diagonals' method
-     covg3  =covgammiosl(th1,params,3,ifinv);
-     cov3c=covthosl(th1,params,covg3,ifinv);
-     % Store the unique values in [s2s2 nunu rhrh s2nu s2rh nurh] order
-     covempt(ind,:)=trilos(covemp);
-     cov1t(ind,:)  =trilos(cov1c);
-     cov2t(ind,:)  =trilos(cov2c);
-     cov3t(ind,:)  =trilos(cov3c);
+     % Consider saving your calculations by setting 'svcalcs'
+     svcalcs=1;
+     if ~incdft; cov2t=NaN; end
+     if svcalcs
+       if isfield(params,'mask')
+         save(sprintf('covgammiosl_demo7_calcs_%s_%s.mat',datum,msk),...
+              'thhats','cov1t','cov2t','cov3t','covempt','ny','dy','params','th1','tapersv')
+       else
+         save(sprintf('covgammiosl_demo7_calcs_%s_%s.mat',datum,msk),...
+              'thhats','cov1t','cov2t','cov3t','covempt','ny','dy','params','th1')
+       end
+     end
    end
 
    clf;
    [ah,ha,H]=krijetem(subnum(3,3));
-   cmnylim=[minmax([abs(covempt) abs(cov1t) abs(cov2t) abs(cov3t)])];
+   % Recall that we flipped the order of Ns, so we must flip the covariances, too
+   % But not for thhat:covempt=flipud(covempt);
+   cov1t=flipud(cov1t);
+   if incdft; cov2t=flipud(cov2t); end
+   cov3t=flipud(cov3t);
+   % For the reference diagonals
+   if incdft 
+     cmnylim=[minmax([abs(covempt) abs(cov1t) abs(cov2t) abs(cov3t)])];
+   else
+     cmnylim=[minmax([abs(covempt) abs(cov1t) abs(cov3t)])];
+   end
    cmnylimrng=ceil(log10(cmnylim));
    for jnd=1:6
      axes(ah(jnd))
@@ -1659,18 +1971,20 @@ elseif strcmp(th,'demo7')
      % 10 between cmnylim
      hold on
      rnd=0;
-     for ind=cmnylimrng(1):cmnylimrng(2)
+     for ind=cmnylimrng(1)-5:cmnylimrng(2)+5
        rnd=rnd+1;
-       refd(rnd)=loglog(ny,10^(ind)./ny,'Color',[0.8 0.8 0.8]);
+       refd(rnd)=loglog(Ns,10^(ind)./Ns,'Color',[0.8 0.8 0.8]);
      end
      % Plot the absolute covariance so that negative correlations do not 
      % mislead
-     loglog(ny,abs(covempt(:,jnd)),'ko','DisplayName','empirical')
-     loglog(ny,abs(cov1t(:,jnd))  ,'^','MarkerEdgeColor',clrs{1},...
-            'MarkerFaceColor',clrs{1},'DisplayName','sample')
-     loglog(ny,abs(cov2t(:,jnd))  ,'s','MarkerEdgeColor',clrs{2},...
-            'MarkerFaceColor',clrs{2},'DisplayName','dftmtx')
-     loglog(ny,abs(cov3t(:,jnd))  ,'*','MarkerEdgeColor',clrs{3},...
+     loglog(Ns,abs(covempt(:,jnd)),'ko','DisplayName','empirical')
+     loglog(Ns,abs(cov1t(:,jnd))  ,'^','MarkerEdgeColor',clrs{1},...
+            'MarkerFaceColor',clrs{1},'DisplayName','sampling')
+     if incdft
+       loglog(Ns,abs(cov2t(:,jnd))  ,'s','MarkerEdgeColor',clrs{2},...
+              'MarkerFaceColor',clrs{2},'DisplayName','dftmtx')
+     end
+     loglog(Ns,abs(cov3t(:,jnd))  ,'*','MarkerEdgeColor',clrs{3},...
             'MarkerFaceColor',clrs{3},'DisplayName','diagonals')
    end
 
@@ -1678,25 +1992,35 @@ elseif strcmp(th,'demo7')
      axes(ah(jnd));
      % Fit a slope to the covariance calculations as a function of grid length
      % in log-log
-     mbfemp(jnd,:) =polyfit(log10(ny),log10(abs(covempt(:,jnd))),1);
-     mbfcov1(jnd,:)=polyfit(log10(ny),log10(abs(cov1t(:,jnd))),1);
-     mbfcov2(jnd,:)=polyfit(log10(ny),log10(abs(cov2t(:,jnd))),1);
-     mbfcov3(jnd,:)=polyfit(log10(ny),log10(abs(cov3t(:,jnd))),1);
-     predemp(jnd,:) =polyval(mbfemp(jnd,:), log10(ny));
-     predcov1(jnd,:)=polyval(mbfcov1(jnd,:),log10(ny));
-     predcov2(jnd,:)=polyval(mbfcov2(jnd,:),log10(ny));
-     predcov3(jnd,:)=polyval(mbfcov3(jnd,:),log10(ny));
-     loglog(ny,10.^(predemp(jnd,:)),'Color','k');
-     loglog(ny,10.^(predcov1(jnd,:)),'Color',clrs{1});
-     loglog(ny,10.^(predcov2(jnd,:)),'Color',clrs{2});
-     loglog(ny,10.^(predcov3(jnd,:)),'Color',clrs{3});
+     mbfemp(jnd,:) =polyfit(log10(Ns),log10(abs(covempt(:,jnd))),1);
+     mbfcov1(jnd,:)=polyfit(log10(Ns),log10(abs(cov1t(:,jnd))),1);
+     mbfcov3(jnd,:)=polyfit(log10(Ns),log10(abs(cov3t(:,jnd))),1);
+     predemp(jnd,:) =polyval(mbfemp(jnd,:), log10(Ns));
+     predcov1(jnd,:)=polyval(mbfcov1(jnd,:),log10(Ns));
+     predcov3(jnd,:)=polyval(mbfcov3(jnd,:),log10(Ns));
+     loglog(Ns,10.^(predemp(jnd,:)),'Color','k');
+     loglog(Ns,10.^(predcov1(jnd,:)),'Color',clrs{1});
+     if incdft
+       mbfcov2(jnd,:)=polyfit(log10(Ns),log10(abs(cov2t(:,jnd))),1);
+       predcov2(jnd,:)=polyval(mbfcov2(jnd,:),log10(Ns));
+       loglog(Ns,10.^(predcov2(jnd,:)),'Color',clrs{2});
+     end
+     loglog(Ns,10.^(predcov3(jnd,:)),'Color',clrs{3});
 
-     [leg1(jnd),legic]=legend([repmat("",rnd,1)',...
+     if incdft
+       [leg1(jnd),legic]=legend([repmat("",rnd,1)',...
                       sprintf('empirical, %0.1f',abs(mbfemp(jnd,1))),...
-                      sprintf('sample, %0.1f',abs(mbfcov1(jnd,1))),...
+                      sprintf('sampling, %0.1f',abs(mbfcov1(jnd,1))),...
                       sprintf('dftmtx, %0.1f',abs(mbfcov2(jnd,1))),...
                       sprintf('diagonal, %0.1f',abs(mbfcov3(jnd,1)))],...
                       'interpreter','tex','BackgroundAlpha',0,'box','off');
+     else
+       [leg1(jnd),legic]=legend([repmat("",rnd,1)',...
+                      sprintf('empirical, %0.1f',abs(mbfemp(jnd,1))),...
+                      sprintf('sampling, %0.1f',abs(mbfcov1(jnd,1))),...
+                      sprintf('diagonal, %0.1f',abs(mbfcov3(jnd,1)))],...
+                      'interpreter','tex','BackgroundAlpha',0,'box','off');
+     end
      leg1(jnd).AutoUpdate='off';
      % Have the legend markers take up less space
      legicms = findobj(legic,'Type','line');
@@ -1717,27 +2041,27 @@ elseif strcmp(th,'demo7')
      if jnd>3
      %   xlabel('Length ($\pi\rho$)','Interpreter','latex')
      end
-     ti(jnd)=title(sprintf('%s',labs{jnd}));
+     ti(jnd)=title(sprintf('$%s$',labs{jnd}),'Interpreter','latex');
      longticks
      ylim([cmnylim(1)*0.5 cmnylim(2)*2.0])
      longticks
      box on
-     xlim(minmax(ny).*[0.9 1.1])
-     set(gca,'Yscale','log','Xscale','log','XTick',fliplr(ny),'XTickLabel',...
-         fliplr(ny))
-     % We will want a second x-axis that quotes the spacing (dy); adapted from
-     % eggers2
-     xlb='Spacing (\Deltax)';
+     xlim(minmax(Ns).*[0.9 1.1])
+     set(gca,'Yscale','log','Xscale','log','XTick',fliplr(Ns),'XTickLabel',...
+         fliplr(Ns),'XMinorTick','off')
+     % We will want a second x-axis that quotes the spacing (dy)
+     xlb='$\Delta y = \Delta x$ Spacing';
      if jnd<4
        [axx(jnd),xl(jnd),yl(jnd)]=...
          xtraxis(ah(jnd),dy,dy,xlb);
+       set(xl,'Interpreter','latex')
      %  movev(ti(jnd),15);
      else
        [axx(jnd),xl(jnd),yl(jnd)]=...
          xtraxis(ah(jnd),dy,dy,[]);
      end
      axx(jnd).XLim=fliplr(gy./minmax(ny).*[1.1 0.9]);
-     set(axx(jnd),'xdir','rev')
+     set(axx(jnd),'xdir','rev','XMinorTick','off')
      longticks
      %movev(xl(jnd),-10)
      ah(jnd).XRuler.TickLabelGapOffset=-2;
@@ -1748,59 +2072,57 @@ elseif strcmp(th,'demo7')
      axx(jnd).XRuler.TickLabelGapOffset=-3;
    end      
     
-   xla='Number of Samples';
-   % Plot the bias of the estimates from the empirical study
-   axes(ah(7));
-   % Errorbars in terms of standard error for the number of realizations
-   pl1(1)=errorbar(ny,squeeze(mean(thhats(:,1,:)-th1(1))),...
-                   squeeze(sqrt(var(thhats(:,1,:)-th1(1))/numreals)),'ko');
-   pl1(1).CapSize = 0;
-   % Add the 0-line where the estimate equals the truth
-   yline(0)
-   xlabel(xla)
-   ylabel('$\langle\hat{\theta}\rangle-\theta_0$','interpreter','latex');
-   ti(7)=title('\sigma^2','FontWeight','bold','Interpreter','tex');
-   %
-   axes(ah(8));
-   pl1(2)=errorbar(ny,squeeze(mean(thhats(:,2,:)-th1(2))),...
-                   squeeze(sqrt(var(thhats(:,2,:)-th1(2))/numreals)),'ko');
-   pl1(2).CapSize = 0;
-   yline(0)
-   xlabel(xla)
-   ti(8)=title('\nu','FontWeight','bold','Interpreter','tex');
-   ylim([-0.1,max(mean(thhats(:,2,:))-th1(2))+0.1])
-   %
-   axes(ah(9));
-   pl1(3)=errorbar(ny,squeeze(mean(thhats(:,3,:)-th1(3))),...
-                   squeeze(sqrt(var(thhats(:,3,:)-th1(3))/numreals)),'ko');
-   pl1(3).CapSize = 0;
-   yline(0)
-   xlabel(xla)
-   ti(9)=title('\rho','FontWeight','bold','Interpreter','tex');
-   %
-   byl=minmax([ylim(ah(7)) ylim(ah(8)) ylim(ah(9))]);
+   labs2={'$\sigma^2$','$\nu$','$\rho$'};
+   for ind=1:np
+     rnd=6+ind;
+     % Plot the relative bias of the estimates from the empirical study
+     axes(ah(rnd));
+     keyboard
+     relbsme(:,ind)=squeeze(mean(thhats(:,ind,:)-th1(ind)))/th1(ind);
+     relbssd(:,ind)=squeeze(sqrt(var(thhats(:,ind,:)-th1(ind),"omitnan"))/...
+                    th1(ind));
+     % Errorbar in terms of the standard deviation 
+     pl1(ind)=errorbar(Ns,relbsme(:,ind),relbssd(:,ind),'ko');
+     pl1(ind).CapSize = 0;
+     % Add the 0-line where the estimate equals the truth
+     yline(0)
+     if ind==1
+       ylabel('$(\langle\hat{\theta}\rangle-\theta_0)/\theta_0$','interpreter','latex');
+     elseif ind==2
+       ylim([-0.1,max(nanmean(thhats(:,ind,:))-th1(ind))+0.1])
+     end 
+     ti(rnd)=title(labs2{ind},'Interpreter','latex');
+   end
+   % Cosmetics, including second xaxis
+   byl=max(abs([ylim(ah(7)) ylim(ah(8)) ylim(ah(9))]));
+   byl=[-byl byl];
+   xla='$Ny \times Nx$ Samples';
    for jnd=7:9
      axes(ah(jnd))
      longticks
-     xlim(minmax(ny).*[0.9 1.1])
-     set(gca,'Xscale','log','XTick',fliplr(ny),'XTickLabel',...  
-         fliplr(ny),'YLim',byl)          
+     xlabel(xla,'Interpreter','latex')
+     xlim(minmax(Ns).*[0.9 1.1])
+     set(gca,'Xscale','log','XTick',fliplr(Ns),'XTickLabel',...  
+         fliplr(Ns),'YLim',byl,'XMinorTick','off')          
+     % Set the top x-axis
      [axx(jnd),xl(jnd),yl(jnd)]=...
        xtraxis(ah(jnd),dy,dy,[]);
      axx(jnd).XLim=fliplr(gy./minmax(ny).*[1.1 0.9]);
-     set(axx(jnd),'xdir','rev')
+     set(axx(jnd),'xdir','rev','XMinorTick','off')
      longticks
      %movev(xl(jnd),-10)
      ah(jnd).XRuler.TickLabelGapOffset=-2;
      ah(jnd).XTickLabelRotation=0;
      axx(jnd).XRuler.TickLabelGapOffset=-3;
    end
-   %
 
    % Super title to display the parameters
+   % Include the geographic lengths of the grid in units of pi rho
+   gypr=round(gy/pi/th1(3));
    sti=sgtitle(...
-              sprintf('$%s%0.2f%s%0.2f%s%0.2f$%s','\sigma^2=',th1(1),...
-                  ' \mathrm{[unit]}^2, \nu=',th1(2),', \rho=',th1(3),' m'),...
+              sprintf('$%s%0.2f%s%0.2f%s%0.2f$%s$%i%s%i%s$','\sigma^2=',th1(1),...
+              ' \mathrm{[unit]}^2, \nu=',th1(2),', \rho=',th1(3),'m  $|$  ',...
+              gypr,'[\pi \rho] \times',gypr,'[\pi \rho]'),...
               'Interpreter','latex');
    % Shift the figure objects to make space for the title
    shrink([ah axx],1.05,1.05)
@@ -1837,89 +2159,177 @@ elseif strcmp(th,'demo8')
    oneprcnt=ceil(0.01.*prod(params.NyNx));
    % If you specify a mask, it needs to be usable by MASKIT, either as an index
    % matrix or a region name that we have worked with previously
-   % params.mask='france';
+   %params.mask='puss';
+   %params.mask='random';datum='30-Apr-2025';% for random
+   %params.mask='france';datum='09-May-2025';%'30-Apr-2025'
+   %params.mask='Italy';datum='08-May-2025';
+   %params.mask='doves';datum='11-May-2025';
+   params.mask='newjersey';datum='11-May-2025';
+   if isfield(params,'mask')
+     % If you provided a mask, randomly select the grid index location that the
+     % mask will be centered on (p.mymx) to be passed onto MASKIT
+     vrshft=randn*0.2*params.NyNx(1)/2;
+     hzshft=randn*0.2*params.NyNx(2)/2;
+     vrshft=0;
+     hzshft=0;
+     params.mymx=[vrshft hzshft];
+   end
+   % Simulate via circulant embedding
+   simparams=params;simparams.blurs=Inf;
+   % If you did not specify a mask, we will proceed with random deletions
+   % The number of parameters
+   np=3;
+   try
+     % Load experiments
+     if isfield(params,'mask')
+       keyboard
+       load(sprintf('covgammiosl_demo8vars_%s_%s.mat',params.mask,datum),...
+            'thhats','tapersv','cov1t','cov2t','cov3t','covet','missarr','prcmiss')
+       if all(isnan(cov2t)); incdft=0; else; incdft=1; end
+       numreals=size(thhats,1);
+     else
+       load(sprintf('covgammiosl_demo8vars_random_%s.mat',datum),...
+            'thhats','tapersv','cov1t','cov2t','cov3t','covet','missarr','prcmiss')
+       if all(isnan(cov2t)); incdft=0; else; incdft=1; end
+       numreals=size(thhats,1);
+     end
+   catch
+     % How many realizations for calculating the empirical covariance?
+     numreals=200;
+     % What is the maximum percent missingness we will study? If we are working
+     % with masks, we need to remember that the scale we provide is not directly
+     % proportional to the amount of missing observations
+     if isfield(params,'mask')
+       if strcmp(params.mask,'france')
+         % max missing will be 56.5%
+         missarr=logspace(0,2,9);
+       elseif strcmp(params.mask,'Italy')
+         % max missing will be 56.55%
+         missarr=logspace(0,2.85,9);
+       elseif strcmp(params.mask,'doves')
+         missarr=logspace(0,2.196,9);
+       elseif strcmp(params.mask,'newjersey')
+         missarr=logspace(0,2.057,9);
+       end
+     else
+       % random deletions
+       missarr=logspace(0,2,9);
+     end
+     % Preallocate space for the estimates
+     thhats=zeros(numreals,np,numel(missarr));
+     % Calculate the estimates for increasing missingness for the mask type
+     % selected 
+     taper=ones(params.NyNx);
+     for ind=1:numel(missarr)
+       params.taper=taper;simparams.taper=taper;
+       tapersv(:,:,ind)=taper;
+       % Calculate the percentage of the grid that is missing
+       prcmiss(ind)=1-sum(taper,"all")./prod(params.NyNx);
+       for mnd=1:numreals
+         thhat=NaN;
+         while isnan(thhat)
+           Hx=simulosl(th1,simparams,0);
+           [thhat,~,~,scl]=mleosl(Hx,[],params,[],[],th1,ifinv,0);
+         end
+         thhats(mnd,:,ind)=deal(thhat.*scl);
+       end
+       if ind<numel(missarr)
+         if isfield(params,'mask')
+           [~,I]=maskit(rand(params.NyNx),params,missarr(ind+1)/100);
+           taper=~I;
+           if strcmp(params.mask,'doves')
+             taper=flipud(fliplr(taper));
+           end
+         else
+           taper(randi(prod(params.NyNx),1,...
+                       ceil(oneprcnt.*(missarr(ind+1)-missarr(ind)))))=deal(0);
+                       %ceil((missarr(ind+1)-missarr(ind))/100)))=deal(0);
+         end
+       end
+     end
+     % Calculate parameter covariance up to 4 different ways and plot as a
+     % function of the percentage of the regular grid that is missing. We may 
+     % choose not to include the dftmtx method so that we can look at larger grids
+     incdft=0;
+     for ind=1:numel(missarr)
+       params.taper=tapersv(:,:,ind);
+       covemp=nancov(thhats(:,:,ind));
+       covg1 =covgammiosl(th1,params,1,ifinv);
+       if incdft; covg2 =covgammiosl(th1,params,2,ifinv); end
+       covg3 =covgammiosl(th1,params,3,ifinv);
+       cov1c=varianceofestimates(th1,params,covg1,ifinv);
+       if incdft; cov2c=varianceofestimates(th1,params,covg2,ifinv); end
+       cov3c=varianceofestimates(th1,params,covg3,ifinv);
+       cov1t(ind,:)=trilos(cov1c);
+       if incdft; cov2t(ind,:)=trilos(cov2c); else; cov2t(ind,:)=NaN; end
+       cov3t(ind,:)=trilos(cov3c);
+       covet(ind,:)=trilos(covemp);
+     end
+     if isfield(params,'mask')
+       save(sprintf('covgammiosl_demo8vars_%s_%s.mat',params.mask,date),...
+            'thhats','tapersv','cov1t','cov2t','cov3t','covet','missarr','prcmiss')
+     else
+       save(sprintf('covgammiosl_demo8vars_random_%s.mat',date),...
+            'thhats','tapersv','cov1t','cov2t','cov3t','covet','missarr','prcmiss')
+     end
+   end
 
-   % If you do not specify a mask, we will proceed with random deletions
-   
+   mdrmv=0
+   if mdrmv
+     % Apply MADOUT to robustly remove outliers; if outliers are removed,
+     % continue simulating until acquiring NUMREALS estimates
+     for ind=1:numel(missarr)
+       thhatst{ind}=madout(thhats(:,:,ind),1);
+       params.taper=tapersv(:,:,ind);
+       while size(thhatst{ind},1)<numreals
+         for jnd=1:(numreals-size(thhatst{ind},1))
+           Hx=simulosl(th1,simparams,0);
+           thhat=NaN;
+           while isnan(thhat)
+             [thhat,~,~,scl]=mleosl(Hx,[],params,[],[],th1,ifinv,0);
+           end
+           thhatspls(jnd,:)=thhat.*scl;
+         end
+         % Recreate thhats(:,:,ind) with the recalculated estimates
+         thhats(:,:,ind)=[thhatst{ind};thhatspls];
+         thhatspls=[];
+         thhatst{ind}=madout(thhats(:,:,ind),1);
+       end
+       thhats(:,:,ind)=thhatst{ind};
+     end
+     covemp=nancov(thhats(:,:,ind));
+     covet(ind,:)=trilos(covemp);
+   end
+
+   % Begin the figure
    % Labels
    labs={'\sigma^2,\sigma^2', '\nu,\nu', '\rho,\rho', '\sigma^2,\nu',...
          '\sigma^2,\rho', '\nu,\rho'};
    % Color friendly palette
    clrs=["#1B9E77","#D95F02","#7570B3"];
-   
-   clf;
+
+   clf
    [ah,ha,H]=krijetem(subnum(3,3));
-   % Simulate via circulant embedding
-   taper=ones(params.NyNx);
-   simparams=params;simparams.blurs=Inf;
-   % The number of parameters
-   np=3;
-   % How many realizations for calculating the empirical covariance?
-   numreals=200;
-   % What is the maximum percent missingness we will study?
-   mostmiss=round(10)+1;
-   % Preallocate space for the estimates
-   thhats=zeros(numreals,np,mostmiss);
-   % Calculate the estimates for increasing missingness for the mask type
-   % selected 
-   for ind=1:mostmiss
-     params.taper=taper;simparams.taper=taper;
-     tapersv(:,:,ind)=taper;
-     % Calculate the percentage of the grid that is missing
-     prcmiss(ind)=1-sum(taper,"all")./prod(params.NyNx);
-     for mnd=1:numreals
-       Hx=simulosl(th1,simparams,0);
-       thhat=NaN;
-       while isnan(thhat)
-         [thhat,~,~,scl]=mleosl(Hx,[],params,[],[],th1,ifinv,0);
-       end
-       thhats(mnd,:,ind)=deal(thhat.*scl);
-     end
-     % Apply TRIMIT to remove possible errant estimates 
-     [thhatst{ind},trimi]=trimit(thhats(:,:,ind),99);
-     if isfield(params,'mask')
-       [~,I]=maskit(rand(params.NyNx),params,ind/100);
-       taper=~I;
-     else
-       taper(randi(prod(params.NyNx),1,oneprcnt))=deal(0);
-     end
-   end
-   if isfield(params,'mask')
-     save(sprintf('covgammiosl_demo8_%s_%s.mat',params.mask,date),...
-          'thhatst','tapersv')
-   else
-     save(sprintf('covgammiosl_demo8_random_%s.mat',date),...
-          'thhatst','tapersv')
-   end
-   % Calculate parameter covariance 4 different ways and plot as a
-   % function of the percentage of the regular grid that is missing
-   for ind=1:mostmiss
-     params.taper=tapersv(:,:,ind);
-     covemp=nancov(thhatst{ind});
-     covg1 =covgammiosl(th1,params,1,ifinv);
-     covg2 =covgammiosl(th1,params,2,ifinv);
-     covg3 =covgammiosl(th1,params,3,ifinv);
-     cov1c=covthosl(th1,params,covg1,ifinv);
-     cov2c=covthosl(th1,params,covg2,ifinv);
-     cov3c=covthosl(th1,params,covg3,ifinv);
-     cov1t=trilos(cov1c);
-     cov2t=trilos(cov2c);
-     cov3t=trilos(cov3c);
-     covet=trilos(covemp);
+   for ind=1:numel(missarr)
      for jnd=1:6
        axes(ah(jnd))
-       plot(prcmiss(ind)*100,abs(covet(jnd)),'ko','DisplayName','empirical')
+       plot(prcmiss(ind)*100,abs(covet(ind,jnd)),'ko','DisplayName','empirical')
        hold on
-       plot(prcmiss(ind)*100,abs(cov1t(jnd)),'^','MarkerEdgeColor',clrs(1),...
-            'MarkerFaceColor',clrs(1),'DisplayName','sample')
-       plot(prcmiss(ind)*100,abs(cov2t(jnd)),'s','MarkerEdgeColor',clrs(2),...
-            'MarkerFaceColor',clrs(2),'DisplayName','dftmtx')
-       plot(prcmiss(ind)*100,abs(cov3t(jnd)),'*','MarkerEdgeColor',clrs(3),...
+       plot(prcmiss(ind)*100,abs(cov1t(ind,jnd)),'^','MarkerEdgeColor',clrs(1),...
+            'MarkerFaceColor',clrs(1),'DisplayName','sampling')
+       if incdft; plot(prcmiss(ind)*100,abs(cov2t(ind,jnd)),'s','MarkerEdgeColor',clrs(2),...
+            'MarkerFaceColor',clrs(2),'DisplayName','dftmtx'); end
+       plot(prcmiss(ind)*100,abs(cov3t(ind,jnd)),'*','MarkerEdgeColor',clrs(3),...
             'MarkerFaceColor',clrs(3),'DisplayName','diagonals')
        if jnd==2 & ind==1
          % Make a legend the first time we touch the top center plot
-         [leg1,legic]=legend('empirical','sample','dftmtx','diagonals',...
-                             'box','off');
+         if incdft
+           [leg1,legic]=legend('empirical','sampling','dftmtx','diagonals',...
+                               'box','off');
+         else
+           [leg1,legic]=legend('empirical','sampling','diagonals',...
+                               'box','off');
+         end
          leg1.AutoUpdate='off';
          % Reduce the amount of space each legend marker uses 
          legicms = findobj(legic,'Type','line');
@@ -1932,56 +2342,59 @@ elseif strcmp(th,'demo8')
            end
          end
          % Move the legend to the left edge of the axis
-         leg1.Position(1)=0.38;
-         leg1.Position(2)=0.78;
+         leg1.Position(1)=0.39;
+         leg1.Position(2)=0.83;
       end
     end
    end
+   % for consistency between experiments that we are studying, set same limits
+   ayl={[0.1 1.2],[0.000001 0.03],[0.4 2.5],[0.001 0.015],[0.1 2.1],[0.005 0.08]};
    for jnd=1:6
     axes(ah(jnd))
     if jnd==1|jnd==4
        ylabel('$|\mathrm{cov}\{\theta_i,\theta_j\}|$','Interpreter','latex')
     end
-    set(groot, 'DefaultTextInterpreter', 'latex')
-    title(sprintf('$%s$',labs{jnd}))
+    title(sprintf('$%s$',labs{jnd}),'Interpreter','latex')
     longticks
+    xlim([0.9 100])
+    set(gca,'XScale','log','XTick',[0 1 10 20 40 100],...
+       'YLim',ayl{jnd},'XMinorTick','off')
    end      
 
-   % Plot the bias of the estimates from the empirical study
-   axes(ah(7));
-   % Errorbar in terms of the standard error given the number of realizations
-   pl1(1)=errorbar(prcmiss*100,squeeze(mean(thhats(:,1,:)-th1(1))),...
-                   squeeze(sqrt(var(thhats(:,1,:)-th1(1))/numreals)),'ko');
-   pl1(1).CapSize = 0;
-   hold on
-   % Add the 0-line where the estimate equals the truth
-   yline(0)
-   xlabel('Percent missing')
-   ylabel('$\langle\hat{\theta}\rangle-\theta_0$','interpreter','latex');
-   ti(7)=title('\sigma^2','Interpreter','tex');
-   longticks
-   %
-   axes(ah(8));
-   pl1(2)=errorbar(prcmiss*100,squeeze(mean(thhats(:,2,:)-th1(2))),...
-                   squeeze(sqrt(var(thhats(:,2,:)-th1(2))/numreals)),'ko');
-   pl1(2).CapSize = 0;
-   hold on
-   yline(0)
-   xlabel('Percent missing')
-   ti(8)=title('\nu','Interpreter','tex');
-   %ylim([-0.1,max(mean(thhats(:,2,:))-th1(2))+0.1])
-   longticks
-   %
-   axes(ah(9));
-   pl1(3)=errorbar(prcmiss*100,squeeze(mean(thhats(:,3,:)-th1(3))),...
-                   squeeze(sqrt(var(thhats(:,3,:)-th1(3))/numreals)),'ko');
-   pl1(3).CapSize = 0;
-   hold on
-   yline(0)
-   xlabel('Percent missing')
-   ti(9)=title('\rho','Interpreter','tex');
-   longticks
-   %
+   % Plot the relative bias of the estimates from the empirical study
+   labs2={'$\sigma^2$','$\nu$','$\rho$'};
+   for ind=1:np
+     rnd=6+ind;
+     axes(ah(rnd));
+     relbsme(:,ind)=squeeze(mean(thhats(:,ind,:)-th1(ind)))/th1(ind);
+     relbssd(:,ind)=squeeze(sqrt(var(thhats(:,ind,:)-th1(ind),"omitnan"))/...
+                    th1(ind));
+     % Errorbar in terms of the standard deviation 
+     pl1(ind)=errorbar(prcmiss*100,relbsme(:,ind),relbssd(:,ind),'ko');
+     pl1(ind).CapSize = 0;
+     hold on
+     % Add the 0-line where the estimate equals the truth
+     yline(0)
+     xlabel('Percent missing')
+     if ind==1
+       ylabel('$(\langle\hat{\theta}\rangle-\theta_0)/\theta_0$','interpreter','latex');
+     end
+     ti(rnd)=title(labs2{ind},'Interpreter','latex');
+     longticks
+    % xlim([min(prcmiss*100) 100]+[-0.5 0.5])
+    xlim([0.9 100])
+    set(gca,'XScale','log','XTick',[0 1 10 20 40 100])%,...
+%            'XTickLabel',{'1';'10';'20';'40','100'})
+   end
+
+   byl=max(abs([ylim(ah(7)) ylim(ah(8)) ylim(ah(9))]));
+   byl=[-byl byl];
+   % for consistency between the france and random experiment
+   byl=[-0.5 0.5];
+   for ind=1:np
+     axes(ah(ind+6))
+     set(gca,'YLim',byl,'XMinorTick','off')          
+   end
 
    if isfield(params,'mask')
      masknm=params.mask;
@@ -2005,24 +2418,107 @@ elseif strcmp(th,'demo8')
        params.NyNx,params.dydx,th1.*[1 10 1],date),'epsc')
 
    % Let's take a quick look at each taper 
+   for ind=1:numel(missarr)
+     ftx0=fftshift(fft2(tapersv(:,:,ind)));
+     ftph0=imag(ftx0);
+     ftph(:,:,ind)=ftph0;
+     ftx0=decibel(abs(ftx0).^2);
+     % Decibel will produce -Inf if an element is 0; replace these with the
+     % next smallest value
+     ftx0(isinf(ftx0))=NaN;
+     ftx0(isnan(ftx0))=min(ftx0,[],'all');
+     ftx(:,:,ind)=ftx0;
+     % And again, but this time with padding after conversation w Arthur 4/30/25
+     ftx0p=fftshift(fft2(tapersv(:,:,ind),2^nextpow2(params.NyNx(2)),...
+                 2^nextpow2(params.NyNx(1))));
+     ftph0p=imag(ftx0p);
+     ftphp(:,:,ind)=ftph0p;
+     ftx0p=decibel(abs(ftx0p).^2);
+     % Decibel will produce -Inf if an element is 0; replace these with the
+     % next smallest value
+     ftx0p(isinf(ftx0p))=NaN;
+     ftx0p(isnan(ftx0p))=min(ftx0p,[],'all');
+     ftxp(:,:,ind)=ftx0p;
+   end
+   % Plot with padding
+   upad=0;
+   if upad; ftp=ftxp; ftphs=ftphp; else; ftp=ftx; ftphs=ftph; end
+   for pnd=1:2
    figure()
-   colormap gray
-   numrws=ceil(sqrt(mostmiss));
-   [ah,ha,H]=krijetem(subnum(numrws,ceil(mostmiss./numrws)));
-   for ind=1:size(ha,2)
-     if ind<=mostmiss
-       axes(ha(ind))
+   numrws=ceil(sqrt(numel(missarr)));
+   [ah,ha,H]=krijetem(subnum(numrws,2*ceil(numel(missarr)./numrws)));
+   for ind=1:size(ha,2)/2
+     % Figures in x-space are in odd columns
+     xnd=ind+numrws*floor((ind-1)/numrws);
+     % Figures in k-space are in even columns
+     knd=ind+numrws*(floor((ind-1)/numrws)+1);
+     if ind<=numel(missarr)
+       % Display the taper in grid space
+       axes(ha(xnd))
        imagesc(tapersv(:,:,ind))
        caxis([0 1])
-       title(sprintf('%0.1f percent missing',100*prcmiss(ind)))
+       title(sprintf('$%0.1f\\%%$: Tx;',100*prcmiss(ind)),'Interpreter','latex')
        longticks
        axis image
-       shrink(ha(ind),1.02,1.02)
+       shrink(ha(xnd),1.05,1.05)
+       set(ha(xnd),'XTick',[1 params.NyNx(2)],'YTick',[1 params.NyNx(1)])
+       xlabel('$x_1$','Interpreter','latex')
+       ylabel('$x_2$','Interpreter','latex')
+       % Display the taper in wavenumber space
+       axes(ha(knd))
+       colormap(ha(knd),parula)
+       if pnd==1
+         % square modulus pf the FT of the taper
+         imagesc(ftp(:,:,ind))
+         caxis(minmax(ftp(:,:,2:end)))
+         title('$|FFT2(Tx)|^2$','Interpreter','latex')
+       else
+         % Phase of the FT of the taper
+         imagesc(ftphs(:,:,ind))
+         %caxis(minmax(ftphs(:,:,2:end)))
+       end
+
+       longticks
+       axis image
+       shrink(ha(knd),1.05,1.05)
+       if upad==1
+         set(ha(knd),'XTick',[1 params.NyNx(2)],'YTick',[1 params.NyNx(1)])
+       else
+         set(ha(knd),'XTick',[1 size(ftxp(:,:,1),1)],'YTick',[1 size(ftxp(:,:,1),2)])
+       end
+       xlabel('$k_1$','Interpreter','latex')
+       ylabel('$k_2$','Interpreter','latex')
+       set(ha(knd),'YAxisLocation','right')
+
+       moveh([ha(xnd) ha(knd)],-0.01*(3-4*floor((ind-1)/numrws)))
+       moveh(ha(knd),-0.02)
+
+       colormap(ha(xnd),gray(2))
      else
-       delete(ha(ind))
+       delete([ha(xnd) ha(knd)])
      end
    end
-   movev([ha(1:mostmiss)],-0.03)
+   cbx=colorbar(ha(numrws),'Location','southoutside');
+   cbx.Position(1)=0.15;
+   cbx.Position(2)=0.03;
+   cbx.Position(3)=0.3;
+   cbx.Position(4)=0.02;
+   cbx.Label.String='spatial grid space';
+   cbx.Label.Position(2)=2.3;
+   cbx.XTick=[0 1];
+   cbk=colorbar(ha(2*numrws),'Location','southoutside');
+   cbk.Position(1)=0.6;
+   cbk.Position(2)=0.03;
+   cbk.Position(3)=0.3;
+   cbk.Position(4)=0.02;
+   if pnd==1
+     cbk.Label.String='wavenumber space: amplitude (10log10(\cdot))';
+   else
+     cbk.Label.String='wavenumber space: phase';
+   end
+   cbk.Label.Position(2)=2.3;
+   keyboard
+
    sti(2)=sgtitle(...
      sprintf('$%s%0.2f%s%0.2f%s%0.2f$%s%i%s%i%s%i%s%i%s%s',...
      '\sigma^2=',th1(1),' \mathrm{[unit]}^2, \nu=',th1(2),', \rho=',th1(3),...
@@ -2031,8 +2527,8 @@ elseif strcmp(th,'demo8')
      params.dydx(2),'m; ',upper(masknm)),...
     'Interpreter','latex');
    % Pause to confirm the figure is nice before saving
-   keyboard
    saveas(gcf,...                                                               
-     sprintf('covgammiosl_demo8_missing_Ny%iNx%i_dy%idx%i_s2%inu%irh%i_%s_2.eps',...
-       params.NyNx,params.dydx,th1.*[1 10 1],date),'epsc') 
+     sprintf('covgammiosl_demo8_missing_Ny%iNx%i_dy%idx%i_s2%inu%irh%i_%s_2_%i.eps',...
+       params.NyNx,params.dydx,th1.*[1 10 1],date,pnd),'epsc') 
+   end
 end
