@@ -77,7 +77,7 @@ function varargout=maternosy(y,th,dth,meth)
 % maternosy('demo3')
 %
 % Last modified by fjsimons-at-alum.mit.edu, 03/19/2025
-% Last modified by olwalbert-at-princeton.edu, 03/19/2025
+% Last modified by olwalbert-at-princeton.edu, 04/26/2025
 
 if ~isstr(y)
   % Defaults (avoiding DEFVAL to speed up)
@@ -90,6 +90,7 @@ if ~isstr(y)
   rh=th(end  );
   % The argument, make sure it is a distance
   argu=2*sqrt(nu)/pi/rh*abs(y);
+
   % Check whether we are asking for the case that nu approaches
   % infinity; if so, by the straight-up method Cy would have Inf/NaN entries
   if isinf(nu)
@@ -215,18 +216,35 @@ if ~isstr(y)
               % small argument limit of the Bessel function, see Eq. 9.6.9 of A&S
               Cy(y==0)=0;
             else
-              % Central difference approach to calculating the partial
-              % derivative that we are currently defaulting to
-              % Step-size
-              epsln=eps*1e3;
+              % Central difference approach for calculating the partial
+              % derivative that we default to.
+              % Set the step-size; this first value works well in practice
+              h=eps*5e5/2;
+              % Press+2007 5.7.8 list the optimal step-size
+              h=eps^(1/3)*th(2); 
+              % We know there are discontinuities at integer values, so if th(2)
+              % +/- h is close to an integer, double h
+              while abs(mod(th(2)+h,1))<1e-10 | abs(mod(th(2)-h,1))<1e-10
+                 h=2*h;
+              end
               % Parameters evaluated for step-size around th
-              th1=th;th1(2)=th1(2)-epsln/2;
-              th2=th;th2(2)=th2(2)+epsln/2;
-              % Autocovariance evaluated near th with a step-size between in nu
-              Cy1=maternosy(y,th1);
-              Cy2=maternosy(y,th2);
-              % We will return this central difference as the partial for nu
-              Cy=(Cy2-Cy1)/epsln;
+              thl=th;thl(2)=thl(2)-h;
+              thr=th;thr(2)=thr(2)+h;
+              % Autocovariance evaluated around th(2)
+              Cy=(maternosy(y,thr)-maternosy(y,thl))/(2*h);
+              % Press+2007 eq 5.7.9: error from roundoff and truncation is 
+              % approx eps^(2/3) for this finite difference formulation and
+              % step-size
+
+             % Another alternative is chebyshev polynomial approximation for Cy
+             % as a function of nu that can be differentiated
+             % k=20; t=augknt(minmax(y),k); x=chbpnt(t,k);
+             % %sp=spapi(t,x,maternosy(x,th0,2,1));
+             % % plot(y,fnval(sp,y)); hold on; plot(y,maternosy(y,th0,2,1),'--')
+             % sp=spapi(t,x,maternosy(x,th0,[],1));
+             % Cy=fnval(sp,y);
+             % % evaluate:
+             % plot(y,Cy); hold on; plot(y,maternosy(y,th0,[],1),'--')
             end
           elseif dth==3
               % The partial derivative of Cy with respect to the range, dCydrho;
@@ -416,7 +434,7 @@ elseif strcmp(y,'demo1')
     lY=13; lX=24;
 
     % Matern parameters... think about last one in terms of sqrt(lX^2+lY^2)
-    th=[2000 2.25 2/6];
+    th=[2000 4.5 2/6];
 
     % Grid size, also in physical units, keep it even for this example
     p.NyNx=[4300 5500]; %+randi(1000,[1 2])*(-1)^round(rand);
@@ -429,11 +447,12 @@ elseif strcmp(y,'demo1')
     y=[-floor(p.NyNx(1)/2):1:+floor(p.NyNx(1)/2)-1]*p.dydx(1);
     [X,Y]=meshgrid(x,y);
     yy=sqrt(X.^2+Y.^2);
+    keyboard
     % Evaluate the Matern spectral covariance
-    methS=randi(2); methS=1;
+    methS=randi(2); methS=2;
     Sbb=v2s(maternos(k,th,[],2,methS),p);
     % Evaluate the Matern correlation
-    methC=randi(2); methC=1;
+    methC=randi(2); methC=2;
     Cy=maternosy(yy,th,[],methC);
     % Check the variance
     difer(Cy(dci(1),dci(2))-th(1))
