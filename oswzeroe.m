@@ -17,7 +17,7 @@ function oswzeroe(fid,scl,avhsz,good,F0,covF0,fmti)
 %
 % OSWZEROB, OSRZERO, OSWDIAG, OSRDIAG
 %
-% Last modified by fjsimons-at-alum.mit.edu, 08/21/2017
+% Last modified by fjsimons-at-alum.mit.edu, 05/15/2025
 
 % Print the scaling of the theoretical values
 fprintf(fid,'%s\n','The scaling factors');
@@ -28,7 +28,7 @@ fprintf(fid,'%s\n','The covariance from the Fisher matrix at the truth');
 fprintf(fid,fmti{1},trilos(covF0));
 
 % Print the scaled Fisher matrix, the expected value of the Hessian
-fprintf(fid,'%s\n','The unblurred scaled Fisher matrix at the truth');
+fprintf(fid,'%s\n','The scaled Fisher matrix at the truth');
 fprintf(fid,fmti{2},trilos(F0));
 
 % Print the observed scaled average of the Hessians (over last set of runs)
