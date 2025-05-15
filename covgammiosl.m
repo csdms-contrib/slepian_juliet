@@ -90,8 +90,8 @@ function varargout=covgammiosl(th,params,method,ifinv);
 % % either as random deletions or a growing masked region:
 % covgammiosl('demo8')
 %
-% Last modified by fjsimons-at-princeton.edu, 04/08/2025
-% Last modified by olwalbert-at-princeton.edu, 05/12/2025
+% Last modified by fjsimons-at-princeton.edu, 05/15/2025
+% Last modified by olwalbert-at-princeton.edu, 05/15/2025
 
 if ~isstr(th)
   % Set default for ifinv to assume that the covariance of the score for all
@@ -101,8 +101,11 @@ if ~isstr(th)
   % Set the calculation method default to SAMPLING so we don't accidentally
   % get into trouble with large fields (costly in memory for method 2, costly
   % in calculation time for method 3)
-  if ~exist('method','var');method=1;end
+  if ~exist('method','var'); method=1;end
 
+  % Really the only way for this code to work
+  params.blurs=-1;
+  
   % The number of Matern parameters
   np=3;
   % To save on calculation time, disable extra verification checks in BLUROSY
