@@ -26,7 +26,9 @@ function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpi
 % params     The structure with the fixed parameters from the experiment
 % name       A name string for the title
 % thpix      The example estimate, randomly picked up
-% ifinv     ordered inversion flags for [s2 nu rho], e.g. [1 0 1]
+% ifinv      Ordered inversion flags for [s2 nu rho], e.g. [1 0 1]; if [1 1 1],
+%            the loglikelihood contours will be estimated and included with the
+%            second figure, otherwise, the appropriate subplots will be removed
 %
 % OUTPUT:
 %
@@ -36,10 +38,10 @@ function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpi
 %
 % This only gets used in MLEOS/MLEROS/MLEROS0/MLEOSL thus far, their 'demo2'
 %
-% Last modified by olwalbert-at-princeton.edu, 06/10/2024
-% Last modified by fjsimons-at-alum.mit.edu, 06/10/2024
-
+% Last modified by olwalbert-at-princeton.edu, 08/17/2024
+% Last modified by fjsimons-at-alum.mit.edu, 06/11/2024
 defval('xver',1)
+defval('ifinv',[1 1 1])
 
 % Number of times the standard deviation for scale truncation
 nstats=[-3:3]; fax=3;
@@ -69,6 +71,13 @@ elseif np==3
   flabs={'variance \sigma^2','smoothness \nu','range \rho',};
   unts={[] [] []};
 end
+
+% Append the scaling of each Matern parameter axis if it is not 1
+for i=1:np                                                       
+    if sclth0(i)~=1
+        flabs{i}=append(flabs{i},sprintf(' (x 10^{%d})',log10(sclth0(i))));
+    end
+end  
 
 figure(1)
 clf
@@ -125,6 +134,7 @@ for ind=1:np
   catch
       a=Inf;
   end
+
   if isinf(a) || any(bdens<-1e-10) || size(thhats,1)<50
     % If it's funky use the good old histogram
     [bdens,c]=hist(thhats(:,ind),max(size(thhats,1)/3,3));
@@ -225,6 +235,7 @@ for ind=1:np
     tl(ind)=title(sprintf('%s = %5.3f %s %4.0e %s',labs{ind},...
 			  mobs/sclth0(ind),'x',...
 			  sclth0(ind),unts{ind}));
+    set(tl(ind),'FontWeight','normal');
     xl0(ind)=xlabel(sprintf('%s = %5.3f %s %4.0e %s',labs0{ind},...
 			    th0(ind)/sclth0(ind),'x',...
 			    sclth0(ind),unts{ind}));
@@ -232,10 +243,12 @@ for ind=1:np
     tl(ind)=title(sprintf('%s = %5.3f %s',labs{ind},...
 			  mobs/sclth0(ind),...
 			  unts{ind}));
+    set(tl(ind),'FontWeight','normal');
     xl0(ind)=xlabel(sprintf('%s = %5.3f %s',labs0{ind},...
 			    th0(ind)/sclth0(ind),...
 			    unts{ind}));
   end
+  movev(tl(ind),range(ylim)/20)
   movev(xl0(ind),-range(ylim)/15)
   drawnow
 end     
@@ -249,7 +262,8 @@ elseif np==5
   mv=0.125; mh=0.01; aps1=[0.8 1]; aps2=[1 1];
   set(thhis(3:5),'FaceColor',grey(9),'EdgeColor',grey(9))
 elseif np==3
-  mv=0.1; mh=-0.075; aps1=[1.3 1]; aps2=[1.4 1.4];
+  % mv=0.1; mh=-0.075; aps1=[1.3 1]; aps2=[1.4 1.4];
+  mv=0.05; mh=-0.06; aps1=[1.3 1]; aps2=[1.3 1.3];
 end
 for ind=1:np-1
   moveh(ha([1:2]+2*(ind-1)),(ind-np)*mh)
@@ -258,8 +272,9 @@ shrink(ah(1:np),aps1(1),aps1(2))
 shrink(ah(np+1:end),aps2(1),aps2(2))
 
 movev(ah(length(ah)/2+1:end),mv)
+movev(xl,0.02);
 axes(ah(1))
-yl=ylabel('posterior probability density');
+yl=ylabel({'posterior';'probability density'});
 axes(ah(4))
 yl(2)=ylabel('sample values');
 longticks(ah)
@@ -276,7 +291,7 @@ set(pobs,'linew',1.5,'color',grey(3.5))
 %delete(psF0)
 
 % Do this so the reduction looks slightly better
-set(yl,'FontSize',12)
+% set(yl,'FontSize',12)
 nolabels(ah(2:np),2)
 %disp(sprintf('\n'))
 %fig2print(gcf,'landscape')
@@ -285,7 +300,8 @@ nolabels(ah(2:np),2)
 movev(ah,-.1)
 % If params isn't a structure, we're not in the right mindset
 if isstruct(params)
-  t=ostitle(ah,params,name,length(thhats(:,1))); movev(t,.4)
+  t=ostitle(ah,params,name,length(thhats(:,1))); movev(t,.7);
+  set(t,'FontSize',12);
 end
 
 try 
@@ -313,10 +329,10 @@ try
                                       'one sigma uncertainty based on the ensemble'));
 end
 
-if np>3; movev(tt,-4); else; movev(tt,-3.5); end
+% if np>3; movev(tt,-4); else; movev(tt,-3.5); end
 
-if ifinv==[1 0 1]
-    delete(ah([2 5]))
+if any(ifinv~=[1 1 1])
+    delete(ah(~repmat(ifinv,1,2)))
 end
 
 % Make basic x-y plots of the parameters
@@ -341,13 +357,50 @@ if xver==1
     % s=-2*log(1-cl);
     s=chi2inv(cl,2);
     
-    mobs=nanmean(thhats(:,ind));
     t=linspace(0,2*pi);
+
+    if all(ifinv==[1 1 1])
+        % Create loglikelihood contours for the mean estimate using
+        % your covariance matrix of choice; for now, since we are plotting the
+        % loglikelihood contours in addition to the error ellipses calculated
+        % from the observed standard deviation of the sample of estimates, let's 
+        % use the observed covariance (also looks nice using COVAVHS)
+        covch=nancov(thhats.*sclth0);
+        thch=th0;% alternatively, mobss
+        try
+            % Load preexisting files instead of recalculating
+            mlelcontfnam=sprintf('mlelcontosl_%s.mat',name);
+            mlelcontdata=importdata(mlelcontfnam);
+            Lgrid=mlelcontdata.Lgrid;Lcon=mlelcontdata.Lcon;thR=mlelcontdata.thR;
+        catch
+            % Unable to find files as labeled, we will have to calculate the
+            % loglikelihood surface
+            disp(sprintf(...
+                'Starting calculation of loglikelihood surface at %s',...
+                datestr(now,15)));
+            % Create a field for the true Matern parameters that we will use for
+            % calculating the loglihood surface
+            [~,~,~,~,Hk]=simulosl(th0.*sclth0,params,1);
+            % Open a new figure to dump visual output generated by mlelcontosl
+            figure(3)
+            clf;
+            % Let's make the range of the loglikelihood grid a bit wider than
+            % the cross; this can be tinkered with further
+            thRange=[thch'.*sclth0'+pstats.*sobss'].*[0.9 1.1];
+            [Lgrid,Lcon,thR]=mlelcontosl(Hk,thch.*sclth0,params,covch,thRange,1);
+
+            % Save loglikelihood variables to file
+            mlelcontfnam=sprintf('mlelcontosl_%s',name);
+            save(mlelcontfnam,'Lgrid','Lcon','thR');
+            figure(2)
+        end
+    end
 
     for ind=1:np
         axes(ah(ind))
-        % Find the pairwise combinations
-        p1=pcomb(ind,1); p2=pcomb(ind,2);
+        % Find the pairwise combinations for the cross-plot convention: s2-nu,
+        % s2-rho, nu-rho
+        p1=pcomb(ind,1);p2=pcomb(ind,2);
 
         % Observed means and theoretical standard deviations
         t1(ind)=plot(mobss(p1)+pstats*stdavhss(p1),...
@@ -381,7 +434,7 @@ if xver==1
         % Cosmetix
         % Delete the big cross
         %        delete([o1(ind) o2(ind)])
-        xlabel(flabs{p1})
+        xl2(ind)=xlabel(flabs{p1});
         ylabel(flabs{p2})
         % Plot pairwise error ellipses
         % https://www.xarg.org/2018/04/how-to-plot-a-covariance-error-ellipse/
@@ -393,20 +446,42 @@ if xver==1
         % [V,D]=eig(covavhs([p1 p2],[p1 p2])./[sclth0([p1 p2])'*sclth0([p1 p2])]);
         a=sqrt(s)*V*sqrt(D)*[cos(t); sin(t)];
         ep(ind)=plot(a(1,:)+mobss(p1),a(2,:)+mobss(p2));
-        axis square
-        hold off
-        longticks(ah)
         %seemax([ah(1) ah(2)],1)
         %seemax([ah(2) ah(3)],2)
-        titi=ostitle(ah,params,name,length(thhats(:,1))); movev(titi,-2)
+        if all(ifinv==[1 1 1])
+            % Recall that the loglihood grid order is s2-nu, nu-rho, rho-s2; 
+            % we need to transpose Lgrid, Lcon, thR to match our cross-plot axes
+            Lconcp=[Lcon(1,:);Lcon(3,:);Lcon(2,:)];
+            Lgridcp=[Lgrid(:,:,1);Lgrid(:,:,3)';Lgrid(:,:,2)];
+            xcon=thR(p1,:)./sclth0(p1);ycon=thR(p2,:)./sclth0(p2); 
+            hold on
+            [cont,ch(ind)]=contour(xcon,ycon,Lgrid(:,:,p1),Lcon(p1,:));
+            set(ch(ind),'EdgeColor',[0.45 0.45 0.45]);
+        end
+        axis square
+        
+        hold off
+        longticks(ah)
+
+        if ind==1
+            titi=ostitle(ah,params,name,length(thhats(:,1))); movev(titi,-2)
+            set(titi,'FontSize',12);
+        end
         try
             tt=supertit(ah(1:np),sprintf('%s\n%s%s',sprintf(answs,answ{:}),pm,...
                                          'one sigma uncertainty based on the ensemble'));
             movev(tt,-7)
         end
     end
-    if ifinv==[1 0 1]
-        delete(ah([1 3]))
+    % Align the x-axis labels
+    for ind=1:3
+        xl2(ind).VerticalAlignment='bottom';xl2(ind).Units='centimeters';
+    end
+    movev(xl2(3),-0.5);
+    xl2(1).Position(2)=xl2(3).Position(2);xl2(2).Position(2)=xl2(3).Position(2);
+    moveh(ah(1),-0.02);moveh(ah(3),0.02);
+    if any(ifinv~=[1 1 1])
+        delete(ah(~~ifinv([3 2 1])))
     end
 end 
 
