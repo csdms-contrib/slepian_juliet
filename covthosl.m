@@ -39,14 +39,6 @@ if covm==0
     return
 end
 
-% We are calculating the variance of the estimates to incorporate wavenumber
-% correlation when the periodogram is blurred. Confirm that we are using
-% blurring
-if ~isinf(params.blurs)
-    params.blurs=Inf;
-    warning('params.blurs was not, but now is, set to Inf')
-end
-
 % Let's stick to easier problems for now
 defval('ifinv',[1 0 1])
 
