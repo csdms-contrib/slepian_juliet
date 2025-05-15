@@ -32,8 +32,8 @@ function covth=covthosl(th,params,covg,ifinv)
 %
 % covth=covthosl(th,p,[],ifinv);
 %
-% Last modified by fjsimons-at-alum.mit.edu, 04/15/2025
-% Last modified by olwalbert-at-princeton.edu, 04/15/2025
+% Last modified by fjsimons-at-alum.mit.edu, 05/15/2025
+% Last modified by olwalbert-at-princeton.edu, 05/15/2025
 
 % We are calculating the variance of the estimates to incorporate wavenumber
 % correlation when the periodogram is blurred. Confirm that we are using
@@ -72,14 +72,5 @@ df=length(k(:))/2;
 % Only calculate the covariance for parameters that we inverted for
 F=matslice(F,ifinv);
 covF=inv(F);
-
-% REMINDER: follow up on including the dof and normalization for taper
-%
-% Frederik normalizes by df in calculation of covF in FISHIOSL; Arthur does not
-% in likelihood.DebiasedWhittle.fisher or 
-% likelihood.DebiasedWhittle.variance_of_estimates
-% I will leave out the degrees of freedom for now for comparison
-% covFF=inv(F)/df;
-
 covth=covF*covg*covF;
 
