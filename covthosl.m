@@ -1,4 +1,4 @@
-function covth=covthosl(th,params,covg,ifinv)
+function covth=covthosl(th,params,covm,ifinv)
 % covth=COVTHOSL(th,params,covg,ifinv)
 %
 % Estimates the covariance matrix of the parameter estimate according to Eq. 36
@@ -10,14 +10,13 @@ function covth=covthosl(th,params,covg,ifinv)
 % th        Matern spectral parameters, [s2 nu rh]
 % params    Parameter structure of the grid; at least p.NyNx and p.dydx must be
 %           provided explicitly
-% covg      The variance of the score
+% covm      A method specification blabla
 % ifinv     Indicate which parameters were inverted for and require covariance
 %           calculation
 %
 % OUTPUT:
 %
-% covth     Covariance of the parameter estimates; We are assuming a special
-%           case for now so we only calculate a 2by2 for s2 and rh
+% covth     Covariance of the parameter estimates
 %
 % SEE ALSO:
 %
@@ -28,12 +27,17 @@ function covth=covthosl(th,params,covg,ifinv)
 % th=[1.41 0.75 6];
 % p=[];p.NyNx=[65 92];p.dydx=[1 1];p.blurs=Inf;ifinv=[1 1 1];
 % covg=covgammiosl(th,p,1,ifinv);
-% covth=covthosl(th,p,covg,ifinv);
+% covth=covthosl(th,p,covm,ifinv);
 %
 % covth=covthosl(th,p,[],ifinv);
 %
 % Last modified by fjsimons-at-alum.mit.edu, 05/15/2025
 % Last modified by olwalbert-at-princeton.edu, 05/15/2025
+
+if covm==0
+    covth=zeros(sum(ifinv),sum(ifinv));
+    return
+end
 
 % We are calculating the variance of the estimates to incorporate wavenumber
 % correlation when the periodogram is blurred. Confirm that we are using
@@ -48,8 +52,8 @@ defval('ifinv',[1 0 1])
 
 % If we did not bring in a precomputed variance of the score
 % calculate it now via sampling
-if isempty(covg)
-    covg=covgammiosl(th,params,1,ifinv);
+if isempty(covm)
+    covm=covgammiosl(th,params,1,ifinv);
 end
 
 % Calculate the Fisher information matrix for the grid
@@ -72,5 +76,5 @@ df=length(k(:))/2;
 % Only calculate the covariance for parameters that we inverted for
 F=matslice(F,ifinv);
 covF=inv(F);
-covth=covF*covg*covF;
+covth=covF*covm*covF;
 
