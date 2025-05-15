@@ -1,6 +1,6 @@
-function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver)
+function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver,cm)
 % [thhat,covFHhJ,lpars,scl,thini,params,Hk,k]=...
-%          MLEOSL(Hx,thini,params,algo,bounds,aguess,ifinv,xver)
+%          MLEOSL(Hx,thini,params,algo,bounds,aguess,ifinv,xver,cm)
 %
 % Maximum-likelihood estimation for univariate Gaussian
 % multidimensional fields with isotropic Matern covariance
@@ -44,6 +44,8 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver)
 %          not be appropriate in the case of real data with various unknowns
 % xver     0 Minimal output, no extra verification steps
 %          1 Conduct extra verification steps
+% cm       1, 2, 3 also launches COVTHOSL with this number as method, and 
+%          0 does not (because doing it takes time)
 %
 % OUTPUT:
 %
@@ -53,7 +55,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver)
 %          covFHhJ{1} from Fisher matrix AT the estimate [FISHIOSL] (eq. 139)
 %          covFHhJ{2} from analytical Hessian matrix AT the estimate [HESSIOSL] (eq. 133)
 %          covFHhJ{3} from numerical Hessian matrix NEAR the estimate [FMINUNC/FMINCON]
-%          covFHhJ{4} from the full formula (eq. 138) at the estimate [COVTHOSL]
+%          covFHhJ{4} from the full formula (eq. 138) at the estimate [COVTHOSL] if you have it
 % lpars    The logarithmic likelihood and its derivatives AT or NEAR the estimate
 %          lpars{1} the numerical logarithmic likelihood [FMINUNC/FMINCON]
 %          lpars{2} the numerical scaled gradient, or score [FMINUNC/FMINCON]
@@ -621,12 +623,13 @@ if ~isstr(Hx)
     covFhF=inv(F)*[hes./matscl]*inv(F)/df;
   end
 
-  % Calculate the variance of the estimates using either the sampling (1), 
-  % full dftmtx (2), or per-diagonal method (3) in COVGAMMIOSL
-  covmethod=1;
-  % %% OLW: The scaling is off in comparison to the analytical and numerical
-  % covariances; df should probably make an appearance, or is it the scaling?
-  covFJF=covthosl(sclh.*thhat,params,covmethod,ifinv);
+  % Calculate the variance of the estimates using COVGAMMIOSL via 
+  % (1) gradient sampling (always works, robust, fast)
+  % (2) full dftmtx (fast, but very memory intensive)
+  % (3) diagonals method (slow, ultimately)
+  % (0) don't even do it
+  defval('cm',0);
+  covFJF=covthosl(sclh.*thhat,params,cm,ifinv);
   % This should ensure that COVFJF is a 3x3 whether we inverted for all
   % parameters or not; only needed for display purposes later
   covFJF=matslice(covFJF,ifinv,-1);
@@ -815,7 +818,6 @@ elseif strcmp(Hx,'demo1')
     % Maybe just print it and decide later? No longer e>0 as a condition.
     % e in many times is 0 even though the solution was clearly found, in
     % other words, this condition IS a way of stopping with the solution
-    keyboard
     try
       % Maybe I'm too restrictive in throwing these out? Maybe the
       % Hessian can be slightly imaginary and I could still find thhat
