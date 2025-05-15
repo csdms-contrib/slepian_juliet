@@ -663,18 +663,22 @@ if ~isstr(Hx)
 
     disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3s,1,npp)),...
 	       ' ','(ds2)^2','(dnu)^2','(drho)^2','ds2dnu','ds2drho','dnudrho'))
-    disp(sprintf(sprintf(' Numerical Hessian : %s',str3),trilos(hes)))
+    disp(sprintf(sprintf(' Numerical hessian : %s',str3),trilos(hes)))
     disp(sprintf(sprintf(' Analyticl Hessian : %s',str3),trilos(-H.*matscl1)))
     disp(sprintf(sprintf(' Analytical Fisher : %s',str3),trilos( F.*matscl)))
 
     disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3s,1,npp)),...
 	       ' ','C(s2,s2)','C(nu,nu)','C(rho,rho)','C(s2,nu)','C(s2,rho)','C(nu,rho)'))
-    disp(sprintf(sprintf(' Cov (Numer Hess.) : %s',str3),trilos(covh)))
+    disp(sprintf(sprintf(' Cov (Numer hess.) : %s',str3),trilos(covh)))
     disp(sprintf(sprintf(' Cov (Analy Hess.) : %s',str3),trilos(covH)))
     disp(sprintf(sprintf(' Cov (Analy Fish.) : %s',str3),trilos(covF)))
     disp(sprintf(sprintf(' Cov ( FishHFish.) : %s',str3),trilos(covFHF)))
     disp(sprintf(sprintf(' Cov ( FishhFish.) : %s',str3),trilos(covFhF)))
-    disp(sprintf(sprintf(' Cov ( FishJFish.) : %s',str3),trilos(covFJF)))
+    if sum(covFJF(:))~=0
+        disp(sprintf(sprintf(' Cov ( FishJFish.) : %s',str3),trilos(covFJF)))
+    else
+        disp(sprintf(sprintf(' Cov ( FishJFish.) : %s',str3),zeros(npp,1)))
+    end
 
     disp(sprintf('%s',repmat('_',119,1)))
     disp(sprintf(sprintf('%s : %s ',str0,str2),...
