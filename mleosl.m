@@ -81,7 +81,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver,cm)
 % EXAMPLE:
 %
 % p.quart=0; p.blurs=Inf; p.kiso=NaN; clc; [Hx,th,p]=simulosl([],p,1);
-% p.blurs=-1; mleosl(Hx,[],p,[],[],[],[],1);
+% p.blurs=-1; mleosl(Hx,[],p,[],[],[],[],1,1);
 %
 % You can stick in partial structures, e.g. only specifying params.kiso
 %
@@ -96,7 +96,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver,cm)
 % mleosl('demo1',N,th,p)
 %
 % Statistical study of a series of simulations using MLEPLOS
-% mleosl('demo2','14-Oct-2023')
+% mleosl('demo2','15-May-2025')
 %
 % Covariance study of a series of simulations using COVPLOS
 % mleosl('demo4','14-Oct-2023')
