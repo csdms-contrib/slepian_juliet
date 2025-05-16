@@ -47,7 +47,7 @@ defval('ifinv',[1 0 1])
 
 % If we did not bring in a precomputed variance of the score
 % calculate it now via the specified method
-covm=covgammiosl(th,params,1,ifinv);
+covm=covgammiosl(th,params,covm,ifinv);
 
 % Calculate the Fisher information matrix for the grid
 k=knums(params);
@@ -59,7 +59,7 @@ if isfield(params,'taper') & numel(params.taper)>1 & isinf(params.blurs)
   nt=sum(params.taper,"all");
   nt=nt/prod(params.NyNx); 
   % Should be less than or equal to 1; if not, check out the taper
-  if nt>1;keyboard;end
+  if nt>1; keyboard; end
   F=F*nt;
 end
 
