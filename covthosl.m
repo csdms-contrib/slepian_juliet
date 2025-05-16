@@ -10,7 +10,10 @@ function covth=covthosl(th,params,covm,ifinv)
 % th        Matern spectral parameters, [s2 nu rh]
 % params    Parameter structure of the grid; at least p.NyNx and p.dydx must be
 %           provided explicitly
-% covm      A method specification blabla
+% covm      A method specification for the covariance calculation
+%           1 sampling
+%           2 dfmtx
+%           3 diagonals
 % ifinv     Indicate which parameters were inverted for and require covariance
 %           calculation
 %
@@ -29,7 +32,7 @@ function covth=covthosl(th,params,covm,ifinv)
 % covg=covgammiosl(th,p,1,ifinv);
 % covth=covthosl(th,p,covm,ifinv);
 %
-% covth=covthosl(th,p,[],ifinv);
+% covth=covthosl(th,p,1,ifinv);
 %
 % Last modified by fjsimons-at-alum.mit.edu, 05/15/2025
 % Last modified by olwalbert-at-princeton.edu, 05/15/2025
@@ -43,10 +46,8 @@ end
 defval('ifinv',[1 0 1])
 
 % If we did not bring in a precomputed variance of the score
-% calculate it now via sampling
-if isempty(covm)
-    covm=covgammiosl(th,params,1,ifinv);
-end
+% calculate it now via the specified method
+covm=covgammiosl(th,params,1,ifinv);
 
 % Calculate the Fisher information matrix for the grid
 k=knums(params);
