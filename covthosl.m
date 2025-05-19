@@ -47,7 +47,9 @@ defval('ifinv',[1 0 1])
 
 % If we did not bring in a precomputed variance of the score
 % calculate it now via the specified method
-covm=covgammiosl(th,params,covm,ifinv);
+if prod(size(covm))==1
+    covm=covgammiosl(th,params,covm,ifinv);
+end
 
 % Calculate the Fisher information matrix for the grid
 k=knums(params);
@@ -56,7 +58,7 @@ F=fishiosl(k,th,params);
 % If the data were tapered and the periodogram was blurred, I think we need to
 % modify how F is normalized in FISHIOSL (i.e., taking the mean of mth products)
 if isfield(params,'taper') & numel(params.taper)>1 & isinf(params.blurs)
-  nt=sum(params.taper,"all");
+  nt=sum(params.taper,'all');
   nt=nt/prod(params.NyNx); 
   % Should be less than or equal to 1; if not, check out the taper
   if nt>1; keyboard; end
@@ -64,6 +66,7 @@ if isfield(params,'taper') & numel(params.taper)>1 & isinf(params.blurs)
 end
 
 % Degrees of freedom calculated according to FISHIOSL
+
 df=length(k(:))/2;
 
 % Only calculate the covariance for parameters that we inverted for
