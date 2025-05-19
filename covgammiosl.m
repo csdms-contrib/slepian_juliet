@@ -590,7 +590,7 @@ elseif strcmp(th,'demo0')
       longticks
     end
     cb=colorbar;
-    cb.Limits=cax; cb.Location="southoutside"; cb.Position=[0.35 0.035 0.3 0.01];
+    cb.Limits=cax; cb.Location='southoutside'; cb.Position=[0.35 0.035 0.3 0.01];
     movev(ha,-0.025) 
     ti=sgtitle(sprintf('$%s%0.2f%s%0.2f%s%0.2f$%s%i%s%i%s',...
        '\sigma^2=',th(1),' \mathrm{[unit]}^2, \nu=',th(2),', \rho=',th(3),...
