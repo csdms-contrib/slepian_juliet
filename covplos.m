@@ -1,5 +1,5 @@
-function varargout=covplos(oneortwo,sclcovX,obscov,params,thhats,E,v,cblox)
-% COVPLOS(oneortwo,sclcovX,obscov,params,thhats,E,v,cblox)
+function varargout=covplos(oneortwo,sclcovX,obscov,params,thhats,E,v,cblox,ifinv)
+% COVPLOS(oneortwo,sclcovX,obscov,params,thhats,E,v,cblox,ifinv)
 %
 % Makes a nice covariance plot of the maximum-likelihood estimation results
 %
@@ -14,15 +14,20 @@ function varargout=covplos(oneortwo,sclcovX,obscov,params,thhats,E,v,cblox)
 % E         Young's modulus (not used for single fields and only for title)
 % v         Poisson's ratio (not used for single fields and only for title)
 % cblox     Is the colorbar 'hor' or 'ver' [default]
+% ifinv      Ordered inversion flags for [s2 nu rho], e.g. [1 0 1]; if [1 1 1],
+%            the loglikelihood contours will be estimated and included with the
+%            second figure, otherwise, the appropriate subplots will be removed
 %
 % OUTPUT:
 %
 % ah,yl     Axis handles to what was just plotted
 %
 % Last modified by fjsimons-at-alum.mit.edu, 10/30/2023
+% Last modified by olwalbert-at-princeton.edu, 08/29/2024
 
 defval('oneortwo',2)
 defval('cblox','ver')
+defval('ifinv',[1 1 1])
 
 % Number of paramters
 np=length(sclcovX);
@@ -56,8 +61,9 @@ switch oneortwo
   t(1)=title('predicted');
 
   axes(ah(2))
-  imagesc(obscov)
-  covannotate(ah(2),np)
+  im=imagesc(obscov);
+  im.AlphaData=~isnan(im.CData);
+  covannotate(ah(2),np,ifinv)
   t(2)=title('observed');
 
   set(ah(2),'yaxisl','r')
@@ -84,7 +90,9 @@ end
 
 % Stick the params here somewhere so we can continue to judge
 t=ostitle(ah,params,[],length(thhats(:,1)));
-movev(t,.5)
+movev(t,.5);
+set(t,'FontSize',12);
+moveh(t,-0.1);
 % We are quoting the TRUTHS and the 1xstandard deviation based on COVX
 % Here is the MEAN ESTIMATE and its OBSERVED-COVARIANCE-based standard deviation
 [answ,answs]=osansw(mean(thhats),cov(thhats),E,v);
@@ -93,14 +101,18 @@ disp(sprintf('\n%s',...
 disp(sprintf(answs,answ{:}))
 % By the way, use THAT as a title
 tt=supertit(ah(1:2),sprintf(answs,answ{:}));
-movev(tt,-5)
+movev(tt,-4.5)
+set(tt,'FontSize',12);
+moveh(tt,-0.1);
 
 % Output
 varns={ah,yl};
 varargout=varns(1:nargout);
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function covannotate(ah,np)
+function covannotate(ah,np,ifinv)
+
+defval('ifinv',repelem(1,np))
 
 if np==6
   xc=[3.5 3.5];
@@ -113,6 +125,7 @@ elseif np==5
 elseif np==3
   labs={'s2','nu','rho'};
 end
+labs(~ifinv)={''};
 
 kelicol
 caxis([-1 1])
