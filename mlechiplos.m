@@ -42,6 +42,7 @@ function varargout=mlechiplos(witsj,Hk,thhat,scl,params,ah,pertur,th0,covX,E,v)
 % MLECHIPSDOSL, MLEOSL, EGGERS6
 %
 % Last modified by fjsimons-at-alum.mit.edu, 10/14/2023
+% Last modified by olwalbert-at-princeton.edu, 08/16/2024
 
 defval('pertur',0)
 defval('th0',[])
@@ -162,7 +163,6 @@ end
 
 % Evaluate the likelihood
 % disp(sprintf('The loglihood is %8.3f',Lbar))
-
 % Craft some labels
 xll=[0 3*2*df];
 xlls=[xll(1):df:xll(2)];
@@ -258,8 +258,8 @@ t(2)=title(sprintf('%s =  %5.3f   8/K = %5.3f   %s   p = %5.2f',...
 %	           neem,nanvar(magx));
 delete(get(ah(2),'xlabel'));
 xlim(xll); ylim(xll)
-xl(2)=xlabel(sprintf('observed 2%s',varibal));
-yl(2)=ylabel(sprintf('predicted 2%s',varibal));
+xl(2)=xlabel(sprintf('predicted 2%s',varibal));
+yl(2)=ylabel(sprintf('observed 2%s',varibal));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 axes(ah(3))
@@ -279,10 +279,11 @@ fig2print(gcf,'landscape')
 set(ah(1),'xtick',xlls,'ytick',ylls)
 set(ah(2),'xtick',xlls,'ytick',xlls)
 longticks([ah cb])
-set(t,'FontSize',9)
+set(t,'FontSize',8,'FontWeight','Normal')
+movev(t,0.01)
 
 % This will reset everything that is plot under HOLD ON
-set([cat(1,findobj('FontSize',10)); yl(:); xl(:); xcb(:)],'FontSize',12)
+set([cat(1,findobj('FontSize',8)); yl(:); xl(:); xcb(:)],'FontSize',8)
 
 % Any off-putting motions would have been due to using underscores in titles
 set(ah(3),'position',...
@@ -310,6 +311,8 @@ elseif strcmp(cborien,'vert')
   moveh(xcb,15)
   moveh([ah cb],-.025)
 end
+movev(xl(1),0.02);movev(xl(2),0.5);
+movev(t(3),8)
 
 % This only if the calling sequence is not OLHEDESIMONS5
 [a,b]=star69;
@@ -317,12 +320,16 @@ if ~strcmp(b,'olhedesimons5')
   % Stick the params here somewhere so we can continue to judge
   movev([ah cb],-.1)
   t=ostitle(ah,params,[],length(thhat(:,1)));
-  movev(t,.25)
+  movev(t,.35)
+  set(t,'FontSize',10);
   % E.g. quote  the TRUTHS and the THEORETICAL standard deviation with
   % which it can be known using the available data... as you wish
   [answ,answs]=osansw(th0,covX,E,v);
   tt=supertit(ah,sprintf(answs,answ{:}));
-  movev(tt,-4.25)
+  set(tt,'FontSize',10);
+  movev(tt,-4.65)
+  moveh(ah(1),-0.04)
+  moveh([ah(3) cb],0.04)
 
   if ~isempty(E) && ~isempty(v)
     movev(tt,-0.25)
