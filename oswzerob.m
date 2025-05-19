@@ -22,20 +22,25 @@ function oswzerob(fid,th0,params,lpars,fmts)
 %
 % OSWZEROE, OSRZERO, OSWDIAG, OSRDIAG
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/25/2018
+% Last modified by fjsimons-at-alum.mit.edu, 05/19/2025
 
 % Commit the truth to file
 fprintf(fid,'%s\n','the true parameter vector');
 fprintf(fid,fmts{1},th0);
 
-% Commit the parameters of the experiment to file
-fprintf(fid,'%s\n','the fixed experimental parameters');
+% Commit the parameters of the SIMULATION to file
+fprintf(fid,'%s\n','the fixed simulation parameters');
 
-% Rather, these need to be ordered to yield to the format
+% Rather, these need to be ordered like this to yield to the format
 fulls={'DEL','g','z2','dydx','NyNx','blurs','kiso','quart'};
 [~,i]=ismember(fulls,fieldnames(params));
 jk=struct2cell(params);
 fprintf(fid,fmts{2},[jk{i(~~i)}]);
+
+% Commit the parameters of the INVERSION to file
+fprintf(fid,'%s\n','the fixed inversion parameters');
+
+% blurs nugget ifinv maskhash 
 
 % Convert the bounds to something printable
 fprintf(fid,'%s\n','the bounds, if any');
