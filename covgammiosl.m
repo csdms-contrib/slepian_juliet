@@ -1507,7 +1507,7 @@ elseif strcmp(th,'demo6')
    labs={'\sigma^2,\sigma^2', '\nu,\nu', '\rho,\rho', '\sigma^2,\nu',...
          '\sigma^2,\rho', '\nu,\rho'};
    % Color friendly palette
-   clrs=["#1B9E77","#D95F02","#7570B3"];
+   clrs=['#1B9E77','#D95F02','#7570B3'];
 
    % For now, small values so that we have a chance at forming the data vector
    % and finding an estimate for small grids 
@@ -1738,7 +1738,7 @@ elseif strcmp(th,'demo6')
      rnd=6+ind;
      % Plot the relative bias of the estimates from the empirical study
      relbsme(:,ind)=squeeze(mean(thhats(:,ind,:)-th1(ind)))/th1(ind);
-     relbssd(:,ind)=squeeze(sqrt(var(thhats(:,ind,:)-th1(ind),"omitnan"))/...
+     relbssd(:,ind)=squeeze(sqrt(var(thhats(:,ind,:)-th1(ind),'omitnan'))/...
                     th1(ind));
      axes(ah(rnd))
      % Errorbar in terms of the standard deviation 
@@ -1780,7 +1780,7 @@ elseif strcmp(th,'demo6')
      ah(jnd).XRuler.TickLabelGapOffset=-2;
      ah(jnd).XTickLabelRotation=0;
      axx(jnd).XRuler.TickLabelGapOffset=-3;
-     ylim([-1. max(relbsme,[],"all")*1.1])
+     ylim([-1. max(relbsme,[],'all')*1.1])
    end
    %
 
@@ -1815,7 +1815,7 @@ elseif strcmp(th,'demo7')
    labs={'\sigma^2,\sigma^2', '\nu,\nu', '\rho,\rho', '\sigma^2,\nu',...
           '\sigma^2,\rho', '\nu,\rho'};
    % Color friendly palette
-   clrs=["#1B9E77","#D95F02","#7570B3"];
+   clrs=['#1B9E77','#D95F02','#7570B3'];
 
    % Set the Matern parameters 
    rh=16;%6;
@@ -2011,14 +2011,14 @@ elseif strcmp(th,'demo7')
      loglog(Ns,10.^(predcov3(jnd,:)),'Color',clrs{3});
 
      if incdft
-       [leg1(jnd),legic]=legend([repmat("",rnd,1)',...
+       [leg1(jnd),legic]=legend([repmat('',rnd,1)',...
                       sprintf('empirical, %0.1f',abs(mbfemp(jnd,1))),...
                       sprintf('sampling, %0.1f',abs(mbfcov1(jnd,1))),...
                       sprintf('dftmtx, %0.1f',abs(mbfcov2(jnd,1))),...
                       sprintf('diagonal, %0.1f',abs(mbfcov3(jnd,1)))],...
                       'interpreter','tex','BackgroundAlpha',0,'box','off');
      else
-       [leg1(jnd),legic]=legend([repmat("",rnd,1)',...
+       [leg1(jnd),legic]=legend([repmat('',rnd,1)',...
                       sprintf('empirical, %0.1f',abs(mbfemp(jnd,1))),...
                       sprintf('sampling, %0.1f',abs(mbfcov1(jnd,1))),...
                       sprintf('diagonal, %0.1f',abs(mbfcov3(jnd,1)))],...
@@ -2082,7 +2082,7 @@ elseif strcmp(th,'demo7')
      axes(ah(rnd));
      keyboard
      relbsme(:,ind)=squeeze(mean(thhats(:,ind,:)-th1(ind)))/th1(ind);
-     relbssd(:,ind)=squeeze(sqrt(var(thhats(:,ind,:)-th1(ind),"omitnan"))/...
+     relbssd(:,ind)=squeeze(sqrt(var(thhats(:,ind,:)-th1(ind),'omitnan'))/...
                     th1(ind));
      % Errorbar in terms of the standard deviation 
      pl1(ind)=errorbar(Ns,relbsme(:,ind),relbssd(:,ind),'ko');
@@ -2227,7 +2227,7 @@ elseif strcmp(th,'demo8')
        params.taper=taper;simparams.taper=taper;
        tapersv(:,:,ind)=taper;
        % Calculate the percentage of the grid that is missing
-       prcmiss(ind)=1-sum(taper,"all")./prod(params.NyNx);
+       prcmiss(ind)=1-sum(taper,'all')./prod(params.NyNx);
        for mnd=1:numreals
          thhat=NaN;
          while isnan(thhat)
@@ -2309,7 +2309,7 @@ elseif strcmp(th,'demo8')
    labs={'\sigma^2,\sigma^2', '\nu,\nu', '\rho,\rho', '\sigma^2,\nu',...
          '\sigma^2,\rho', '\nu,\rho'};
    % Color friendly palette
-   clrs=["#1B9E77","#D95F02","#7570B3"];
+   clrs=['#1B9E77','#D95F02','#7570B3'];
 
    clf
    [ah,ha,H]=krijetem(subnum(3,3));
@@ -2370,7 +2370,7 @@ elseif strcmp(th,'demo8')
      rnd=6+ind;
      axes(ah(rnd));
      relbsme(:,ind)=squeeze(mean(thhats(:,ind,:)-th1(ind)))/th1(ind);
-     relbssd(:,ind)=squeeze(sqrt(var(thhats(:,ind,:)-th1(ind),"omitnan"))/...
+     relbssd(:,ind)=squeeze(sqrt(var(thhats(:,ind,:)-th1(ind),'omitnan'))/...
                     th1(ind));
      % Errorbar in terms of the standard deviation 
      pl1(ind)=errorbar(prcmiss*100,relbsme(:,ind),relbssd(:,ind),'ko');
