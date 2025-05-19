@@ -34,12 +34,13 @@ function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpi
 %
 % ah,ha,yl,xl,tl  Various axis handles of the plots made
 %
-% EXAMPLE:
-%
 % This gets used in 'demo2' of MLEOS/MLEROS/MLEROS0/MLEOSL and MASKIT/MUCKIT
 %
-% Last modified by olwalbert-at-princeton.edu, 05/02/2025
-% Last modified by fjsimons-at-alum.mit.edu, 06/11/2024
+% Tested on 8.5.0.197613 (R2015a)
+%
+% Last modified by olwalbert-at-princeton.edu, 05/19/2025
+% Last modified by fjsimons-at-alum.mit.edu, 05/19/2025
+
 defval('xver',1)
 defval('ifinv',[1 1 1])
 
@@ -50,7 +51,7 @@ tstats=[-3 3];
 vstats=[-2 0 2];
 sclth0=10.^round(log10(abs(th0)));
 movit=0.01;
-yls=[-0.0 0.75];
+yls=[-0.0 0.65];
 % Determines the rounding on the y axis 
 rondo=1e2;
 % Sets the format for the estimated/true plot labels
@@ -75,7 +76,7 @@ end
 % Append the scaling of each Matern parameter axis if it is not 1
 for i=1:np                                                       
     if sclth0(i)~=1
-        flabs{i}=append(flabs{i},sprintf(' (x 10^{%d})',log10(sclth0(i))));
+        %        flabs{i}=append(flabs{i},sprintf(' (x 10^{%d})',log10(sclth0(i))));
     end
 end  
 % Set the taper
@@ -99,8 +100,15 @@ else
 end
 
 % Calculate covariance of scores
-cvg=covgammiosl(th0,params,1);
-% Calculate covariance of estimated parameters
+try
+    % dfmtx
+    cvg=covgammiosl(th0,params,2);
+catch
+    % gradient sample
+    cvg=covgammiosl(th0,params,1);
+end
+
+% Calculate true covariance of estimated parameters
 cvth=covthosl(th0,params,cvg,[1 1 1]);
 
 figure(1)
@@ -175,8 +183,6 @@ for ind=1:np
     disp(' ')
   end
 
-  % Note that there are changes that wreck this in 2023b (?)
-  
   % Now plot it using a scale factor to remove the units from the y axis
   thhis(ind)=bar(c,sobs*bdens,1);
   set(ah(ind),'ylim',yls)
@@ -194,7 +200,7 @@ for ind=1:np
   p0(ind)=plot([th0i th0i],ylim,'k-');
   halfup=indeks(ylim,1)+range(ylim)/2;
   ps(ind)=plot(th0i+[-1 1]*stdF0,...
-	       [halfup halfup],'k-'); 
+	       [halfup halfup],'k-');
   % Didn't like this range bar in the end
   delete(ps(ind))
   
@@ -210,7 +216,7 @@ for ind=1:np
   % In previous versions had used th0i/mobs here also, that didn't summarize it well
   pobs(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,sobs));
   % Include the analytically calculated covariance 
-  pclc(ind)=plot(xnorm,scth*normpdf(xnorm,th0i,scth));
+  pclc(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,scth));
 
   % Some annotations
   % Experiment size, he giveth, then taketh away
@@ -220,14 +226,14 @@ for ind=1:np
   tu(ind)=text(stats(end)-range(stats)/nrx,indeks(ylim,2)-range(ylim)/nry,...
 	      sprintf('N = %i',size(thhats(~isnan(sum(thhats,2))),1))); set(tu(ind),'horizon','r')
 
-  % The percentage covered in the histogram that is being shown
-  tt(ind)=text(stats(1)+range(stats)/nrx,indeks(ylim,2)-2*range(ylim)/nry,...
-	      sprintf('s/%s = %5.2f','\sigma',sobs/stdavhs)); 
-  fb=fillbox(ext2lrtb(tt(ind),[],0.8),'w'); delete(tt(ind)); set(fb,'EdgeColor','w')
-  tt(ind)=text(stats(1)+range(stats)/nrx,indeks(ylim,2)-2*range(ylim)/nry,...
-	      sprintf('s/%s = %5.2f','\sigma',sobs/stdavhs));
-
   % The ratio of the observed to the theoretical standard deviation
+  tt(ind)=text(stats(1)+range(stats)/nrx,indeks(ylim,2)-2*range(ylim)/nry,...
+	       sprintf('s/%s = %5.2f','\sigma',sobs/scth));
+  fb=fillbox(ext2lrtb(tt(ind),1.20,1),'w'); delete(tt(ind)); set(fb,'EdgeColor','w')
+  tt(ind)=text(stats(1)+range(stats)/nrx,indeks(ylim,2)-2*range(ylim)/nry,...
+	      sprintf('s/%s = %5.2f','\sigma',sobs/scth));
+
+  % The percentage covered in the histogram that is being shown
   t(ind)=text(stats(1)+range(stats)/nrx,indeks(ylim,2)-range(ylim)/nry,...
 	      sprintf('%4.2f%s',...
 		      sum(bdens([c>=stats(1)&c<=stats(end)])/sum(bdens)*100),...
@@ -292,8 +298,8 @@ elseif np==5
   mv=0.125; mh=0.01; aps1=[0.8 1]; aps2=[1 1];
   set(thhis(3:5),'FaceColor',grey(9),'EdgeColor',grey(9))
 elseif np==3
-  % mv=0.1; mh=-0.075; aps1=[1.3 1]; aps2=[1.4 1.4];
-  mv=0.05; mh=-0.06; aps1=[1.3 1]; aps2=[1.3 1.3];
+  mv=0.1; mh=-0.075; aps1=[1.3 1]; aps2=[1.4 1.4];
+  % mv=0.05; mh=-0.06; aps1=[1.3 1]; aps2=[1.3 1.3];
 end
 for ind=1:np-1
   moveh(ha([1:2]+2*(ind-1)),(ind-np)*mh)
@@ -302,7 +308,7 @@ shrink(ah(1:np),aps1(1),aps1(2))
 shrink(ah(np+1:end),aps2(1),aps2(2))
 
 movev(ah(length(ah)/2+1:end),mv)
-movev(xl,0.02);
+
 axes(ah(1))
 yl=ylabel('probability density');
 axes(ah(4))
@@ -316,9 +322,13 @@ set(psavhs,'linew',1.5,'color','k')
 set(psXpix,'linew',0.5,'color','k')
 % Based on the actually observed covariance of these data
 set(pobs,'linew',1.5,'color',grey(3.5))
-
-% Delete the one you know barely works
-%delete(psF0)
+% The latest prediction
+set(pclc,'linew',1,'color','k')
+% Since 2025 turns out the Fisher matrix IS being blurred with -1
+delete(psF0)
+% Since 2025 we know the Hessians/Fisher are no good for blurred with Inf
+delete(psavhs)
+delete(psXpix)
 
 % Do this so the reduction looks slightly better
 % set(yl,'FontSize',12)
@@ -359,7 +369,9 @@ try
                                       'one sigma uncertainty based on the ensemble'));
 end
 
-% if np>3; movev(tt,-4); else; movev(tt,-3.5); end
+% Late-breaking
+if np>3; movev(tt,-4); else; movev(tt,-3.5); end
+set(tt,'FontSize',10)
 
 if any(ifinv~=[1 1 1])
     delete(ah(~repmat(ifinv,1,2)))
@@ -389,6 +401,7 @@ if xver==1
     
     t=linspace(0,2*pi);
     %%% OLW
+    % This is expected to work ? for blurs=-1 for simulation and inversion
     if 0%all(ifinv==[1 1 1])
         % Create loglikelihood contours for the mean estimate using
         % your covariance matrix of choice; for now, since we are plotting the
