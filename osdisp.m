@@ -20,7 +20,7 @@ function varargout=osdisp(th0,thhats,nl,avhs,F0,covavhs)
 %
 % The strings used 
 %
-% Last modified by fjsimons-at-alum.mit.edu, 03/07/2023
+% Last modified by fjsimons-at-alum.mit.edu, 05/15/2025
 
 % The necessary strings for formatting
 str0='%18s';
@@ -57,12 +57,12 @@ else
   if nl==1
     % Average numerical Hessian near the estimate and Fisher matrix at the truth
     disp(sprintf(['\nOver %i simulation, the numerical Hessian near the estimate\n' ...
-		  'and the unblurred Fisher matrix at the truth are |%4.2f|%s apart:\n'],nl,...
+		  'and the (un)blurred Fisher matrix at the truth are |%4.2f|%s apart:\n'],nl,...
 		 1/100*round(100*mean(abs([avhs-F0]'./F0'*100))),'%'))
   else
     % Average numerical Hessian near the estimate and Fisher matrix at the truth
     disp(sprintf(['\nOver %i simulations, the median numerical Hessian near the estimate\n' ...
-		  'and the unblurred Fisher matrix at the truth are |%4.2f|%s apart:\n'],nl,...
+		  'and the (un)blurred Fisher matrix at the truth are |%4.2f|%s apart:\n'],nl,...
 		 1/100*round(100*mean(abs([avhs-F0]'./F0'*100))),'%'))
   end
 
