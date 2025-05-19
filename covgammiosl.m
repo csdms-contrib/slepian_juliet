@@ -311,7 +311,7 @@ if ~isstr(th)
       EJJt_out=reshape(permute(EJJt_out,[3 1 2]),[prod(NyNx) prod(NyNx)]);
       
       % Sum and normalize the quantities above; eq. 8 of Walden+1994
-      Hk2cov=(abs(EJJht_out).^2+abs(EJJt_out).^2)./sum(Tx,"all").^2;
+      Hk2cov=(abs(EJJht_out).^2+abs(EJJt_out).^2)./sum(Tx,'all').^2;
 
       % Un-do the normalization factor applied in BLUROSY for the blurred
       % expected periodogram and its partial derivatives; shift both such
