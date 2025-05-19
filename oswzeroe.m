@@ -17,7 +17,7 @@ function oswzeroe(fid,scl,avhsz,good,F0,covF0,fmti)
 %
 % OSWZEROB, OSRZERO, OSWDIAG, OSRDIAG
 %
-% Last modified by fjsimons-at-alum.mit.edu, 05/15/2025
+% Last modified by fjsimons-at-alum.mit.edu, 05/19/2025
 
 % Print the scaling of the theoretical values
 fprintf(fid,'%s\n','The scaling factors');
@@ -36,3 +36,6 @@ fprintf(fid,'%s\n',...
         sprintf('The scaled numerical Hessian matrix averaged over whichever %i runs last output',...
                 good));
 fprintf(fid,fmti{2},trilos(avhsz));
+
+% Print the COVTHOSL using an exact method
+
