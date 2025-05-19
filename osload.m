@@ -33,7 +33,8 @@ function [th0,thhats,params,covX,covavhs,thpix,E,v,obscov,sclcovX,momx,covXpix,c
 %
 % OSOPEN, OSRDIAG, TRIMIT, MLEOS etc
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/14/2023
+% Last modified by fjsimons-at-alum.mit.edu, 04/15/2025
+% Last modified by olwalbert-at-princeton.edu, 04/15/2025
 
 % Who called? Work this into the filenames
 [~,nn]=star69;
@@ -63,7 +64,7 @@ np=size(thinis,2);
 % Could be instructive to ascertain no patterns are in
 % for i=1:np ; plot(thinis(:,i),thhats(:,i),'o'); pause; end
 
-% Report what it is trying to readd
+% Report what it is trying to read
 disp(sprintf('\n%s reading log files:\n\n%s\n%s\n%s\n%s',...
              upper(mfilename),f1,f2,f3,f4))
 
@@ -84,7 +85,7 @@ catch
 end
 
 % Here you might confirm that the hokey variances are on average further
-% from the truth, negatively biased, than the mle estimates. 
+% from the truth, negatively biased, than the MLE estimates. 
 matscl=[sclth0(:)*sclth0(:)'];
 
 % Bring all of them on a common scaling, if it should have differed...
@@ -98,8 +99,8 @@ end
 
 % Below is the covariance derived from the "grand average" MEDIAN
 % numerical Hessian over all runs collected in the DIAGN file, expressed
-% with a common scaling. Note that this is sometimes very strongly
-% affected by outliers; shouldn't give it too much credence.
+% with a common scaling. Note that the average is very strongly
+% affected by outliers; hence we pick the median.
 avhs=median(hes,1);
 k=knums(params);
 df=length(k(~~k))/2; 
@@ -127,7 +128,7 @@ pp=trilosi(covX(pix,:));
 diferm(covXpix(:)./matscl(:),pp(:)./matscl(:),3)
 
 % The below should be the same as covF0 since it came out of OSWZEROE, not at zero-k
-[~,covth0]=fishiosl(k,th0,1);
+[~,covth0]=fishiosl(k,th0,params,1);
 
 % This needs to be identical except in a few digits compared to the size
 diferm(covth0(:)./matscl(:),covF0(:)./matscl(:),3)
