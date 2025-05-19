@@ -1014,7 +1014,7 @@ elseif strcmp(th,'demo2')
     % Plot
     clf;
     % Color friendly palette
-    clrs=["#1B9E77","#D95F02","#7570B3"];
+    clrs=['1B9E77','#D95F02','#7570B3'];
 
     % Histogram of s2 estimates
     subplot(221)
