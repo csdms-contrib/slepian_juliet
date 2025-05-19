@@ -768,7 +768,7 @@ elseif strcmp(th,'demo1')
    
    clf;
    % Color friendly palette
-   clrs=["#1B9E77","#D95F02","#7570B3"];
+   clrs=['#1B9E77','#D95F02','#7570B3'];
    % for consistency between experiments that we are studying, set same limits
    shxlim={[20 200],[20 200],[0.8 2.6]};
    shylim={[0.8 2.6],[1900 3800],[1900 3800]};
