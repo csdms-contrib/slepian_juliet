@@ -933,22 +933,22 @@ elseif strcmp(Hx,'demo2')
   varns={cobs,mobs,nobs,th0,p,momx};
   varargout=varns(1:nargout);
 
+  keyboard
+  
   % Print the figure!
   disp(' ')
   % Figure not printing consistently; force MATLAB to revisit the figures drawn
   % prior to save
   figure(2)
-  figna=figdisp([],sprintf('%s_%s_2',Hx,datum),[],2);
+  figna=figdisp([],sprintf('%s_%s_2',Hx,datum),[],1);
   disp('pause to save')
   pause(3)
   figure(1)
-  figna=figdisp([],sprintf('%s_%s_1',Hx,datum),[],2);
+  figna=figdisp([],sprintf('%s_%s_1',Hx,datum),[],1);
   
   % Being extra careful or not?
   defval('xver',0)
 
-keyboard
-  
   if xver==1
     % Take a look a the distribution of the residual moments
     % This now is a full part of MLECHIPLOS and demo5
