@@ -840,7 +840,7 @@ if ~isempty(tsto) & size(tsto,2)==2
     c=a*b;
     if isfield(params,'taper') & numel(params.taper)>1
         g=params.taper;
-        sg=sum(g.^2,"all");
+        sg=sum(g.^2,'all');
         g2=g.*c; 
     else
         g=ones(NyNx);
