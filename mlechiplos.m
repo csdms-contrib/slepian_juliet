@@ -124,7 +124,7 @@ switch witsj
    Xk1=-Lkros0(k,thhat.*scl,params,Hk)-log(detSb);
    Lbar=logliros0(thhat,params,Hk,k,scl);
  case 4
-   [Lbar,~,~,momx,~,Lk]=logliosl(k,thhat,scl,params,Hk,1);
+   [Lbar,~,~,momx,~,Lk]=logliosl(k,thhat.*scl,params,Hk,1);
     % This only works if params.blurs is not Inf since then SIMULOSL changed
     if ~any(isnan(Lb))
         Xk1=-Lk-log(Sb(~~k));
