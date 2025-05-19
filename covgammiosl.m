@@ -157,7 +157,7 @@ if ~isstr(th)
       % Set the number of realizations (1e3-2e3 is sufficient for terms to
       % asymptote out; if not runinpar, 1e3 takes 8.4s for a 128 by 128 grid, 
       % if runinpar with 23 workers, 1e3 takes 1.1s, with more scaling linearly)
-      numreals=1000; 
+      numreals=3000; 
       % Pre-allocate space for each score
       kgrads=zeros(numreals,np);
 
@@ -197,9 +197,16 @@ if ~isstr(th)
       % kgrads=deal(squeeze(sum((1-Semps/Sbar).*dSbardth./Sbar)));
       kpp=knums(params);
       % Take out zero wavenumber because we only ever  simulate
-      % ZERO-MEAN PROCEESSES and only ever analyze DEMEANED data
-      kgrads=deal(squeeze(sum((Sbar(~~kpp)-Semps(~~kpp,:)).*...
-                              dSbardth(~~kpp,:,:)./Sbar(~~kpp).^2))); 
+      % ZERO-MEAN PROCESSES and only ever analyze DEMEANED data
+      try
+          kgrads=deal(squeeze(sum([Sbar(~~kpp)-Semps(~~kpp,:)].*...
+                                  dSbardth(~~kpp,:,:)./Sbar(~~kpp).^2))); 
+      catch
+          % This is the non-implicitly expanded equivalent
+          kgrads=deal(squeeze(sum([repmat(Sbar(~~kpp),1,size(Semps,2),sum(ifinv))-repmat(Semps(~~kpp,:),[1 1 sum(ifinv)])].*...
+                                  repmat(dSbardth(~~kpp,:,:),[1 numreals 1])...
+                                  ./repmat(Sbar(~~kpp),1,numreals,sum(ifinv)).^2))); 
+      end
       lk=length(kpp(~~kpp));
 
       % The fair comparison would be between, essentially identical
