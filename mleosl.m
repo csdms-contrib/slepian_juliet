@@ -80,6 +80,15 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver,cm)
 %
 % EXAMPLE:
 %
+% % 2015 - convolutional blurring all the way
+% p.quart=0; p.blurs=2; p.kiso=NaN; clc; [Hx,th,p]=simulosl([],p,1);
+% p.blurs=2; mleosl(Hx,[],p,[],[],[],[],1,1);
+%
+% % 2018 - exact blurring all the way
+% p.quart=0; p.blurs=-1; p.kiso=NaN; clc; [Hx,th,p]=simulosl([],p,1);
+% p.blurs=-1; mleosl(Hx,[],p,[],[],[],[],1,0);
+%
+% % 2025 - circulant embedding and exact blurring
 % p.quart=0; p.blurs=Inf; p.kiso=NaN; clc; [Hx,th,p]=simulosl([],p,1);
 % p.blurs=-1; mleosl(Hx,[],p,[],[],[],[],1,1);
 %
@@ -96,7 +105,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver,cm)
 % mleosl('demo1',N,th,p)
 %
 % Statistical study of a series of simulations using MLEPLOS
-% mleosl('demo2','15-May-2025')
+% mleosl('demo2','16-May-2025')
 %
 % Covariance study of a series of simulations using COVPLOS
 % mleosl('demo4','14-Oct-2023')
@@ -929,15 +938,17 @@ elseif strcmp(Hx,'demo2')
   % Figure not printing consistently; force MATLAB to revisit the figures drawn
   % prior to save
   figure(2)
-  figna=figdisp([],sprintf('%s_%s_2',Hx,datum),[],1);
+  figna=figdisp([],sprintf('%s_%s_2',Hx,datum),[],2);
   disp('pause to save')
   pause(3)
   figure(1)
-  figna=figdisp([],sprintf('%s_%s_1',Hx,datum),[],1);
+  figna=figdisp([],sprintf('%s_%s_1',Hx,datum),[],2);
   
   % Being extra careful or not?
   defval('xver',0)
 
+keyboard
+  
   if xver==1
     % Take a look a the distribution of the residual moments
     % This now is a full part of MLECHIPLOS and demo5
@@ -1015,9 +1026,9 @@ elseif strcmp(Hx,'demo5')
   matscl=[scl(:)*scl(:)'];
 
   if any(isnan(k(:))); return; end
-  
+
   % Fisher and Fisher-derived covariance at the truth
-  [F0,covF0]=fishiosl(k,th0,params,xver);
+  [F0,covF0]=fishiosl(k,th0,params);
   % Fisher and Fisher-derived covariance at the estimate
   % covF=covFHh{1};
   % Those two are close of course, and of not much intrinsic interest anymore
