@@ -1014,7 +1014,7 @@ elseif strcmp(Hx,'demo5')
   
   % Figure name
   figna=sprintf('%s_%s_%s',mfilename,Hx,date);
-  
+
   % Simulate data, watch the blurring, verify CHOLCHECK inside
   [Hx,th0,p,k,Hk]=simulosl(th0,params,1);
   
@@ -1068,7 +1068,8 @@ elseif strcmp(Hx,'demo5')
   % Time to rerun LOGLIOS one last time at the solution
   % Do not collect the analytical gradient and Hessian, since these are
   % not the observed blurred gradients
-  [L,~,~,momx]=logliosl(k,scl.*thhat,p,Hks,1);
+  sclh=scl; sclh(1)=1;
+  [L,~,~,momx]=logliosl(k,sclh.*thhat,p,Hks,1);
 
   % We had this already, just making sure it checks out
   diferm(L,lpars{1})
