@@ -30,7 +30,7 @@ function b=varbias(th0,p,calx,calxo)
 %
 % SEE ALSO:
 %
-% SIMULOSL
+% SIMULOSL, KSELBIAS
 %
 % EXAMPLE:
 %
