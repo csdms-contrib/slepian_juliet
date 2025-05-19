@@ -41,8 +41,8 @@ function varargout=mlechiplos(witsj,Hk,thhat,scl,params,ah,pertur,th0,covX,E,v)
 %
 % MLECHIPSDOSL, MLEOSL, EGGERS6
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/14/2023
 % Last modified by olwalbert-at-princeton.edu, 08/16/2024
+% Last modified by fjsimons-at-alum.mit.edu, 05/18/2025
 
 defval('pertur',0)
 defval('th0',[])
