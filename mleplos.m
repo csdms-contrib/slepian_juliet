@@ -36,9 +36,9 @@ function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpi
 %
 % EXAMPLE:
 %
-% This only gets used in MLEOS/MLEROS/MLEROS0/MLEOSL thus far, their 'demo2'
+% This gets used in 'demo2' of MLEOS/MLEROS/MLEROS0/MLEOSL and MASKIT/MUCKIT
 %
-% Last modified by olwalbert-at-princeton.edu, 08/17/2024
+% Last modified by olwalbert-at-princeton.edu, 05/02/2025
 % Last modified by fjsimons-at-alum.mit.edu, 06/11/2024
 defval('xver',1)
 defval('ifinv',[1 1 1])
@@ -78,13 +78,36 @@ for i=1:np
         flabs{i}=append(flabs{i},sprintf(' (x 10^{%d})',log10(sclth0(i))));
     end
 end  
+% Set the taper
+if isfield(params,'mask')
+  if strcmp(params.mask,'random')
+    mcl=str2double(name(1:2))*0.01;
+    [~,I]=muckit(randn(params.NyNx),params,mcl);
+    params.taper=I;
+  else
+    % Calculate the analytical covariance for the Matern parameter, grid, and taper
+    [~,I]=maskit(randn(params.NyNx),params);
+    if strcmp(name,params.mask)
+      params.taper=I;
+    else
+      % Assume this is a call for the anti-mask from MASKIT('DEMO2')
+      params.taper=~I;
+    end
+  end
+else
+  params.taper=1;
+end
+
+% Calculate covariance of scores
+cvg=covgammiosl(th0,params,1);
+% Calculate covariance of estimated parameters
+cvth=covthosl(th0,params,cvg,[1 1 1]);
 
 figure(1)
 clf
 [ah,ha]=krijetem(subnum(2,np));
 
 disp(sprintf('\n'))
-
 % For each of the parameters
 for ind=1:np
   % The empirical means and standard deviations of the estimates
@@ -124,6 +147,11 @@ for ind=1:np
   end
   % Collect them all
   stdXpixs(ind)=stdXpix;
+
+  % The standard deviation from the calculated covariance
+  scth=sqrt(cvth(ind,ind));
+  % Collect them all
+  scths(ind)=scth;
   
   % HISTOGRAMS
   axes(ah(ind))
@@ -181,6 +209,8 @@ for ind=1:np
   % Based on the actually observed covariance of these data
   % In previous versions had used th0i/mobs here also, that didn't summarize it well
   pobs(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,sobs));
+  % Include the analytically calculated covariance 
+  pclc(ind)=plot(xnorm,scth*normpdf(xnorm,th0i,scth));
 
   % Some annotations
   % Experiment size, he giveth, then taketh away
@@ -274,7 +304,7 @@ shrink(ah(np+1:end),aps2(1),aps2(2))
 movev(ah(length(ah)/2+1:end),mv)
 movev(xl,0.02);
 axes(ah(1))
-yl=ylabel({'posterior';'probability density'});
+yl=ylabel('probability density');
 axes(ah(4))
 yl(2)=ylabel('sample values');
 longticks(ah)
@@ -358,20 +388,40 @@ if xver==1
     s=chi2inv(cl,2);
     
     t=linspace(0,2*pi);
-
-    if all(ifinv==[1 1 1])
+    %%% OLW
+    if 0%all(ifinv==[1 1 1])
         % Create loglikelihood contours for the mean estimate using
         % your covariance matrix of choice; for now, since we are plotting the
         % loglikelihood contours in addition to the error ellipses calculated
         % from the observed standard deviation of the sample of estimates, let's 
         % use the observed covariance (also looks nice using COVAVHS)
         covch=nancov(thhats.*sclth0);
-        thch=th0;% alternatively, mobss
+        thch=mobss;
         try
+            keyboard
             % Load preexisting files instead of recalculating
-            mlelcontfnam=sprintf('mlelcontosl_%s.mat',name);
-            mlelcontdata=importdata(mlelcontfnam);
-            Lgrid=mlelcontdata.Lgrid;Lcon=mlelcontdata.Lcon;thR=mlelcontdata.thR;
+            %%%mlelcontfnam=sprintf('mlelcontosl_%s.mat',name);
+            %%%mlelcontdata=importdata(mlelcontfnam);
+            %%%Lgrid=mlelcontdata.Lgrid;Lcon=mlelcontdata.Lcon;thR=mlelcontdata.thR;
+            mlelcontfnam1=sprintf('mlelcontosl_r1_%s.mat',name);
+            mlelcontfnam2=sprintf('mlelcontosl_r2_%s.mat',name);
+            mlelcontfnam3=sprintf('mlelcontosl_r3_%s.mat',name);
+            mlelcontfnam4=sprintf('mlelcontosl_r4_%s.mat',name);
+            mlelcontfnam5=sprintf('mlelcontosl_r5_%s.mat',name);
+            mlelcontdata1=importdata(mlelcontfnam1);
+            mlelcontdata2=importdata(mlelcontfnam2);
+            mlelcontdata3=importdata(mlelcontfnam3);
+            mlelcontdata4=importdata(mlelcontfnam4);
+            mlelcontdata5=importdata(mlelcontfnam5);
+            Lgrid1=mlelcontdata1.Lgrid1;Lcon1=mlelcontdata1.Lcon1;thR1=mlelcontdata1.thR1;
+            Lgrid2=mlelcontdata2.Lgrid2;Lcon2=mlelcontdata2.Lcon2;thR2=mlelcontdata2.thR2;
+            Lgrid3=mlelcontdata3.Lgrid3;Lcon3=mlelcontdata3.Lcon3;thR3=mlelcontdata3.thR3;
+            Lgrid4=mlelcontdata4.Lgrid4;Lcon4=mlelcontdata4.Lcon4;thR4=mlelcontdata4.thR4;
+            Lgrid5=mlelcontdata5.Lgrid5;Lcon5=mlelcontdata5.Lcon5;thR5=mlelcontdata5.thR5;
+            Lcon=(Lcon1+Lcon2+Lcon3+Lcon4+Lcon5)/5;
+            Lgrid=(Lgrid1+Lgrid2+Lgrid3+Lgrid4+Lgrid5)/5;
+            thR=(thR1+thR2+thR3+thR4+thR5)/5; % check that all thR# are equivalent
+            keyboard
         catch
             % Unable to find files as labeled, we will have to calculate the
             % loglikelihood surface
@@ -380,19 +430,66 @@ if xver==1
                 datestr(now,15)));
             % Create a field for the true Matern parameters that we will use for
             % calculating the loglihood surface
-            [~,~,~,~,Hk]=simulosl(th0.*sclth0,params,1);
+
+            [~,~,~,~,Hk]=simulosl(thch.*sclth0,params);
+            params.blurs=-1;Sb=blurosy(th0.*sclth0,params);params.blurs=Inf;
             % Open a new figure to dump visual output generated by mlelcontosl
             figure(3)
             clf;
             % Let's make the range of the loglikelihood grid a bit wider than
             % the cross; this can be tinkered with further
             thRange=[thch'.*sclth0'+pstats.*sobss'].*[0.9 1.1];
-            [Lgrid,Lcon,thR]=mlelcontosl(Hk,thch.*sclth0,params,covch,thRange,1);
+            thRange=[th0'.*sclth0'+pstats.*sobss'].*[0.5 2.0];
 
+            % The normal way, look at the loglihood surface for the periodogram
+            % formed from the data at the mean parameter estimates
+            % [Lgrid,Lcon,thR]=mlelcontosl(Hk,thch.*sclth0,params,covch,thRange,1);
+
+            %%% OLW -- try providing sqrt of periodogram at truth in place of
+            % Hk; alternatively, we will need to add a flag to mlelcontosl, \
+            % logliosl, hformos and make a condition within hformos
+
+            % Output calculation stored in mlelcontSb/
+            %[Lgrid,Lcon,thR]=mlelcontosl(sqrt(Sb),thch.*sclth0,params,covch,thRange,1);
+
+            % Let's look at a couple randomly selected samples and plot their
+            % loglikelihood contours
+            keyboard
+            rthhats1=thhats(randi(size(thhats,1)),:);
+            rthhats2=thhats(randi(size(thhats,1)),:);
+            rthhats3=thhats(randi(size(thhats,1)),:);
+            rthhats4=thhats(randi(size(thhats,1)),:);
+            rthhats5=thhats(randi(size(thhats,1)),:);
+            [~,~,~,~,Hk1]=simulosl(rthhats1.*sclth0,params);
+            [~,~,~,~,Hk2]=simulosl(rthhats2.*sclth0,params);
+            [~,~,~,~,Hk3]=simulosl(rthhats3.*sclth0,params);
+            [~,~,~,~,Hk4]=simulosl(rthhats4.*sclth0,params);
+            [~,~,~,~,Hk5]=simulosl(rthhats5.*sclth0,params);
+
+            [Lgrid1,Lcon1,thR1]=mlelcontosl(Hk1,rthhats1.*sclth0,params,covch,thRange,1);
+            [Lgrid2,Lcon2,thR2]=mlelcontosl(Hk2,rthhats2.*sclth0,params,covch,thRange,1);
+            [Lgrid3,Lcon3,thR3]=mlelcontosl(Hk3,rthhats3.*sclth0,params,covch,thRange,1);
+            [Lgrid4,Lcon4,thR4]=mlelcontosl(Hk4,rthhats4.*sclth0,params,covch,thRange,1);
+            [Lgrid5,Lcon5,thR5]=mlelcontosl(Hk5,rthhats5.*sclth0,params,covch,thRange,1);
+
+            keyboard
             % Save loglikelihood variables to file
-            mlelcontfnam=sprintf('mlelcontosl_%s',name);
-            save(mlelcontfnam,'Lgrid','Lcon','thR');
+            %mlelcontfnam=sprintf('mlelcontosl_%s',name);
+            %save(mlelcontfnam,'Lgrid','Lcon','thR');
+            mlelcontfnam1=sprintf('mlelcontosl_r1_%s',name);
+            mlelcontfnam2=sprintf('mlelcontosl_r2_%s',name);
+            mlelcontfnam3=sprintf('mlelcontosl_r3_%s',name);
+            mlelcontfnam4=sprintf('mlelcontosl_r4_%s',name);
+            mlelcontfnam5=sprintf('mlelcontosl_r5_%s',name);
+            save(mlelcontfnam1,'Lgrid1','Lcon1','thR1');
+            save(mlelcontfnam2,'Lgrid2','Lcon2','thR2');
+            save(mlelcontfnam3,'Lgrid3','Lcon3','thR3');
+            save(mlelcontfnam4,'Lgrid4','Lcon4','thR4');
+            save(mlelcontfnam5,'Lgrid5','Lcon5','thR5');
             figure(2)
+            Lcon=(Lcon1+Lcon2+Lcon3+Lcon4+Lcon5)/5;
+            Lgrid=(Lgrid1+Lgrid2+Lgrid3+Lgrid4+Lgrid5)/5;
+            thR=thR1; % check that all thR# are equivalent
         end
     end
 
@@ -408,6 +505,12 @@ if xver==1
         t2(ind)=plot([mobss(p1) mobss(p1)],...
 		     mobss(p2)+pstats*stdavhss(p2));
         set([t1(ind) t2(ind)],'Color',grey)
+        % Observed mean and calculated standard deviations
+        c1(ind)=plot(mobss(p1)+pstats*scths(p1),...
+		     [mobss(p2) mobss(p2)]);
+        c2(ind)=plot([mobss(p1) mobss(p1)],...
+		     mobss(p2)+pstats*scths(p2));
+        set([c1(ind) c2(ind)],'Color',grey)
         % The parameter estimates
         p(ind)=plot(thhats(:,p1),thhats(:,p2),'o'); 
 
@@ -446,16 +549,26 @@ if xver==1
         % [V,D]=eig(covavhs([p1 p2],[p1 p2])./[sclth0([p1 p2])'*sclth0([p1 p2])]);
         a=sqrt(s)*V*sqrt(D)*[cos(t); sin(t)];
         ep(ind)=plot(a(1,:)+mobss(p1),a(2,:)+mobss(p2));
+        % And for the calculated covariance, too
+        znp=zeros(1,np);
+        znp([p1 p2])=1;
+        [V,D]=eig(matslice(cvth./(sclth0'*sclth0),znp));
+        a11=sqrt(s)*V*sqrt(D)*[cos(t);sin(t)];
+        a=sqrt(s)*V*sqrt(D)*[cos(t); sin(t)];
+        ec(ind)=plot(a(1,:)+mobss(p1),a(2,:)+mobss(p2));
         %seemax([ah(1) ah(2)],1)
         %seemax([ah(2) ah(3)],2)
-        if all(ifinv==[1 1 1])
+        %%% OLW
+        if 0%all(ifinv==[1 1 1])
             % Recall that the loglihood grid order is s2-nu, nu-rho, rho-s2; 
             % we need to transpose Lgrid, Lcon, thR to match our cross-plot axes
             Lconcp=[Lcon(1,:);Lcon(3,:);Lcon(2,:)];
-            Lgridcp=[Lgrid(:,:,1);Lgrid(:,:,3)';Lgrid(:,:,2)];
+            Lgridcp(:,:,1)=Lgrid(:,:,1);
+            Lgridcp(:,:,2)=Lgrid(:,:,3)';
+            Lgridcp(:,:,3)=Lgrid(:,:,2);
             xcon=thR(p1,:)./sclth0(p1);ycon=thR(p2,:)./sclth0(p2); 
             hold on
-            [cont,ch(ind)]=contour(xcon,ycon,Lgrid(:,:,p1),Lcon(p1,:));
+            [cont,ch(ind)]=contour(xcon,ycon,Lgridcp(:,:,p1),Lconcp(p1,:));
             set(ch(ind),'EdgeColor',[0.45 0.45 0.45]);
         end
         axis square
@@ -488,6 +601,3 @@ end
 % Output
 varns={ah,ha,yl,xl,tl};
 varargout=varns(1:nargout);
-
-% Subfunction to compute standard deviations
-
