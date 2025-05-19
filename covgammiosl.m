@@ -1220,7 +1220,7 @@ elseif strcmp(th,'demo3')
     labs={'\sigma^2,\sigma^2', '\nu,\nu', '\rho,\rho', '\sigma^2,\nu',...
           '\sigma^2,\rho', '\nu,\rho'};
     % Color friendly palette
-    clrs=["#1B9E77","#D95F02","#7570B3"];
+    clrs=['#1B9E77','#D95F02','#7570B3'];
 
     clf;
     [ah,ha,H]=krijetem(subnum(2,3));
@@ -1228,7 +1228,7 @@ elseif strcmp(th,'demo3')
       axes(ah(ind))
       if varofcov
         pl1(ind)=errorbar(2:25:numsims,mn1(ind,2:25:end),var1(ind,2:25:end),...
-          "o",'MarkerSize',2,'Color',clrs{1},'DisplayName','sampling');
+          'o','MarkerSize',2,'Color',clrs{1},'DisplayName','sampling');
         pl1(ind).CapSize = 0;
         set(gca,'YScale','log')
       else
