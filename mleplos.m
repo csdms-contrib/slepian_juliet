@@ -51,7 +51,7 @@ tstats=[-3 3];
 vstats=[-2 0 2];
 sclth0=10.^round(log10(abs(th0)));
 movit=0.01;
-yls=[-0.0 0.65];
+yls=[-0.0 0.6];
 % Determines the rounding on the y axis 
 rondo=1e2;
 % Sets the format for the estimated/true plot labels
@@ -76,7 +76,12 @@ end
 % Append the scaling of each Matern parameter axis if it is not 1
 for i=1:np                                                       
     if sclth0(i)~=1
-        %        flabs{i}=append(flabs{i},sprintf(' (x 10^{%d})',log10(sclth0(i))));
+        try
+            flabs{i}=append(flabs{i},sprintf(' (x 10^{%d})',log10(sclth0(i))));
+        catch
+            % Maybe this isn't necessary for R2015a
+            flabs{i}=sprintf('%s %s',flabs{i},sprintf(' (x 10^{%d})',log10(sclth0(i))));
+        end
     end
 end  
 % Set the taper
@@ -315,15 +320,15 @@ axes(ah(4))
 yl(2)=ylabel('sample values');
 longticks(ah)
 % Normal distribution based on stdF0
-set(psF0,'linew',0.5,'color','k','LineS','--')
+set(psF0,'LineWidth',0.5,'Color','k','LineStyle','--')
 % Based on the median numerical Hessian matrix
-set(psavhs,'linew',1.5,'color','k')
+set(psavhs,'LineWidth',1.5,'Color','k')
 % Based on the randomly picked Hessian matrix
-set(psXpix,'linew',0.5,'color','k')
+set(psXpix,'LineWidth',0.5,'Color','k')
 % Based on the actually observed covariance of these data
-set(pobs,'linew',1.5,'color',grey(3.5))
+set(pobs,'LineWidth',1.5,'Color',grey(3.5))
 % The latest prediction
-set(pclc,'linew',1,'color','k')
+set(pclc,'LineWidth',1,'Color','k')
 % Since 2025 turns out the Fisher matrix IS being blurred with -1
 delete(psF0)
 % Since 2025 we know the Hessians/Fisher are no good for blurred with Inf
@@ -378,9 +383,10 @@ if any(ifinv~=[1 1 1])
 end
 
 % Make basic x-y plots of the parameters
-% FJS SHOULD CALL THIS MLETHPLOS
+% FJS SHOULD CALL THIS MLETHPLOS OR BETTER YET, MLEXPLOS
 if xver==1
     figure(2)
+    fig2print(gcf,'landscape')
     clf
     pcomb=nchoosek(1:np,2);
     [ah,ha]=krijetem(subnum(1,3));
@@ -510,7 +516,7 @@ if xver==1
         axes(ah(ind))
         % Find the pairwise combinations for the cross-plot convention: s2-nu,
         % s2-rho, nu-rho
-        p1=pcomb(ind,1);p2=pcomb(ind,2);
+        p1=pcomb(ind,1); p2=pcomb(ind,2);
 
         % Observed means and theoretical standard deviations
         t1(ind)=plot(mobss(p1)+pstats*stdavhss(p1),...
@@ -547,11 +553,22 @@ if xver==1
         % Color mix
         cmix=[0 0 0]; cmix([p1 p2])=1/2;
         set([p(ind) m(ind)],'MarkerFaceColor',cmix,'MarkerEdgeColor',cmix,'MarkerSize',2)
+        % Dull colors
+        set([p(ind) m(ind)],'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',2)
+
         % Cosmetix
         % Delete the big cross
-        %        delete([o1(ind) o2(ind)])
+        delete([o1(ind) o2(ind)])
+        % Delete the little cross
+        delete([c1(ind) c2(ind)])
+        % Delete the other cross
+        delete([t1(ind) t2(ind)])
+        % Delete the "estimate"
+        delete(m(ind))
+        % Labels
         xl2(ind)=xlabel(flabs{p1});
         ylabel(flabs{p2})
+
         % Plot pairwise error ellipses
         % https://www.xarg.org/2018/04/how-to-plot-a-covariance-error-ellipse/
         hold on
@@ -562,6 +579,7 @@ if xver==1
         % [V,D]=eig(covavhs([p1 p2],[p1 p2])./[sclth0([p1 p2])'*sclth0([p1 p2])]);
         a=sqrt(s)*V*sqrt(D)*[cos(t); sin(t)];
         ep(ind)=plot(a(1,:)+mobss(p1),a(2,:)+mobss(p2));
+
         % And for the calculated covariance, too
         znp=zeros(1,np);
         znp([p1 p2])=1;
@@ -569,9 +587,17 @@ if xver==1
         a11=sqrt(s)*V*sqrt(D)*[cos(t);sin(t)];
         a=sqrt(s)*V*sqrt(D)*[cos(t); sin(t)];
         ec(ind)=plot(a(1,:)+mobss(p1),a(2,:)+mobss(p2));
-        %seemax([ah(1) ah(2)],1)
-        %seemax([ah(2) ah(3)],2)
-        %%% OLW
+        % seemax([ah(1) ah(2)],1)
+        % seemax([ah(2) ah(3)],2)
+
+        % Dull colors
+        set(ep(ind),'LineWidth',1.5,'Color',grey(3.5))
+        set(ec(ind),'LineWidth',1,'Color','k')
+        % Send these ellipses to the back so the dots show on top
+        bottom(ec(ind),ah(ind))
+        bottom(ep(ind),ah(ind))
+      
+        % %% OLW
         if 0%all(ifinv==[1 1 1])
             % Recall that the loglihood grid order is s2-nu, nu-rho, rho-s2; 
             % we need to transpose Lgrid, Lcon, thR to match our cross-plot axes
@@ -603,9 +629,15 @@ if xver==1
     for ind=1:3
         xl2(ind).VerticalAlignment='bottom';xl2(ind).Units='centimeters';
     end
-    movev(xl2(3),-0.5);
+    movev(xl2(3),-1);
     xl2(1).Position(2)=xl2(3).Position(2);xl2(2).Position(2)=xl2(3).Position(2);
-    moveh(ah(1),-0.02);moveh(ah(3),0.02);
+    moveh(ah(1),-0.02); moveh(ah(3),0.02);
+
+    % Late-breaking
+    if np>3; movev(tt,-4); else; movev(tt,-3.5); end
+    set(tt,'FontSize',10)
+    set(ah,'FontSize',12)
+    
     if any(ifinv~=[1 1 1])
         delete(ah(~~ifinv([3 2 1])))
     end
