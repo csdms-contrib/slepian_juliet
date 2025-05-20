@@ -939,12 +939,10 @@ elseif strcmp(Hx,'demo2')
   disp(' ')
   % Figure not printing consistently; force MATLAB to revisit the figures drawn
   % prior to save
-  figure(2)
-  figna=figdisp([],sprintf('%s_%s_2',Hx,datum),[],1);
+  figure(2);  figna=figdisp([],sprintf('%s_%s_2',Hx,datum),[],1);
   disp('pause to save')
   pause(3)
-  figure(1)
-  figna=figdisp([],sprintf('%s_%s_1',Hx,datum),[],1);
+  figure(1); figna=figdisp([],sprintf('%s_%s_1',Hx,datum),[],1);
   
   % Being extra careful or not?
   defval('xver',0)
