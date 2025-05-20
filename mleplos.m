@@ -518,22 +518,23 @@ if xver==1
         % s2-rho, nu-rho
         p1=pcomb(ind,1); p2=pcomb(ind,2);
 
-        % Observed means and theoretical standard deviations
+        % Observed means and AVERAGE NUMERICAL HESSIAN standard deviations
         t1(ind)=plot(mobss(p1)+pstats*stdavhss(p1),...
 		     [mobss(p2) mobss(p2)]); hold on
         t2(ind)=plot([mobss(p1) mobss(p1)],...
 		     mobss(p2)+pstats*stdavhss(p2));
         set([t1(ind) t2(ind)],'Color',grey)
-        % Observed mean and calculated standard deviations
+        % Observed means and EXACT standard deviations which should be great
         c1(ind)=plot(mobss(p1)+pstats*scths(p1),...
 		     [mobss(p2) mobss(p2)]);
         c2(ind)=plot([mobss(p1) mobss(p1)],...
 		     mobss(p2)+pstats*scths(p2));
         set([c1(ind) c2(ind)],'Color',grey)
+
         % The parameter estimates
         p(ind)=plot(thhats(:,p1),thhats(:,p2),'o'); 
 
-        % Observed means and observed standard deviations
+        % Observed means and OBSERVED standard deviations
         m(ind)=plot(mobss(p1),mobss(p2),'v');
         o1(ind)=plot(mobss(p1)+pstats*sobss(p1),...
 		     [mobss(p2) mobss(p2)],'LineWidth',1);
@@ -557,14 +558,15 @@ if xver==1
         set([p(ind) m(ind)],'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',2)
 
         % Cosmetix
-        % Delete the big cross
-        delete([o1(ind) o2(ind)])
+        % Emphasize the OBSERVED means and standard deviations
+        set([o1(ind) o2(ind)],'LineWidth',1,'Color',grey(3.5))
+        set( m(ind)           ,'MarkerFaceColor',grey(3.5),'MarkerEdgeColor',grey(3.5),'MarkerSize',4)
+        top(m(ind),ah(ind))
+
         % Delete the little cross
         delete([c1(ind) c2(ind)])
         % Delete the other cross
         delete([t1(ind) t2(ind)])
-        % Delete the "estimate"
-        delete(m(ind))
         % Labels
         xl2(ind)=xlabel(flabs{p1});
         ylabel(flabs{p2})
