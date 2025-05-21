@@ -22,8 +22,8 @@ function varargout=covplos(oneortwo,sclcovX,obscov,params,thhats,E,v,cblox,ifinv
 %
 % ah,yl     Axis handles to what was just plotted
 %
-% Last modified by fjsimons-at-alum.mit.edu, 10/30/2023
-% Last modified by olwalbert-at-princeton.edu, 08/29/2024
+% Last modified by fjsimons-at-alum.mit.edu, 05/20/2025
+% Last modified by olwalbert-at-princeton.edu, 05/20/2025
 
 defval('oneortwo',2)
 defval('cblox','ver')
@@ -31,6 +31,20 @@ defval('ifinv',[1 1 1])
 
 % Number of paramters
 np=length(sclcovX);
+
+% Calculate proper covariance of scores, how about using the average estimate
+% maybe should bring that in line with MLEPLOS which uses the truth
+thhat=mean(thhats,1);
+try
+    % DFMTX
+    cvg=covgammiosl(thhat,params,2);
+catch
+    % gradient sample
+    cvg=covgammiosl(thhat,params,1);
+end
+% Calculate true covariance of estimated parameters and replace what came in
+sclcovX=covthosl(thhat,params,cvg,[1 1 1]);
+sclcovX=sclcovX./[diag(sqrt(sclcovX))*diag(sqrt(sclcovX))'];
 
 switch oneortwo
  case 1
