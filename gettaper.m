@@ -228,7 +228,7 @@ if ~isstr(params)
       tys=[tys{:}];
       txs=[txs{:}];
       % Expand to two-dimensions
-      Tx=tys.*txs.';
+      Tx=txs.*tys.';
       % Normalize according to Walden & Percival 1993 eq 208a
       normfact=sqrt(sum(Tx.^2,'all'));
       % BUT, we are in 2-dimensions, does the sqrt go away?
