@@ -934,6 +934,19 @@ elseif strcmp(Hx,'demo2')
   varargout=varns(1:nargout);
 
   keyboard
+
+  flag=3;
+  if flag==3
+      % Make sure MLEPLOS outputs all the handles
+      % Remove the ones that we don't like
+
+      % hold on
+      mlecontosl
+
+      % bottom
+  end
+
+
   
   % Print the figure!
   disp(' ')
@@ -1001,7 +1014,7 @@ elseif strcmp(Hx,'demo4')
 
   % Print the figure!
   disp(' ')
-  figna=figdisp([],sprintf('%s_%s',Hx,datum),[],2);
+  figna=figdisp([],sprintf('%s_%s',Hx,datum),[],1);
 elseif strcmp(Hx,'demo5')  
   % What th-parameter set? The SECOND argument after the demo id
   defval('thini',[]);
