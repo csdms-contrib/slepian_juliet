@@ -961,8 +961,9 @@ elseif strcmp(Hx,'demo2')
   defval('xver',0)
 
   if xver==1
+      % This now is a full part of MLECHIPLOS and demo5 - GO THERE AND REMOVE THIS
+      
     % Take a look a the distribution of the residual moments
-    % This now is a full part of MLECHIPLOS and demo5
     % See RB X, p. 51 about the skewness of a chi-squared - just sayin'.
     % We don't change the number of degrees of freedom! If you have used
     % twice the number, and given half correlated variables, you do not
@@ -1028,6 +1029,7 @@ elseif strcmp(Hx,'demo5')
 
   % Simulate data, watch the blurring, verify CHOLCHECK inside
   [Hx,th0,p,k,Hk]=simulosl(th0,params,1);
+
   
   % Initialize, take defaulted inside MLEOSL for now
   thini=[];
@@ -1035,6 +1037,19 @@ elseif strcmp(Hx,'demo5')
   % Perform the optimization, whatever the quality of the result
   [thhat,covFHh,lpars,scl,thini,p,Hks,k]=mleosl(Hx,thini,p);
   matscl=[scl(:)*scl(:)'];
+
+  % We're going to taper just for what follows
+  if isinf(p.blurs)
+    Tx=gettaper(p,'cosine',0.1);
+    % Replicating the treatment applied to Hk in SIMULOSL
+    Hx=Tx(:).*Hx(:,1); Hx=Hx-mean(Hx);
+    p.taper=Tx;
+    Hk=tospec(Hx,p)/(2*pi);
+    if size(Tx)~=1
+        Hk=Hk/sqrt(sum(Tx(:).^2))*sqrt(prod(p.NyNx));
+    end
+    % Note we won't look at the solution, but we use the taper for the residual
+  end
 
   if any(isnan(k(:))); return; end
 
@@ -1087,7 +1102,7 @@ elseif strcmp(Hx,'demo5')
 
   % Makes an attractive plot that can be used as a judgment for fit
   mlechiplos(4,Hk,thhat,scl,p,ah,0,th0,covFHh{3});
-  
+
   disp('FJS here fits also MLECHIPSDOSL')
   disp('FJS here fits the MLELCONTOSL')
 
