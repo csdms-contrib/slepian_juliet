@@ -69,7 +69,8 @@ if ~isstr(params)
       % This seems a bit tricky if we want to compensate for differences in
       % spacing; maybe this
       % adydx=(attr./dydx)./norm((attr./dydx),'fro');
-      adydx=attr.*dydx;
+      % adydx=attr.*dydx;
+      adydx=attr;
       numrc=ceil(adydx.*NyNx/d^2);
       Tx(  [1:numrc(1) NyNx(1)-numrc(1)+1:NyNx(1)],:)=deal(0);
       Tx(:,[1:numrc(2) NyNx(2)-numrc(2)+1:NyNx(2)])  =deal(0);
@@ -83,18 +84,66 @@ if ~isstr(params)
     end
   elseif strcmp(tnam,'cosine')
     defval('attr',0.2)
-    if isfield(params,'mask') & numel(attr)==2
-      % We are requesting to buffer a mask scaled to attr(1) with another mask
-      % scaled by scl.*(1-attr(2)), so that attr(2) acts in a similar way to
-      % attr in other cases; i.e., attr(2) is the proportion of the data to taper
-      scl=attr(1);
-      sclb=attr(2);
-      % Interior mask
-        % Find the mask vertices for the provided scaling, and for the scaling
-        % provided in ATTR; attr should be less than 1 if we are buffering
-        % outwards and greater than 1 if buffering inwards
-        [~,I,~,~,~,cr]=maskit(randn(params.NyNx),params,scl);
+    if (isfield(params,'mask') & numel(attr)==2) | ... 
+       (isfield(params,'taper') & numel(params.taper)>1) | ...
+        isfield(params,'XY')
+      % You either came in wanting a taper of a mask with attributes defining
+      % the size of the mask and how much the mask boundary will be tapered, OR
+      % you already had a mask in the params.taper field and you want it tapered
+      if isfield(params,'mask') & numel(attr)==2
+        % We are requesting to buffer a mask scaled to attr(1) with another mask
+        % scaled by scl.*(1-attr(2)), so that attr(2) acts in a similar way to
+        % attr in other cases; i.e., attr(2) is the proportion of the data to taper
+        scl=attr(1);
+        sclb=attr(2);
+        % Interior mask
+          % Find the mask vertices for the provided scaling, and for the scaling
+          % provided in ATTR; attr should be less than 1 if we are buffering
+          % outwards and greater than 1 if buffering inwards
+          [~,I,~,~,~,cr]=maskit(randn(params.NyNx),params,scl);
+          [~,Ib,~,~,~,crb]=maskit(randn(params.NyNx),params,scl.*(1-sclb));
+      elseif isfield(params,'taper') & numel(params.taper)>1
+        % You provided a mask in the params.taper slot
+        imdat=params.taper;
+        % Maybe there is a better way to do this. For now I am recycling code
+        % that I know works for creating curves from a binarized grid 
+        % from IMURL2VEC (5/22/25).
+        [B,L] = bwboundaries(imdat,'holes'); 
+        % just in case there are multiple boundaries returned, grab the one with
+        % the most vertices 
+        [~,id]=sort(cellfun(@length,B),'descend');
+        imvec=B{id(1)};
+        N=200;
+        imsz=size(imvec,1);
+        decstep=ceil(imsz/N);
+        imvec=imvec(1:decstep:end,:);
+        imvec(end+1,:)=imvec(1,:);
+        imvec=imvec(:,[2 1]);
+        ptmp=params;ptmp.XY=imvec; 
+        scl=attr(1);
+        sclb=attr(2);
+        [~,I,~,~,~,cr]=maskit(randn(ptmp.NyNx),ptmp,scl);
+        [~,Ib,~,~,~,crb]=maskit(randn(params.NyNx),ptmp,scl.*(1-sclb));
+        % TODO: test this case out, it might break. 
+      elseif isfield(params,'XY')
+      % TODO -- the mask is rescaling in MASKIT. Must resolve this. 
+        % You came in with the exterior boundary of the mask you want
+        cr=params.XY;
+        if numel(attr)<2
+          scl=1;
+          sclb=attr(1);
+        else
+          scl=attr(1);
+          sclb=attr(2);
+        end
+        keyboard
+        [~,I,~,~,scla,cra]=maskit(randn(params.NyNx),params,scl);
+        if scl==1;
+          % I hope that these would be the same
+          diferm(cr-cra)
+        end
         [~,Ib,~,~,~,crb]=maskit(randn(params.NyNx),params,scl.*(1-sclb));
+      end
         % Create denser arrays of polygon vertices
         xv=cr(:,1); yv=cr(:,2);
         xvb=crb(:,1); yvb=crb(:,2);
