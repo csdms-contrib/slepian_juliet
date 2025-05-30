@@ -125,13 +125,13 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver,cm)
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
 % Last modified by fjsimons-at-alum.mit.edu, 04/08/2025
-% Last modified by olwalbert-at-princeton.edu, 04/08/2025
+% Last modified by olwalbert-at-princeton.edu, 05/30/2025
 
 if ~isstr(Hx)
   defval('algo','unc')
   % The necessary strings for formatting, see OSDISP and OSANSW
   str0='%18s';
-  str1='%13.0e ';
+  str1='%13.0e '; 
   str2='%13.0f %13.2f %13.0f';
   str2='%13.3g %13.3g %13.5g';
   str3s='%13s ';
@@ -681,15 +681,16 @@ if ~isstr(Hx)
     disp(sprintf(sprintf(' Cov (Numer hess.) : %s',str3),trilos(covh)))
     disp(sprintf(sprintf(' Cov (Analy Hess.) : %s',str3),trilos(covH)))
     disp(sprintf(sprintf(' Cov (Analy Fish.) : %s',str3),trilos(covF)))
-    disp(sprintf(sprintf(' Cov ( FishHFish.) : %s',str3),trilos(covFHF)))
     disp(sprintf(sprintf(' Cov ( FishhFish.) : %s',str3),trilos(covFhF)))
+    disp(sprintf(sprintf(' Cov ( FishHFish.) : %s',str3),trilos(covFHF)))
     if sum(covFJF(:))~=0
         disp(sprintf(sprintf(' Cov ( FishJFish.) : %s',str3),trilos(covFJF)))
     else
         disp(sprintf(sprintf(' Cov ( FishJFish.) : %s',str3),zeros(npp,1)))
     end
 
-    disp(sprintf('%s',repmat('_',119,1)))
+    % disp(sprintf('%s\n',repmat('_',119,1)))
+    disp(' ')
     disp(sprintf(sprintf('%s : %s ',str0,str2),...
 	         'Numer Hessi std',sqrt(diag(covh))))
     disp(sprintf(sprintf('%s : %s ',str0,str2),...
@@ -697,9 +698,9 @@ if ~isstr(Hx)
     disp(sprintf(sprintf('%s : %s\n ',str0,str2),...
 	         'Anal Fisher std',sqrt(diag(covF))))
     disp(sprintf(sprintf('%s : %s ',str0,str2),...
-	         ' FishHFish. std',sqrt(diag(covFHF))))
-    disp(sprintf(sprintf('%s : %s\n ',str0,str2),...
 	         ' FishhFish. std',sqrt(diag(covFhF))))
+    disp(sprintf(sprintf('%s : %s ',str0,str2),...
+	         ' FishHFish. std',sqrt(diag(covFHF))))
     disp(sprintf(sprintf('%s : %s\n ',str0,str2),...
 	         ' FishJFish. std',sqrt(diag(covFJF))))
   end
@@ -713,7 +714,7 @@ if ~isstr(Hx)
   if xver==0 || xver==1
     disp(sprintf('%8.1fs per %i iterations or %5.1fs per %i function counts',...
                  ts/oput.iterations*100,100,ts/oput.funcCount*1000,1000))
-    disp(sprintf('%s\n',repmat('_',119,1)))
+    % disp(sprintf('%s\n',repmat('_',119,1)))
   end
 
   % Here we compute the moment parameters and recheck the likelihood
@@ -933,8 +934,6 @@ elseif strcmp(Hx,'demo2')
   varns={cobs,mobs,nobs,th0,p,momx};
   varargout=varns(1:nargout);
 
-  keyboard
-
   flag=3;
   if flag==3
       % Make sure MLEPLOS outputs all the handles
@@ -946,8 +945,6 @@ elseif strcmp(Hx,'demo2')
       % bottom
   end
 
-
-  
   % Print the figure!
   disp(' ')
   % Figure not printing consistently; force MATLAB to revisit the figures drawn
@@ -956,44 +953,6 @@ elseif strcmp(Hx,'demo2')
   disp('pause to save')
   pause(3)
   figure(1); figna=figdisp([],sprintf('%s_%s_1',Hx,datum),[],1);
-  
-  % Being extra careful or not?
-  defval('xver',0)
-
-  if xver==1
-      % This now is a full part of MLECHIPLOS and demo5 - GO THERE AND REMOVE THIS
-      
-    % Take a look a the distribution of the residual moments
-    % See RB X, p. 51 about the skewness of a chi-squared - just sayin'.
-    % We don't change the number of degrees of freedom! If you have used
-    % twice the number, and given half correlated variables, you do not
-    % change the variance, that is the whole point. Unlike in FISHIOSL
-    % where you make an analytical prediction that does depend on the
-    % number and which therefore you need to adjust.
-    k=knums(p); varpred=8/[length(k(~~k))];
-
-    figure(2)
-    clf
-    fig2print(gcf','portrait')
-    ahh(1)=subplot(121);
-    histfit(momx(:,3)); 
-    [m,s]=normfit(momx(:,3));
-    disp(sprintf('mean %f predicted mean 1 \nstdv %s predicted stdv %s',m,s,sqrt(varpred)))
-    shrink(ahh(1),1,1.5)
-    xl(1)=xlabel('histogram of the residual moments');
-    ahh(2)=subplot(122);
-    qqplot((momx(:,3)-1)/sqrt(varpred)); axis image; grid on; box on
-    refline(1,0)
-    movev(ahh,-0.1)
-    t=ostitle(ahh,p,sprintf('MLEOSL-%s',datum)); movev(t,1)
-    % Could also do, as these quantities should be very close of course
-    % qqplot(momx(:,2),momx(:,3)); axis image; refline(1,0); grid on
-    % Then use NORMTEST to ascertain the veracity... don't bother with the
-    % Nyquist wavenumbers, there will be very few, but take out the zero
-
-    % Predicted expected value is one.
-    [a,b,c,d]=normtest(momx(:,3),1,varpred);
-  end
 elseif strcmp(Hx,'demo3')
   disp('This does not exist, numbering kept for consistency only')
 elseif strcmp(Hx,'demo4')
@@ -1029,7 +988,6 @@ elseif strcmp(Hx,'demo5')
 
   % Simulate data, watch the blurring, verify CHOLCHECK inside
   [Hx,th0,p,k,Hk]=simulosl(th0,params,1);
-
   
   % Initialize, take defaulted inside MLEOSL for now
   thini=[];
@@ -1057,13 +1015,7 @@ elseif strcmp(Hx,'demo5')
   [F0,covF0]=fishiosl(k,th0,params);
   % Fisher and Fisher-derived covariance at the estimate
   % covF=covFHh{1};
-  % Those two are close of course, and of not much intrinsic interest anymore
    
-  % Make sure there isn't a factor of two in-between covFHh{1} and covFHh{2}
-  % Sometimes the blurring makes it look like that
-  % Should be testing that these are all closer together the larger the
-  % data set is 
-  
   % Scaled covariances based on the analytical Hessian at the estimate
   predcov=covFHh{2}./[scl(:)*scl(:)'];
   % Scaled covariances based on the numerical Hessian at the estimate
@@ -1072,13 +1024,17 @@ elseif strcmp(Hx,'demo5')
   % Quick status report, but note that you get more information in demo4
   disp(sprintf('%s\n',repmat('-',1,97)))
   disp('Analytical and numerical scaled Hessian standard deviations and their ratio')
+  disp('   s2      nu     rho')
   disp(sprintf([repmat('%6.3f  ',1,length(obscov)) '\n'],...
-	       [sqrt(diag(predcov))' ; sqrt(diag(obscov))' ; ...
-		sqrt(diag(predcov))'./sqrt(diag(obscov))']'))
+                [sqrt(diag(predcov))' ; sqrt(diag(obscov))' ; ...
+         	sqrt(diag(predcov))'./sqrt(diag(obscov))']'))
   disp(repmat('-',1,97))
+
   % Talk again!
   [str0,str2]=osdisp(th0,p);
-  disp(sprintf(sprintf('%s : %s ',str0,repmat(str2,size(thhat))),...
+  % Update like inside MLEOSL
+  str2='%13.3g %13.3g %13.5g';
+  disp(sprintf(sprintf('%s : %s ',str0,str2),...
 	       'Estimated theta',thhat.*scl))
   disp(repmat('-',1,97))
 
@@ -1089,16 +1045,13 @@ elseif strcmp(Hx,'demo5')
   clf
   ah=krijetem(subnum(2,3)); delete(ah(4:6)); ah=ah(1:3);
 
-  % Maybe we should show different covariances than the predicted ones??
-
-  % Time to rerun LOGLIOS one last time at the solution
-  % Do not collect the analytical gradient and Hessian, since these are
-  % not the observed blurred gradients
-  sclh=scl; sclh(1)=1;
-  [L,~,~,momx]=logliosl(k,sclh.*thhat,p,Hks,1);
-
-  % We had this already, just making sure it checks out
-  diferm(L,lpars{1})
+  if ~isinf(p.blurs)
+      % Time to rerun LOGLIOS one last time at the solution
+      sclh=scl; sclh(1)=1;
+      % We had this already, just making sure it checks out if we hadn't changed it
+      [L,~,~,momx]=logliosl(k,sclh.*thhat,p,Hks,1);
+      diferm(L,lpars{1})
+  end
 
   % Makes an attractive plot that can be used as a judgment for fit
   mlechiplos(4,Hk,thhat,scl,p,ah,0,th0,covFHh{3});
@@ -1108,7 +1061,7 @@ elseif strcmp(Hx,'demo5')
 
   % Print the figure!
   disp(' ')
-  figna=figdisp(figna,[],[],2);
+  figna=figdisp(figna,[],[],1);
 elseif strcmp(Hx,'demo6')
     % Simulate something
     [Hx,th0,params]=simulosl;
