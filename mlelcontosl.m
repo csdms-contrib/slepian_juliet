@@ -1,62 +1,91 @@
-function varargout=mlelcontosl(Hk,thhat,params,covth,stit,ah)
-% [ah,spt]=MLELCONTOSL(Hk,thhat,params,covth,stit,ah)
+function varargout=mlelcontosl(Hk,thhat,scl,params,covth,thRange,runinpar,stit,ah)
+% [Lgrid,Lcon,thR,xcon,ycon,ah,spt]=MLELCONTOSL(Hk,thhat,scl,params,covth,thRange,runinpar,stit,ah)
 %
-% For a Matern solution set (s2,nu,rho) describing a patch of data, this
-% function shows in Matern parameter-space how the log-likelihood varies
-% around the estimated solution. The function creates a set of three grids
-% (s2-nu, nu-rho, and rho-s2) centered on the estimated set and extending a
-% certain number of standard deviations in each parameter-direction. The
-% loglihoods on that grid are calculated (the third parameter is held
-% constant), and then that loglihood space is contoured using positive
-% standard deviation pairs from the solution center. What should be seen is
-% that the Matern solution set lies in a loglihood valley (as in finding the
-% solution it was negative loglihood being minimized), and this can be used
-% as a measure to see if the best Matern solution was found.
+% Calculates the log-likelihood surface in the parameter cross-plot space (3 2D
+% parameter spaces, s2-nu, s2-rho, and nu-rho) for the provided data.
+% The three calculated log-likelihood grids are centered on the estimate of the 
+% two parameters described and hold the third parameter constant at its 
+% estimated value; the grids are contoured a certain number of standard 
+% deviations for each parameter. The standard deviation is calculated from the 
+% covariance matrix provided. We expect the Matern estimate to be centered in a 
+% log-likelihood valley.
 %
 % INPUT:
 %
 % Hk         The Fourier-domain data, e.g. from SIMULOSL
-% thhat      The three Matern parameters
+% thhat      The three estimated Matern parameters (scaled); optionally, provide
+%            multiple thhats and NO Hk to calculate likelihood contours for 
+%            many estimates 
+% scl        The scaling of the Matern parameters and Hk (scl(1))
 % params     Parameter set pertaining to the data, e.g. from SIMULOSL
 % covth      Covariance matrix of the estimates, whichever way computed
-% stit       Title for the overall figure [defaulted]
-% ah         A 4x4 group of axis handles [defaulted]
+% thRange    Boundary of desired figure; if specified, may reduce number of 
+%            calculations required; [default extends -/+ 5 s.d. from thhat]
+% runinpar     Flag for running each of the 2D parameter space loglihood
+%            calculations in parallel [default]
+% stit       Title for the outputted figure [defaulted]
+% ah         A 4x4 group of axes handles [defaulted]
 %
 % OUTPUT
 % 
+% Lgrid      The grid of loglihood values; ordered to correspond with usual
+%            MLEOSL pairings: s2-nu, s2-rh, nu-rh
+% Lcon       The values to contour for, based on covth; order: s2-nu, s2-rh, nu-rh
+% thR        Vectors defining the Matern parameter grids that the loglihoods
+%            were evaluated for; order: s2-nu, s2-rh, nu-rh 
+% xcon       Cell array for the horizontal axis values of each pairing
+% ycon       Cell array for the vertical axis values of each pairing
 % ah         Set of axis handles
 % spt        Supertitle handle
+% 
 % 
 % EXAMPLE:
 %
 % mlelcontosl('demo1')
-% 
+%
+% [Hx,th0,params,k,Hk]=simulosl;
+% [thhat,covFHh,lpars,scl,thini,params,Hk,k]=mleosl(Hx,[],params,[],[],[],[],1,2);
+% thRange=[thhat'.*scl'+2*sqrt(diag(covFHh{4})).*[-1 1]];
+% thRange=[0.8*thhat' 1.2*thhat'];
+% thRange = [];
+% [Lgrid,Lcon,thR]=mlelcontosl(Hk,thhat,scl,params,covFHh{3},thRange,1);
+%
 % SEE ALSO:
 %
 % CONTOUR, LOGLIOSL
 %
 % Last modified by gleggers-at-alumni.princeton.edu, 05/26/2014
 % Last modified by fjsimons-at-alum.mit.edu, 10/20/2023
+% Last modified by olwalbert-at-princeton.edu, 05/28/2025
 
 % Default values for function inputs
 defval('stit','Loglihood contours')
+% Launch a figure that will not interfere with MLEOSL demo2 which calls this
+% routine
+figure(3); clf
 defval('ah',krijetem(subnum(2,2)))
+% Run in parallel?
+defval('runinpar',1)
+if runinpar
+  NumWorkers=feature('numcores')-1;
+  if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
+end
 
 % Normal use of the function, i.e. not a demo
 if ~ischar(Hk)
     % Default values for the loglihood grid and contours
     % Number of standard deviations the grid extends
-    stdOut=5;         
+    defval('stdOut',2);         
     % Standard deviations to which the contours refer
-    stdCon=[1 2 3];
+    stdCon=1:stdOut;
     % Fineness of the loglihood grids
-    fine=10;
+    fine=50;
 
     % Default options for figure contruction
     % Shade the plot outside the first contour
     optShade=false;   
     % Label contour loglihood values
-    optClabel=false;  
+    optClabel=true;  
     % Show the STD pairs from which contours are calculated
     optSD=false;      
     % Plot an error ellipse about the calculated solution
@@ -72,39 +101,46 @@ if ~ischar(Hk)
     K=knums(params);
     Kn=sum(~isnan(Hk));
     
-    disp('FJS here watch that kiso is not counted we put in LOGLIOSL')
-    
-    % Get scaling of the estimated Matern parameters
-    scl=10.^round(log10(abs(thhat)));
+    % Scaling of the Matern parameters relative to the data vector
+    scl2=scl; scl2(1)=1;
+    % Scaling of the data vector
+    scl3=[scl(1) 1 1];
+    % The Matern estimate scaled relative to the data vector
+    thhat2=thhat.*scl2;
+    % The unscaled Matern estimate
+    thhat3=thhat.*scl;
 
     % Find loglihood of the estimated Matern parameters
-    logli=logliosl(K,thhat./scl,scl,params,Hk);
+    logli=logliosl(K,thhat2,params,Hk);
     
     % Get the standard deviations of the estimated Matern parameters
     thhatsd=sqrt(diag(covth));
-    
+    % The standard deviations relative to the data vector
+    thhatsd2=thhatsd./scl3';
+
     % Normalize the estimated Matern parameters covariance matrix
     covthn=covth./(sqrt(diag(covth))*sqrt(diag(covth)'));
-    
-    % Extract individual covariances from the normalized matrix
+
+    % Extract elements from the normalized covariance matrix
+    % (cross-correlation coefficients)
     Csn=covthn(1,2);
     Csr=covthn(1,3);
     Cnr=covthn(2,3);
     
-    % Set the Matern parameter range the figures will encompass
-    thRange=[thhat'-stdOut*thhatsd thhat'+stdOut*thhatsd];
+    % Set the Matern parameter range that the figures will span
+    defval('thRange',[thhat2'+stdOut*thhatsd2.*[-1 1]]);
     
     % Calculate the Matern parameter values for each contour
-    preCon=repmat(thhat',1,length(stdCon))+thhatsd*stdCon;
+    preCon=repmat(thhat2',1,length(stdCon))+thhatsd2*stdCon;
     
     % Set up vectors defining the Matern parameter grids on which
     % loglihoods will be evaluated    
-    s2R=unique([linspace(thRange(1,1),thhat(1),fine/2) ...
-                linspace(thhat(1),thRange(1,2),fine/2)]);
-    nuR=unique([linspace(thRange(2,1),thhat(2),fine/2) ...
-                linspace(thhat(2),thRange(2,2),fine/2)]);
-    rhoR=unique([linspace(thRange(3,1),thhat(3),fine/2) ...
-                 linspace(thhat(3),thRange(3,2),fine/2)]);
+    s2R=unique([linspace(thRange(1,1),thhat2(1),fine/2) ...
+                linspace(thhat2(1),thRange(1,2),fine/2)]);
+    nuR=unique([linspace(thRange(2,1),thhat2(2),fine/2) ...
+                linspace(thhat2(2),thRange(2,2),fine/2)]);
+    rhoR=unique([linspace(thRange(3,1),thhat2(3),fine/2) ...
+                 linspace(thhat2(3),thRange(3,2),fine/2)]);
     
     % Combine all three vectors for easy reference
     thR=[s2R; nuR; rhoR];
@@ -113,77 +149,102 @@ if ~ischar(Hk)
     pcomb=nchoosek(1:length(thhat),2);
 
     % Calculate loglihoods on Matern parameter grids. For each pairing of
-    % parameters (s2-nu, nu-rho, and rho-s2 - the third parameter being held
-    % constant at its MLE estimated value), calculate the loglihood that
-    % will be contours from the pairs of parameters in "preCon" as well as
-    % the loglihood at points on the grid defined by "thR"
+    % parameters (s2-nu, s2-rho, and nu-rho - the third parameter being held
+    % constant at its MLE estimated value), calculate the loglihood value,
+    % stored in "preCon", that will be used for contouring the pairs of 
+    % parameters on the loglihood grid defined by "thR"
+
+    % Pre-allocate space for the loglihood grid
+    Lgrid=zeros(fine-1,fine-1,3); 
     for i=1:length(thhat)
         % Find the pairwise combinations
         xi=pcomb(i,1); yi=pcomb(i,2);
 
-        % Get the rotating indices - fix later
-        [xi,yi]=cycIndex(i,3);
-        
-        % Update on which loglihood grid is being constructed
-        disp(sprintf('Constructing %s-%s loglihood grid, %s',...
-                     thNam{xi},thNam{yi},datestr(now,15)));
+      % Update on which loglihood grid is being constructed
+      disp(sprintf('Constructing %s-%s loglihood grid, %s',...
+                   thNam{xi},thNam{yi},datestr(now,15)));
 
-        % Calculate each contour's loglihood - this used to be in parallel
-        for j=1:length(preCon(xi,:))
-            % Give a loglihood contour's "estimated theta"
-            switch xi
-              case 1
-                th=[preCon(xi,j) preCon(yi,j) thhat(3)];
-              case 2
-                th=[thhat(1) preCon(xi,j) preCon(yi,j)];
-              case 3
-                th=[preCon(yi,j) thhat(2) preCon(xi,j)];
-            end
-            
-            % Scale the estimated theta
-            scl=10.^round(log10(abs(th)));
-            th=th./scl;
-
-            % Calculate and store contour loglihood value
-            Lcon(i,j)=logliosl(K,th,scl,params,Hk);
+      % Calculate each contour's loglihood with proposed th's scaled relative to
+      % the data vector
+      for j=1:length(preCon(xi,:))
+        switch i
+          case 1
+            % s2-nu
+            th=[preCon(xi,j) preCon(yi,j) thhat2(3)];
+          case 2
+            % s2-rho
+            th=[preCon(xi,j) thhat2(2) preCon(yi,j)];
+          case 3
+            % nu-rho
+            th=[thhat2(1) preCon(xi,j) preCon(yi,j)];
         end
-        
-        % Calculate loglihoods on the Matern parameter grid
+
+         % Calculate and store contour loglihood value
+         Lcon(i,j)=logliosl(K,th,params,Hk);
+      end
+      % Calculate loglihoods on the Matern parameter grid
+      if runinpar==1
+        for j=1:fine-1
+          % j: horizontal axis 
+          Lg=cell(1,fine-1);
+          thRxij=thR(xi,j);
+          switch i
+            case 1
+              parfor (kk=1:fine-1,NumWorkers)
+                % kk: vertical axis 
+                th=[thRxij thR(yi,kk) thhat2(3)];
+                Lg{kk}=logliosl(K,th,params,Hk);
+              end
+              Lgrid(:,j,i)=cat(1,Lg{:});
+            case 2
+              parfor (kk=1:fine-1,NumWorkers)
+                  th=[thRxij thhat(2) thR(yi,kk)];
+                  Lg{kk}=logliosl(K,th,params,Hk);
+              end
+              Lgrid(:,j,i)=cat(1,Lg{:});
+            case 3
+              parfor (kk=1:fine-1,NumWorkers)
+                th=[thhat(1) thRxij thR(yi,kk)];
+                Lg{kk}=logliosl(K,th,params,Hk);
+              end
+              Lgrid(:,j,i)=cat(1,Lg{:});
+          end
+        end
+      else
+        % Not running in parallel; i: parameter pairing, j: horizontal, k:
+        % vertical
         for j=1:length(thR(xi,:))
-            for k=1:length(thR(yi,:))
-                % Give a grid point's "estimated theta"
-                switch xi
-                  case 1
-                    th=[thR(xi,j) thR(yi,k) thhat(3)];
-                  case 2
-                    th=[thhat(1) thR(xi,j) thR(yi,k)];
-                  case 3
-                    th=[thR(yi,k) thhat(2) thR(xi,j)];
-                end
-                
-                % Scale the estimated theta
-                scl=10.^round(log10(abs(th)));
-                th=th./scl;
-                
-                % Calculate and store loglihood value for the grid point
-                Lgrid(j,k,i)=logliosl(K,th,scl,params,Hk);
+          for k=1:length(thR(yi,:))
+            % Give a grid point's proposed theta, scaled relative to the data
+            % vector
+            switch i
+              case 1
+                th=[thR(xi,j) thR(yi,k) thhat2(3)];
+              case 2
+                th=[thR(xi,j) thhat2(2) thR(yi,k)];
+              case 3
+                th=[thhat2(1) thR(xi,j) thR(yi,k)];
             end
+              
+            % Calculate and store loglihood value for the grid point
+            Lgrid(k,j,i)=logliosl(K,th,params,Hk);
+          end
         end
+      end
     end
-
+    
     % Loglihood contour figure construction
-
     % Default values for figure aesthetics:  
     % Standard deviations to have tickmarks
     stds=-stdOut:stdOut; 
 
     % Get the text showing the scaling of each Matern parameter axis
     for i=1:length(thhat)
-        scTxt{i}=sprintf('x 10^{%d}',log10(scl(i))); 
+        scTxt{i}=sprintf('x 10^{%d}',round(log10(scl(i)))); 
     end
 
     % Calculate the values for tickmarks on the loglihood grid
-    thTick=repmat(thhat',size(stds))+thhatsd*stds;
+    thTick=repmat(thhat3',size(stds))+thhatsd*stds;
     thTickLa=cell(size(thTick));
 
     % Convert those tickmark values to strings for tickmark labels
@@ -207,11 +268,10 @@ if ~ischar(Hk)
     for i=1:length(thhat)
         % Activate the proper panel
         axes(ah(i))
-        % Find the pairwise combinations
-        xi=pcomb(i,1); yi=pcomb(i,2);
 
-        % % Get the rotating indices
-        [xi,yi]=cycIndex(i,length(thhat));
+        % Get the rotating indices
+        % [xi,yi]=cycIndex(i,length(thhat));
+        xi=pcomb(i,1); yi=pcomb(i,2);
         
         % Option to shade the plot background outside the largest contour
         if optShade
@@ -222,26 +282,30 @@ if ~ischar(Hk)
         end
         
         % Place dotted gridlines at the center and "glp" standard deviations
-        glp=2;
+        glp=stdOut;
         hold on
-        glh(1)=plot([thhat(xi) thhat(xi)],[thR(yi,1) thR(yi,end)],'k:');
-        glh(2)=plot([thhat(xi) thhat(xi)]+glp*thhatsd(xi),[thR(yi,1) thR(yi,end)],'k:');
-        glh(3)=plot([thhat(xi) thhat(xi)]-glp*thhatsd(xi),[thR(yi,1) thR(yi,end)],'k:');
+        glh(1)=plot([thhat3(xi) thhat3(xi)],...
+                    [thR(yi,1) thR(yi,end)].*scl3(yi),'k:');
+        glh(2)=plot([thhat3(xi) thhat3(xi)]+glp*thhatsd(xi),...
+                    [thR(yi,1) thR(yi,end)].*scl3(yi),'k:');
+        glh(3)=plot([thhat3(xi) thhat3(xi)]-glp*thhatsd(xi),...
+                    [thR(yi,1) thR(yi,end)].*scl3(yi),'k:');
         
-        glh(4)=plot([thR(xi,1) thR(xi,end)],[thhat(yi) thhat(yi)],'k:');
-        glh(5)=plot([thR(xi,1) thR(xi,end)],[thhat(yi) thhat(yi)]+glp*thhatsd(yi),'k:');
-        glh(6)=plot([thR(xi,1) thR(xi,end)],[thhat(yi) thhat(yi)]-glp*thhatsd(yi),'k:');
+        glh(4)=plot([thR(xi,1) thR(xi,end)].*scl3(xi),...
+                    [thhat3(yi) thhat3(yi)],'k:');
+        glh(5)=plot([thR(xi,1) thR(xi,end)].*scl3(xi),...
+                    [thhat3(yi) thhat3(yi)]+glp*thhatsd(yi),'k:');
+        glh(6)=plot([thR(xi,1) thR(xi,end)].*scl3(xi),...
+                    [thhat3(yi) thhat3(yi)]-glp*thhatsd(yi),'k:');
 
         % Plot the loglihood contours
-        xcon=thR(xi,:);
-        ycon=thR(yi,:);
-        
+        xcon{i}=thR(xi,:).*scl3(xi);
+        ycon{i}=thR(yi,:).*scl3(yi);
+
         % FIGURE OUT how to replace negative parts of the grid with NaNs
-        
+
         %Lgrid(xcon<=0,ycon<=0,xi)=NaN;
-        % This is three contours but you're only getting to address all of them
-        % Might need to go to individual contours
-        [c,ch(i)]=contour(xcon,ycon,Lgrid(:,:,xi),Lcon(xi,:));
+        [c,ch(i)]=contour(xcon{i},ycon{i},Lgrid(:,:,i),Lcon(i,:));
         
         % Option to label the contours with their loglihood values
         if optClabel
@@ -268,21 +332,21 @@ if ~ischar(Hk)
         
         % Plot a center point showing the estimated Matern solution
         hold on
-        thSol(i)=plot(thhat(xi),thhat(yi),'o');
+        thSol(i)=plot(thhat3(xi),thhat3(yi),'o');
         
         % Option for markers on the parameter pairs whose loglihoods gave the
         % plotted contours, i.e.thhat + 1, 2, 3 STDs
         if optSD
             hold on
-            thCon(i)=plot(repmat(thhat(xi),1,length(stdCon))+stdCon*thhatsd(xi),...
-                          repmat(thhat(yi),1,length(stdCon))+stdCon*thhatsd(yi),'o');
+            thCon(i)=plot(repmat(thhat3(xi),1,length(stdCon))+stdCon*thhatsd(xi),...
+                          repmat(thhat3(yi),1,length(stdCon))+stdCon*thhatsd(yi),'o');
         end
         
         % Option for an "error ellipse" over the contour plot
         % Heretofore been unable to get this to work, but see MLEPLOS
         if optErrE == true
             covth2D=[covth(xi,xi) covth(xi,yi); covth(yi,xi) covth(yi,yi)];
-            error_ellipse(covth2D,[thhat(xi),thhat(yi)]);
+            error_ellipse(covth2D,[thhat3(xi),thhat3(yi)]);
         end
         
         % Adjust the axis
@@ -322,12 +386,12 @@ if ~ischar(Hk)
     strAnno{1}=sprintf('K=%5i',Kn);
     strAnno{2}=sprintf('k_{iso}=%0.4g',params.kiso);
     strAnno{3}=sprintf('L=%7.3f',-logli);
-    strAnno{4}=sprintf('\\sigma^{2}=%6.4f %s %6.4f',thhat(1),char(177),glp*thhatsd(1));
-    strAnno{5}=sprintf('\\nu=%6.2f %s %6.2f',thhat(2),char(177),glp*thhatsd(2));
-    strAnno{6}=sprintf('\\rho=%5.0f %s %5.0f',thhat(3),char(177),glp*thhatsd(3));
-    strAnno{7}=sprintf('C_{\\sigma^{2}\\nu}=%5.2f',Csn);
-    strAnno{8}=sprintf('C_{\\sigma^{2}\\rho}=%5.2f',Csr);
-    strAnno{9}=sprintf('C_{\\nu\\rho}=%5.2f',Cnr);
+    strAnno{4}=sprintf('\\sigma^{2}=%6.4f %s %6.4f',thhat3(1),char(177),glp*thhatsd(1));
+    strAnno{5}=sprintf('\\nu=%6.4f %s %6.4f',thhat3(2),char(177),glp*thhatsd(2));
+    strAnno{6}=sprintf('\\rho=%6.4f %s %6.4f',thhat3(3),char(177),glp*thhatsd(3));
+    strAnno{7}=sprintf('C_{\\sigma^{2}\\nu}=%5.4f',Csn);
+    strAnno{8}=sprintf('C_{\\sigma^{2}\\rho}=%5.4f',Csr);
+    strAnno{9}=sprintf('C_{\\nu\\rho}=%5.4f',Cnr);
 
     % Get x- and y-positions for annotations
     xpos=get(ah(4),'XLim');
@@ -358,42 +422,37 @@ if ~ischar(Hk)
     set(gcf,'color','W','InvertH','off')
 
     % Collect output
-    vars={ah,spt};
-    varargout=vars(1:nargout);
+    varns={Lgrid,Lcon,thR,xcon,ycon,ah,spt};
+    varargout=varns(1:nargout);
 elseif strcmp(Hk,'demo1')
     clear
     % Set parameters for creation of a data patch
     fields={'dydx','NyNx','blurs'};
-    defstruct('params',fields,{[1 1],256*[1 1],-1});
+    defstruct('params',fields,{[10 10]*1e3,64*[1 1],-1});
+    % defstruct('params',fields,{[1 1]*1e0,64*[1 1],-1});
     % Random random parameters
     th0=max(round(rand(1,3).*[1 1 4]*10),[1 1 1])./[1e-4 1 1e-4];
     th0(2)=2+rand(1,1)*2;
     % Examples close to those we've already done
     th0=[1e6 2.5 2e4];
-    th0=[1 2.2 2];
-
+    % th0=[1 1.5 2];
     try
         % Create the data patch, both in spatial and Fourier domain
         [Hx,~,params,k,Hk]=simulosl(th0,params); 
-        
-        % imagesc(v2s(Hx,params)); axis image
         try
             % Estimate the parameters via maximum-likelihood
-            % Stay close at first
-            % thini=th0+th0/100;
-            thini=[];
-            [th,covFHh,lpars,scl]=mleosl(Hx,thini,params);
-            % Scale up the outcome
-            thhat=th.*scl;
-            
+            [th,covFHhJ,lpars,scl,~,~,Hk]=mleosl(Hx,[],params,[],[],[],[],[],2);
+
             % Remind us where the loglihood was
             disp(sprintf('L = %6.2f',lpars{1}))
+
             % Produce the likelihood contours figure
             clf
-            mlelcontosl(Hk,thhat,params,covFHh{3})
+            runinpar=1;
+            [Lgrid,Lcon,thR]=mlelcontosl(Hk,th,scl,params,covFHhJ{4},[],runinpar);
             
             % Plot the figure! 
-            figna=figdisp([],[],[],2);
+            figna=figdisp([],[],[],1);
         end
     end
 end
