@@ -42,7 +42,7 @@ function varargout=mlechiplos(witsj,Hk,thhat,scl,params,ah,pertur,th0,covX,E,v)
 % MLECHIPSDOSL, MLEOSL, EGGERS6
 %
 % Last modified by olwalbert-at-princeton.edu, 08/16/2024
-% Last modified by fjsimons-at-alum.mit.edu, 05/18/2025
+% Last modified by fjsimons-at-alum.mit.edu, 05/30/2025
 
 defval('pertur',0)
 defval('th0',[])
@@ -123,7 +123,7 @@ switch witsj
   case 3
    Xk1=-Lkros0(k,thhat.*scl,params,Hk)-log(detSb);
    Lbar=logliros0(thhat,params,Hk,k,scl);
- case 4
+  case 4
    [Lbar,~,~,momx,~,Lk]=logliosl(k,thhat.*scl,params,Hk,1);
     % This only works if params.blurs is not Inf since then SIMULOSL changed
     if ~any(isnan(Lb))
@@ -238,6 +238,15 @@ hold off
 top(h(3),ah(2))
 delete(get(ah(2),'ylabel'));
 delete(get(ah(2),'title'));
+
+% Take a look a the distribution of the residual moments
+% See RB X, p. 51 about the skewness of a chi-squared - just sayin'.
+% We don't change the number of degrees of freedom! If you have used
+% twice the number, and given half correlated variables, you do not
+% change the variance, that is the whole point. Unlike in FISHIOSL
+% where you make an analytical prediction that does depend on the
+% number and which therefore you need to adjust.
+
 % Test for departure of chi-squaredness via the "magic" parameter which
 % is of course, sort of, a sample variance, and normally distributed by
 % the law of large numbers (with the postulated population mean
@@ -247,7 +256,10 @@ magx=nanmean([Xk(allg)-df/2].^2);
 neem='\xi'; neem='s_X^2';
 % Do the test whether you accept this as a good fit, or not
 vr=8/length(k(~~k));
+% Then use NORMTEST to ascertain the veracity... don't bother with the
+% Nyquist wavenumbers, there will be very few, but take out the zero
 [a,b,c]=normtest(magx,1,vr,0.05);
+
 % disp(sprintf('NORMTEST %i %5.3f %i',a,b,round(c)))
 if a==0; stp='accept'; else stp='reject'; end
 t(2)=title(sprintf('%s =  %5.3f   8/K = %5.3f   %s   p = %5.2f',...
@@ -317,31 +329,31 @@ movev(t(3),8)
 % This only if the calling sequence is not OLHEDESIMONS5
 [a,b]=star69;
 if ~strcmp(b,'olhedesimons5')
-  % Stick the params here somewhere so we can continue to judge
-  movev([ah cb],-.1)
-  t=ostitle(ah,params,[],length(thhat(:,1)));
-  movev(t,.35)
-  set(t,'FontSize',10);
-  % E.g. quote  the TRUTHS and the THEORETICAL standard deviation with
-  % which it can be known using the available data... as you wish
-  [answ,answs]=osansw(th0,covX,E,v);
-  tt=supertit(ah,sprintf(answs,answ{:}));
-  set(tt,'FontSize',10);
-  movev(tt,-4.65)
-  moveh(ah(1),-0.04)
-  moveh([ah(3) cb],0.04)
+    % Stick the params here somewhere so we can continue to judge
+    movev([ah cb],-.1)
+    t=ostitle(ah,params,[],length(thhat(:,1)));
+    movev(t,.35)
+    set(t,'FontSize',10);
+    % E.g. quote  the TRUTHS and the THEORETICAL standard deviation with
+    % which it can be known using the available data... as you wish... or not
+    [answ,answs]=osansw(thhat,covX,E,v);
+    tt=supertit(ah,sprintf(answs,answ{:}));
+    set(tt,'FontSize',10);
+    movev(tt,-4.65)
+    moveh(ah(1),-0.04)
+    moveh([ah(3) cb],0.04)
 
-  if ~isempty(E) && ~isempty(v)
-    movev(tt,-0.25)
-    % But ALSO show the distance between the TRUTH and the estimate for
-    % the effective elastic thickness Te in km. Don't forget the transform
-    % is nonlinear! Don't subtract before transforming.
-    disp(sprintf('ABS Distance of estimate to truth is %5.3g km',...
-		 (abs(DtoTe(thhat(1)*scl(1),E,v)-...
-		      DtoTe(th0(1),E,v))/1000)))
-  end
+    if ~isempty(E) && ~isempty(v)
+        movev(tt,-0.25)
+        % But ALSO show the distance between the TRUTH and the estimate for
+        % the effective elastic thickness Te in km. Don't forget the transform
+        % is nonlinear! Don't subtract before transforming.
+        disp(sprintf('ABS Distance of estimate to truth is %5.3g km',...
+		     (abs(DtoTe(thhat(1)*scl(1),E,v)-...
+		          DtoTe(th0(1),E,v))/1000)))
+    end
 else
-  tt=NaN;
+    tt=NaN;
 end
 
 % Output
