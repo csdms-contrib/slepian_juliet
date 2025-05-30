@@ -124,7 +124,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver,cm)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 04/08/2025
+% Last modified by fjsimons-at-alum.mit.edu, 05/30/2025
 % Last modified by olwalbert-at-princeton.edu, 05/30/2025
 
 if ~isstr(Hx)
@@ -922,7 +922,8 @@ elseif strcmp(Hx,'demo2')
   clf
 
   % We feed it various things and it calculates a bunch more
-  [ah,ha]=mleplos(thhats,th0,covF0,covavhs,covXpix,[],[],p,...
+  [ah,ha,yl,xl,ps,ms,o1,o2,ep,ec,axlm,covth]=...
+      mleplos(thhats,th0,covF0,covavhs,covXpix,[],[],p,...
                   sprintf('MLEOSL-%s',datum),thpix,ifinv);
   
   % Return some output, how about just the empirically observed
@@ -934,17 +935,6 @@ elseif strcmp(Hx,'demo2')
   varns={cobs,mobs,nobs,th0,p,momx};
   varargout=varns(1:nargout);
 
-  flag=3;
-  if flag==3
-      % Make sure MLEPLOS outputs all the handles
-      % Remove the ones that we don't like
-
-      % hold on
-      mlecontosl
-
-      % bottom
-  end
-
   % Print the figure!
   disp(' ')
   % Figure not printing consistently; force MATLAB to revisit the figures drawn
@@ -953,6 +943,112 @@ elseif strcmp(Hx,'demo2')
   disp('pause to save')
   pause(3)
   figure(1); figna=figdisp([],sprintf('%s_%s_1',Hx,datum),[],1);
+
+  % Now that the original figure 2 has been saved, modify the figure by removing
+  % the points and the cross, and by adding the likelihood contours from
+  % MLELCONTOSL for the mean estimate using the covariance matrix of choice
+  flag=3;
+  if flag==3
+      % Make sure MLEPLOS outputs all the handles
+      % Remove the ones that we don't like
+      % Remove the points and the cross
+      delete([ps o1 o2])
+      % Remove the marker at the center indicating the mean observation?
+      delete(ms)
+
+      % Prepare to plot the loglihood contours on the existing axes
+      hold on
+      % Calculate the loglihood contours for an estimate within 
+      % MLELCONTOSL -- we may specify the range of parameter values as an input, 
+      % but discretization of the grid must be manually modified within 
+      % MLELCONTOSL as 'fine'
+      % Set the parameter ranges based on the existing axes limits with scaling
+      % consistent with nu and rho
+      thcont=[axlm(1,:);...
+              axlm(2,:).*10^round(log10(th0(2)));...
+              axlm(3,:).*10^round(log10(th0(3)))];
+
+      % Set the covariance matrix from which the number of standard deviations
+      % out from the mean observation is calculated for contour placement
+      covcont=cobs; %covth;
+
+      % Run in parallel? Number of workers assessed as one less number of
+      % physical cores.
+      runinpar=1;
+
+      % Calculate the grid and objects used for contouring with MLELCONTOSL, all 
+      % organized by cross-parameter pairings in the usual order: 
+      % s2-nu, s2-rho, nu-rho
+
+      %% %%
+      % Q for Frederik: Do you prefer option A, B, or C for acquiring a data 
+      % vector and estimate for MLELCONTOSL?
+
+      % Option A: fish for a data vector whose parameter estimates are within 
+      % 5% relative distance of mobs (this will take a few iterations)
+      % 
+       thhat=NaN;scl=NaN;
+       while any(abs(thhat.*scl-mobs)./mobs>0.05) | isnan(thhat)
+         % Simulate from the mean observation
+         p.blurs=Inf; Hx=simulosl(mobs,p); p.blurs=-1;
+
+         % This is where it would be good to load the simulation parameters; in
+         % case we came in from a simulation with p.blurs=-1, this will need to
+         % be uncommented:
+         % p.blurs=-1; Hx=simulosl(mobs,p);
+
+         % Calculate the MLE for the data vector
+         [thhat,~,lpars,scl,~,~,Hk]=mleosl(Hx,[],p);
+       end
+       [Lgrid,Lcon,thR,xcon,ycon]=...
+              mlelcontosl(Hk,thhat,scl,p,covcont,thcont,runinpar);
+      
+      % Option B: scale any data vector simulated from the truth and calculate 
+      % the likelihood surface for this observation with mobs, which assumes the
+      % process underlying the data is close to MOBS (as it should be). This is
+      % quick, but the likelihood surface will likely not be centered on MOBS
+      %
+      % p.blurs=Inf; Hx=simulosl(th0,p); p.blurs=-1;
+      % shat=nanstd(Hx(:,1));
+      % Hk=tospec(Hx./shat,p)/(2*pi);
+      % scl=10.^round(log10(abs(mobs))); scl(1)=shat^2;
+      % [Lgrid,Lcon,thR,xcon,ycon]=...
+      %        mlelcontosl(Hk,mobs./scl,scl,p,covcont,thcont,runinpar);
+
+      % Option C: simulate N data vectors from the truth, calculate the 
+      % likelihood surface from each observation and their MLE solution, and
+      % plot the contours of the average surface 
+      %
+      % N=25;
+      % for cnd=1:N
+      %   thhat=NaN; 
+      %   while isnan(thhat)
+      %     p.blurs=Inf; Hx=simulosl(th0,p); p.blurs=-1;
+      %     [thhat,~,lpars,scl,~,~,Hk]=mleosl(Hx,[],p);
+      %   end
+      %   [Lgridc{cnd},Lconc{cnd},~,xcon,ycon]=...
+      %        mlelcontosl(Hk,thhat,scl,p,covcont,thcont,runinpar);
+      % end
+      % Lgrid=mean(cat(4,Lgridc{:}),4);
+      % Lcon =mean(cat(4,Lconc{:}), 4);
+      %% %%
+
+      % Plot the contours; set a grayscale coloring scheme
+      figure(2)  
+      pcomb=nchoosek(1:length(mobs),2);
+      for ind=1:np
+        xi=pcomb(ind,1);yi=pcomb(ind,2);
+        axes(ah(ind))
+        hold on
+        [cont,ch(ind)]=contour(xcon{ind}/scl(xi),ycon{ind}/scl(yi),...
+                               Lgrid(:,:,ind),Lcon(ind,:));
+        set(ch(ind),'EdgeColor',[0.33 0.33 0.33],'LineStyle',':');
+      end
+      % bottom
+      bottom(ch(ind),ah(ind))
+      figure(2);  figna=figdisp([],sprintf('%s_%s_3','demo2',datum),[],1);
+  end
+
 elseif strcmp(Hx,'demo3')
   disp('This does not exist, numbering kept for consistency only')
 elseif strcmp(Hx,'demo4')
@@ -1054,14 +1150,14 @@ elseif strcmp(Hx,'demo5')
   end
 
   % Makes an attractive plot that can be used as a judgment for fit
-  mlechiplos(4,Hk,thhat,scl,p,ah,0,th0,covFHh{3});
+  [cb,xl,t,tt]=mlechiplos(4,Hk,thhat,scl,p,ah,0,th0,covFHh{3});
 
   disp('FJS here fits also MLECHIPSDOSL')
   disp('FJS here fits the MLELCONTOSL')
 
   % Print the figure!
   disp(' ')
-  figna=figdisp(figna,[],[],1);
+  figna=figdisp(figna,[],[],1)
 elseif strcmp(Hx,'demo6')
     % Simulate something
     [Hx,th0,params]=simulosl;
