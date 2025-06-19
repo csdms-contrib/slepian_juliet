@@ -2,12 +2,12 @@ function varargout=mlechiplos(witsj,Hk,thhat,scl,params,ah,pertur,th0,covX,E,v)
 % [cb,xl,t,tt]=MLECHIPLOS(witsj,Hk,thhat,scl,params,ah,pertur)
 % [cb,xl,t,tt]=MLECHIPLOS(witsj,Hk,thhat,scl,params,ah,pertur,th0,covX,E,v)
 %
-% Makes a three-panel plot of the quadratic residuals and their
+% Makes a THREE-panel plot of the quadratic residuals and their
 % interpretation for a likelihood model evaluated at its estimate. Plotted
 % are a histogram with the theoretical distribution overlain, a
 % quantile-quantile plot against the theoretical distribution, and a
 % two-dimensional spectral plot to check for patterns. Calculates metrics
-% and statistical tests.
+% and performs a statistical test for model suitability.
 %
 % INPUT:
 %
@@ -41,8 +41,8 @@ function varargout=mlechiplos(witsj,Hk,thhat,scl,params,ah,pertur,th0,covX,E,v)
 %
 % MLECHIPSDOSL, MLEOSL, EGGERS6
 %
-% Last modified by olwalbert-at-princeton.edu, 08/16/2024
-% Last modified by fjsimons-at-alum.mit.edu, 05/30/2025
+% Last modified by olwalbert-at-princeton.edu, 06/01/2025
+% Last modified by fjsimons-at-alum.mit.edu, 06/01/2025
 
 defval('pertur',0)
 defval('th0',[])
@@ -142,6 +142,7 @@ switch witsj
         S=blurosy(th0,params,1);
         % Remember Sb that came out of SIMULOSL in this case was the periodogram
         % and not the expected periodogram, and it was for a new run not for the Hk
+        % that were input here, hence we needed to recompute the expected periodogram
         Xk=abs(Hk).^2./S;
     end
    % The oldest way, using a since retired function LKOSL
@@ -181,7 +182,7 @@ end
 allg=~isinf(Xk);
 % Should that perhaps be isnan, as in MLECHIPSDOSL
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 axes(ah(1))
 % Take out the Inf which may occur at zero wavenumber
 [bdens,c]=hist(2*Xk(allg),5*round(log(length(Xk(allg)))));
@@ -192,7 +193,7 @@ bb=bar(c,bdens,1);
 t(1)=title(sprintf('m(%s) =  %5.3f   v(%s) =  %5.3f',...
 		   varibal,nanmean(Xk(allg)),...
 		   varibal,nanvar(Xk(allg))));
-set(bb,'FaceC',grey)
+set(bb,'FaceColor',grey)
 hold on
 % Plot the ideal chi-squared distribution
 refs=linspace(0,max(2*Xk),100);
@@ -213,7 +214,7 @@ xl(1)=xlabel(xstr2);
 yl(1)=ylabel('probability density');
 axis square
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 axes(ah(2))
 % Note that SOME people use a different parameterization (b vs 1/b)
 % Note that gamma [df/2 2] is chi-squared [df]...
@@ -273,7 +274,7 @@ xlim(xll); ylim(xll)
 xl(2)=xlabel(sprintf('predicted 2%s',varibal));
 yl(2)=ylabel(sprintf('observed 2%s',varibal));
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 axes(ah(3))
 imagefnan([xlis(1) xlis(end)],[xlis(end) xlis(1)],...
 	  reshape(Xk,params.NyNx),...
@@ -287,15 +288,9 @@ set(xcb,'string',xstr)
 
 % Cosmetics
 fig2print(gcf,'landscape')
-%set(ah(1),'dataa',[max(xlls)/max(ylls) 1 10])
 set(ah(1),'xtick',xlls,'ytick',ylls)
 set(ah(2),'xtick',xlls,'ytick',xlls)
 longticks([ah cb])
-set(t,'FontSize',8,'FontWeight','Normal')
-movev(t,0.01)
-
-% This will reset everything that is plot under HOLD ON
-set([cat(1,findobj('FontSize',8)); yl(:); xl(:); xcb(:)],'FontSize',8)
 
 % Any off-putting motions would have been due to using underscores in titles
 set(ah(3),'position',...
@@ -323,37 +318,40 @@ elseif strcmp(cborien,'vert')
   moveh(xcb,15)
   moveh([ah cb],-.025)
 end
-movev(xl(1),0.02);movev(xl(2),0.5);
-movev(t(3),8)
 
-% This only if the calling sequence is not OLHEDESIMONS5
-[a,b]=star69;
-if ~strcmp(b,'olhedesimons5')
-    % Stick the params here somewhere so we can continue to judge
-    movev([ah cb],-.1)
-    t=ostitle(ah,params,[],length(thhat(:,1)));
-    movev(t,.35)
-    set(t,'FontSize',10);
-    % E.g. quote  the TRUTHS and the THEORETICAL standard deviation with
-    % which it can be known using the available data... as you wish... or not
-    [answ,answs]=osansw(thhat,covX,E,v);
-    tt=supertit(ah,sprintf(answs,answ{:}));
-    set(tt,'FontSize',10);
-    movev(tt,-4.65)
-    moveh(ah(1),-0.04)
-    moveh([ah(3) cb],0.04)
+% Cosmetics for the labels
+set([yl(:); xl(:); xcb(:)],'FontSize',11)
 
-    if ~isempty(E) && ~isempty(v)
-        movev(tt,-0.25)
-        % But ALSO show the distance between the TRUTH and the estimate for
-        % the effective elastic thickness Te in km. Don't forget the transform
-        % is nonlinear! Don't subtract before transforming.
-        disp(sprintf('ABS Distance of estimate to truth is %5.3g km',...
-		     (abs(DtoTe(thhat(1)*scl(1),E,v)-...
-		          DtoTe(th0(1),E,v))/1000)))
-    end
-else
-    tt=NaN;
+% Cosmetics for the title
+axes(ah(1))
+movev(t(1),0.02)
+axes(ah(2))
+movev(t(2),0.1)
+axes(ah(3))
+delete(t(3))
+delete(xcb)
+t(3)=title(xstr);
+movev(t(3),2.5)
+
+% Stick the params here somewhere so we can continue to judge
+movev([ah cb],-.1)
+tt=ostitle(ah,params,[],length(thhat(:,1)));
+movev(tt,.35)
+% E.g. quote  the TRUTHS and the THEORETICAL standard deviation with
+% which it can be known using the available data... as you wish... or not
+% If run from MLEOSL5 you'll want to supply the proper values if you have them
+[answ,answs]=osansw(thhat.*scl,covX,E,v);
+ttt=supertit(ah,sprintf(answs,answ{:}));
+movev(ttt,-4.25)
+
+if ~isempty(E) && ~isempty(v)
+    movev(tt,-0.25)
+    % But ALSO show the distance between the TRUTH and the estimate for
+    % the effective elastic thickness Te in km. Don't forget the transform
+    % is nonlinear! Don't subtract before transforming.
+    disp(sprintf('ABS Distance of estimate to truth is %5.3g km',...
+		 (abs(DtoTe(thhat(1)*scl(1),E,v)-...
+		      DtoTe(th0(1),E,v))/1000)))
 end
 
 % Output
