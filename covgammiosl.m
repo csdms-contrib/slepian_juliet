@@ -89,6 +89,8 @@ function varargout=covgammiosl(th,params,method,ifinv);
 % % Study of the dependence of parameter covariance on missingness (taper),
 % % either as random deletions or a growing masked region:
 % covgammiosl('demo8')
+% % Growing domain study comparing covthosl with the fisher inverse 
+% covgammiosl('demo9')
 %
 % Last modified by fjsimons-at-princeton.edu, 05/15/2025
 % Last modified by olwalbert-at-princeton.edu, 05/15/2025
@@ -207,7 +209,24 @@ if ~isstr(th)
                                   repmat(dSbardth(~~kpp,:,:),[1 numreals 1])...
                                   ./repmat(Sbar(~~kpp),1,numreals,sum(ifinv)).^2))); 
       end
-      lk=length(kpp(~~kpp));
+      if isfield(params,'kiso') & ~isnan(params.kiso)
+        % In the case that we have truncated the wavenumbers by setting
+        % params.kiso, we will need to adjust the scaling. I should check that
+        % this is accounted for in blurosy for Sbar and so on. If it is, this
+        % becomes a counting issue only and what is below should be fine
+        diferm(numel(kpp(kpp<=params.kiso))/numel(kpp)-kselbias(kpp,params))
+        %lk=length(kpp(~~kpp)).*kselbias(kpp,params);
+        % I think that the following commented out block will be necessary, but
+        % not sufficient unless we build this same constraint into fishiosl which
+        % is called by varianceofestimates, aka covthosl
+        %  kgrads=deal(squeeze(sum((Sbar(kpp<=params.kiso&~~kpp)-...
+        %                           Semps(kpp<=params.kiso&~~kpp,:)).*...
+        %                        dSbardth(kpp<=params.kiso&~~kpp,:,:)./...
+        %                        Sbar(kpp<=params.kiso&~~kpp).^2))); 
+        lk=length(kpp(kpp<=params.kiso&~~kpp));
+      else
+        lk=length(kpp(~~kpp));
+      end
 
       % The fair comparison would be between, essentially identical
       % diferm(ggrads,kgrads/lk)
@@ -348,6 +367,16 @@ if ~isstr(th)
 
       % Normalization factors for both non-unit and unit tapers
       normfact=prod(NyNx).^2;
+
+      if isfield(params,'kiso')
+        % [NOTE COPIED FROM CASE 1, IMPLEMENTATION NOT QUITE] 
+        % In the case that we have truncated the wavenumbers by setting
+        % params.kiso, we will need to adjust the scaling. I should check that
+        % this is accounted for in blurosy for Sbar and so on. If it is, this
+        % becomes a counting issue only and what is below should be fine
+        kor=knums(params);
+        normfact=normfact.*kselbias(kor,params).^2;
+      end
 
       % Final assembly (A54)
       covg=fax'*Hk2cov*fax./seq_ep./normfact;
@@ -557,6 +586,16 @@ if ~isstr(th)
 
      % Normalization factors in the case of masked and unit tapers
      normfact=prod(params.NyNx).^2;
+     if isfield(params,'kiso')
+         % [NOTE COPIED FROM CASE 1, IMPLEMENTATION NOT QUITE] 
+         % In the case that we have truncated the wavenumbers by setting
+         % params.kiso, we will need to adjust the scaling. I should check that
+         % this is accounted for in blurosy for Sbar and so on. If it is, this
+         % becomes a counting issue only and what is below should be fine
+         kor=knums(params);
+         normfact=normfact.*kselbias(kor,params).^2;
+     end
+
      covg=s./normfact;
      % wkspc=whos; sum([wkspc.bytes])
   end % end of method cases
@@ -1021,7 +1060,7 @@ elseif strcmp(th,'demo2')
     % Plot
     clf;
     % Color friendly palette
-    clrs=['1B9E77','#D95F02','#7570B3'];
+    clrs=['#1B9E77','#D95F02','#7570B3'];
 
     % Histogram of s2 estimates
     subplot(221)
@@ -1308,72 +1347,137 @@ elseif strcmp(th,'demo4')
     EJJht_in=reshape(permute(...
         tensorprod(Um,tensorprod(Un,Cm_n_mn,1,2),1,2),...
         [3 1 2]),NyNx(1),NyNx(2),prod(NyNx));
-    % This will be going to the "Sbar"
+    % This will be going to the 'Sbar'
     EJJht_out=reshape(permute(...
                 conj(tensorprod(Um,tensorprod(Un,conj(EJJht_in),1,2),1,2)),...
               [3 1 2]),[prod(NyNx) prod(NyNx)]);
     diferm(EJJht_out-EJJht_out.') 
     diferm(EJJht_out-EJJht_out') 
-    % This will be going to the "pSbar"
+    % This will be going to the 'pSbar'
     EJJt_out=reshape(permute(...
                tensorprod(Um,tensorprod(Un,EJJht_in,1,2),1,2),...
              [3 1 2]),[prod(NyNx) prod(NyNx)]);
     Hk2cov=(abs(EJJht_out).^2+abs(EJJt_out).^2)./prod(NyNx).^2;
   
+    % We will have two versions of this plot: the first (pltver==1) preserves
+    % the original display of the terms involved in the Isserlis calculation,
+    % the second (pltver==2) is for publication
+    pltver=2;
+
     % While the first and second terms below sum to similar quantities, we can
     % quickly see wave-number dependent distinctions:
     figure(1)
     clf 
-    ah(1)=subplot(321); imagesc(dxxp); cb1=colorbar; 
-    cb1.Label.String='euclidean distance [m]'; 
-    t(1)=title('$||\mathbf{x}-\mathbf{x''}||$');
-    t(1).Interpreter='latex';
-    % Ticks represent indices only
-    ah(1).XTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
-    ah(1).YTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
-    xlabel('$\mathbf{x}''$'); ylabel('$\mathbf{x}$'); axis image
+    if pltver==1
+        ah(1)=subplot(321); imagesc(dxxp); cb1=colorbar; 
+        cb1.Label.String='euclidean distance [m]'; 
+        t(1)=title('$||\mathbf{x}-\mathbf{x''}||$');
+        t(1).Interpreter='latex';
+        % Ticks represent indices only
+        ah(1).XTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
+        ah(1).YTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
+        xlabel('$\mathbf{x}''$'); ylabel('$\mathbf{x}$'); axis image
 
-    ah(2)=subplot(322); imagesc(Cmn); caxis([0 1]); cb2=colorbar; 
-    cb2.Label.String='covariance [unit^2]'; 
-    t(2)=title('$C(||\mathbf{x}-\mathbf{x''}||)$');
-    t(2).Interpreter='latex';
-    ah(2).XTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
-    ah(2).YTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
-    xlabel('$\mathbf{x}''$'); ylabel('$\mathbf{x}$'); axis image
+        ah(2)=subplot(322); imagesc(Cmn); caxis([0 1]); cb2=colorbar; 
+        cb2.Label.String='covariance [unit^2]'; 
+        t(2)=title('$C(||\mathbf{x}-\mathbf{x''}||)$');
+        t(2).Interpreter='latex';
+        ah(2).XTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
+        ah(2).YTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
+        xlabel('$\mathbf{x}''$'); ylabel('$\mathbf{x}$'); axis image
 
-    ah(3)=subplot(323);
-    imagesc(log(abs(EJJt_out./prod(NyNx)).^2));
-    cax=caxis; caxis(cax(2)-[10 0])
-    cb4=colorbar; cb4.Label.String='term 1 log([|unit|^2/m])';
-    %title('|U(UCU'')U|^2')
-    t(3)=title('$|\mathrm{cov}\{H(\mathbf{k}),H^*(\mathbf{k''})\}|^2$');
-    t(3).Interpreter='latex';
-    ah(3).XTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
-    ah(3).YTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
-    xlabel('$\mathbf{k}''$'); ylabel('$\mathbf{k}$'); axis image
+        ah(3)=subplot(323);
+        imagesc(log(abs(EJJt_out./prod(NyNx)).^2));
+        cax=caxis; caxis(cax(2)-[10 0])
+        cb4=colorbar; cb4.Label.String='term 1 log([|unit|^2/m])';
+        %title('|U(UCU'')U|^2')
+        t(3)=title('$|\mathrm{cov}\{H(\mathbf{k}),H^*(\mathbf{k''})\}|^2$');
+        t(3).Interpreter='latex';
+        ah(3).XTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
+        ah(3).YTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
+        xlabel('$\mathbf{k}''$'); ylabel('$\mathbf{k}$'); axis image
 
-    ah(4)=subplot(324);
-    imagesc(log(abs(EJJht_out./prod(NyNx)).^2));
-    cax=caxis; caxis(cax(2)-[10 0])
-    cb3=colorbar; cb3.Label.String='term 2 log([|unit|^2/m])';
-    %title('|(U(UCU'')*U)*|^2')
-    t(4)=title('$|\mathrm{cov}\{H(\mathbf{k}),H(\mathbf{k''})\}|^2$');
-    t(4).Interpreter='latex';
-    ah(4).XTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
-    ah(4).YTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
-    xlabel('$\mathbf{k}''$'); ylabel('$\mathbf{k}$'); axis image
+        ah(4)=subplot(324);
+        imagesc(log(abs(EJJht_out./prod(NyNx)).^2));
+        cax=caxis; caxis(cax(2)-[10 0])
+        cb3=colorbar; cb3.Label.String='term 2 log([|unit|^2/m])';
+        %title('|(U(UCU'')*U)*|^2')
+        t(4)=title('$|\mathrm{cov}\{H(\mathbf{k}),H(\mathbf{k''})\}|^2$');
+        t(4).Interpreter='latex';
+        ah(4).XTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
+        ah(4).YTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
+        xlabel('$\mathbf{k}''$'); ylabel('$\mathbf{k}$'); axis image
 
-    % Ratio of Isserlis' terms for periodogram covariance
-    ah(5)=subplot(325);
-    imagesc(log(Hk2cov));
-    cax=caxis; caxis(cax(2)-[10 0])
-    cb5=colorbar; cb5.Label.String='log periodogram covariance';
-    t(5)=title('$\mathrm{cov}\{|H(\mathbf{k})|^2,|H(\mathbf{k''})|^2\}$');
-    t(5).Interpreter='latex';
-    ah(5).XTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
-    ah(5).YTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
-    xlabel('$\mathbf{k}''$'); ylabel('$\mathbf{k}$'); axis image
-    layout(ah(5),0.5,'m','x')
+        % Isserlis' periodogram covariance as the sum of the previous two terms 
+        ah(5)=subplot(325);
+        imagesc(log(Hk2cov));
+        cax=caxis; caxis(cax(2)-[10 0])
+        cb5=colorbar; cb5.Label.String='log periodogram covariance';
+        t(5)=title('$\mathrm{cov}\{|H(\mathbf{k})|^2,|H(\mathbf{k''})|^2\}$');
+        t(5).Interpreter='latex';
+        ah(5).XTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
+        ah(5).YTick=[0:params.NyNx(1):prod(params.NyNx)-1 prod(params.NyNx)];
+        xlabel('$\mathbf{k}''$'); ylabel('$\mathbf{k}$'); axis image
+        layout(ah(5),0.5,'m','x')
+    elseif pltver==2
+        fs=11;
+        ah=krijetem(subnum(2,4));
+        axes(ah(1))
+        imagesc(Cmn); caxis([0 1]); 
+        %cb(1)=colorbar;  cb(1).Label.String='covariance [unit^2]'; 
+        t(1)=title(append(repmat('\ ',1,15),...
+                          '$\mathcal{C}(||\mathbf{x}-\mathbf{x''}||)$',...
+                          repmat('\ ',1,15),'$\rightarrow$'),...
+                   'FontSize',fs);
+        t(1).Interpreter='latex';
+        ah(1).XTick=[1 prod(params.NyNx)];
+        ah(1).YTick=[1 prod(params.NyNx)];
+        xlabel('$\mathbf{x(:)}''$','Interpreter','latex','FontSize',fs);
+        ylabel('$\mathbf{x(:)}$','Interpreter','latex','FontSize',fs); 
+        axis image
+
+        axes(ah(2))
+        imagesc(log(Hk2cov));
+        cax=caxis; caxis(cax(2)-[10 0])
+        %cb(2)=colorbar; cb(2).Label.String='log periodogram covariance';
+        t(2)=title(append(repmat('\ ',1,10),...
+                          '$\mathrm{cov}\{|H(\mathbf{k})|^2,|H(\mathbf{k''})|^2\}$',...
+                          repmat('\ ',1,9),'$=$'),...
+                   'FontSize',fs);
+        t(2).Interpreter='latex';
+        ah(2).XTick=[1 prod(params.NyNx)];
+        ah(2).YTick=[1 prod(params.NyNx)];
+        xlabel('$\mathbf{k(:)}''$','Interpreter','latex','FontSize',fs);
+        ylabel('$\mathbf{k(:)}$','Interpreter','latex','FontSize',fs); 
+        axis image
+
+        axes(ah(3))
+        imagesc(log(abs(EJJt_out./prod(NyNx)).^2));
+        cax=caxis; caxis(cax(2)-[10 0])
+        %cb(3)=colorbar; cb(3).Label.String='term 1 log([|unit|^2/m])';
+        t(3)=title(append(repmat('\ ',1,10),...
+                          '$|\mathrm{cov}\{H(\mathbf{k}),H^*(\mathbf{k''})\}|^2$',...
+                          repmat('\ ',1,10),'$+$'),...
+                   'FontSize',fs);
+        t(3).Interpreter='latex';
+        ah(3).XTick=[1 prod(params.NyNx)];
+        ah(3).YTick=[1 prod(params.NyNx)];
+        xlabel('$\mathbf{k(:)}''$','Interpreter','latex','FontSize',fs);
+        ylabel('$\mathbf{k(:)}$','Interpreter','latex','FontSize',fs); 
+        axis image
+
+        axes(ah(4))
+        imagesc(log(abs(EJJht_out./prod(NyNx)).^2));
+        cax=caxis; caxis(cax(2)-[10 0])
+        %cb(4)=colorbar; cb(4).Label.String='term 2 log([|unit|^2/m])';
+        t(4)=title('$|\mathrm{cov}\{H(\mathbf{k}),H(\mathbf{k''})\}|^2$','FontSize',fs);
+        t(4).Interpreter='latex';
+        ah(4).XTick=[1 prod(params.NyNx)];
+        ah(4).YTick=[1 prod(params.NyNx)];
+        xlabel('$\mathbf{k(:)}''$','Interpreter','latex','FontSize',fs);
+        ylabel('$\mathbf{k(:)}$','Interpreter','latex','FontSize',fs); 
+        axis image
+    end
     
     % Check this out this should be the covariance between periodogram terms
     A=Hk2cov;
@@ -1435,68 +1539,137 @@ elseif strcmp(th,'demo4')
     % a pseudocovariance of Fourier coefficients. The variances, aka their
     % diagonals, can be predicted from the blurred spectral density.
 
-    figure(2)
-    clf
-    
-    % This is more than we wanted to know but might some some day
-    % The first column (or equivalently the first row) of the wrapped diagonal
-    % of the sum of the predicted terms is mm
-    % difer(mm.'-diagpgmsum(:,1))
-    % Don't v2s(fftshift, very different from fftshitf(v2s
-    ah(1)=subplot(221); imagesc(decibel(fftshift(v2s(pSbar2))))
-    caxis([-40 0])
-    t(1)=title('$|\mathrm{cov}\{H(\mathbf{k}),H^*(\mathbf{k})\}|^2$');
-    t(1).Interpreter='latex';
-    ah(1).XTick=[1 params.NyNx(1)];
-    ah(1).YTick=[1 params.NyNx(2)];
-    xlabel('$k_x$'); ylabel('$k_y$'); axis image
+    if pltver==1
+        figure(2)
+        clf
+        
+        % This is more than we wanted to know but might some some day
+        % The first column (or equivalently the first row) of the wrapped diagonal
+        % of the sum of the predicted terms is mm
+        % difer(mm.'-diagpgmsum(:,1))
+        % Don't v2s(fftshift, very different from fftshitf(v2s
+        ah(1)=subplot(221); imagesc(decibel(fftshift(v2s(pSbar2))))
+        caxis([-40 0])
+        t(1)=title('$|\mathrm{cov}\{H(\mathbf{k}),H^*(\mathbf{k})\}|^2$');
+        t(1).Interpreter='latex';
+        ah(1).XTick=[1 params.NyNx(1)];
+        ah(1).YTick=[1 params.NyNx(2)];
+        xlabel('$k_x$','Interpreter','latex'); 
+        ylabel('$k_y$','Interpreter','latex'); 
+        axis image
 
-    ah(2)=subplot(222); imagesc(decibel(fftshift(v2s(Sbar2))))
-    caxis([-40 0])
-    t(2)=title('$|\mathrm{cov}\{H(\mathbf{k}),H(\mathbf{k})\}|^2$');
-    t(2).Interpreter='latex';
-    % Ticks represent indices only
-    ah(2).XTick=[1 params.NyNx(1)];
-    ah(2).YTick=[1 params.NyNx(2)];
-    xlabel('$k_x$'); ylabel('$k_y$'); axis image
+        ah(2)=subplot(222); imagesc(decibel(fftshift(v2s(Sbar2))))
+        caxis([-40 0])
+        t(2)=title('$|\mathrm{cov}\{H(\mathbf{k}),H(\mathbf{k})\}|^2$');
+        t(2).Interpreter='latex';
+        % Ticks represent indices only
+        ah(2).XTick=[1 params.NyNx(1)];
+        ah(2).YTick=[1 params.NyNx(2)];
+        xlabel('$k_x$','Interpreter','latex'); 
+        ylabel('$k_y$','Interpreter','latex'); 
+        axis image
 
-    a=fftshift(v2s(Sbar2+pSbar2));
-    ah(3)=subplot(223); imagesc(decibel(a));
-    caxis([-40 0])
-    t(3)=title('$\mathrm{cov}\{|H(\mathbf{k})|^2,|H(\mathbf{k''})|^2\}$');
-    t(3).Interpreter='latex';
-    ah(3).XTick=[1 params.NyNx(1)];
-    ah(3).YTick=[1 params.NyNx(2)];
-    xlabel('$k_x$'); ylabel('$k_y$'); axis image
+        a=fftshift(v2s(Sbar2+pSbar2));
+        ah(3)=subplot(223); imagesc(decibel(a));
+        caxis([-40 0])
+        t(3)=title('$\mathrm{cov}\{|H(\mathbf{k})|^2,|H(\mathbf{k''})|^2\}$');
+        t(3).Interpreter='latex';
+        ah(3).XTick=[1 params.NyNx(1)];
+        ah(3).YTick=[1 params.NyNx(2)];
+        xlabel('$k_x$','Interpreter','latex'); 
+        ylabel('$k_y$','Interpreter','latex'); 
+        axis image
 
-    % Note that this is only the non-pseudo part of what we need
-    % The non-correlated part of the covariance of the periodogram is not just
-    % the square of the blurred theoretical spectrum
-    b=v2s(blurosy(th,params)*(2*pi)^2).^2;
-    [~,i]=max(b(:)); b(i)=b(i)*2;
-    ah(4)=subplot(224); imagesc(decibel(b))
-    caxis([-40 0])
-    t(4)=title(sprintf('fixed %s [median ratio %5g]','$\bar{S}(\mathbf{k})^2$',median(abs(a(:)./b(:)))));
-    t(4).Interpreter='latex';
-    ah(4).XTick=[1 params.NyNx(1)];
-    ah(4).YTick=[1 params.NyNx(2)];
-    xlabel('$k_x$'); ylabel('$k_y$'); axis image
+        % Note that this is only the non-pseudo part of what we need
+        % The non-correlated part of the covariance of the periodogram is not just
+        % the square of the blurred theoretical spectrum
+        b=v2s(blurosy(th,params)*(2*pi)^2).^2;
+        [~,i]=max(b(:)); b(i)=b(i)*2;
+        ah(4)=subplot(224); imagesc(decibel(b))
+        caxis([-40 0])
+        t(4)=title(sprintf('fixed %s [median ratio %5g]','$\bar{S}(\mathbf{k})^2$',median(abs(a(:)./b(:)))));
+        t(4).Interpreter='latex';
+        ah(4).XTick=[1 params.NyNx(1)];
+        ah(4).YTick=[1 params.NyNx(2)];
+        xlabel('$k_x$','Interpreter','latex'); 
+        ylabel('$k_y$','Interpreter','latex'); 
+        axis image
 
-    % layout(ah(3),0.5,'m','x')
-    
-    % % Check if Hermitian
-    % Sbar2=fftshift(v2s(Sbar2));
-    % pSbar2=fftshift(v2s(pSbar2));
-    % hermcheck(Sbar2)
-    % hermcheck(pSbar2)
-    % % Check if positive definite 
-    % flg=defcheck(Sbar2); diferm(flg>1)
-    % pflg=defcheck(pSbar2); diferm(pflg>1)
+        % layout(ah(3),0.5,'m','x')
+        
+        % % Check if Hermitian
+        % Sbar2=fftshift(v2s(Sbar2));
+        % pSbar2=fftshift(v2s(pSbar2));
+        % hermcheck(Sbar2)
+        % hermcheck(pSbar2)
+        % % Check if positive definite 
+        % flg=defcheck(Sbar2); diferm(flg>1)
+        % pflg=defcheck(pSbar2); diferm(pflg>1)
 
-    keyboard
-    saveas(gcf,...
-      sprintf('covgammiosl_demo4_dftmtx_%ix%i_s2%inu%irh%i_%s.eps',...
-        params.NyNx.*params.dydx,th.*[1 10 1],date),'epsc')
+        saveas(gcf,...
+               sprintf('covgammiosl_demo4_dftmtx_%ix%i_s2%inu%irh%i_%s.eps',...
+                       params.NyNx.*params.dydx,th.*[1 10 1],date),'epsc')
+    elseif pltver==2
+        axes(ah(5))
+        b=v2s(blurosy(th,params)*(2*pi)^2).^2;
+        [~,i]=max(b(:)); b(i)=b(i)*2;
+        imagesc(decibel(b))
+        caxis([-40 0])
+        t(5)=title(append(repmat('\ ',1,21),'$\bar{S}(\mathbf{k})^2$',...
+                          repmat('\ ',1,18),'$\approx$'),...
+                   'FontSize',fs);
+        t(5).Interpreter='latex';
+        ah(5).XTick=[1 params.NyNx(1)];
+        ah(5).YTick=[1 params.NyNx(2)];
+        xlabel('$k_x$','Interpreter','latex','FontSize',fs); 
+        ylabel('$k_y$','Interpreter','latex','FontSize',fs); 
+        axis image
+
+        axes(ah(6))
+        a=fftshift(v2s(Sbar2+pSbar2));
+        imagesc(decibel(a));
+        caxis([-40 0])
+        t(6)=title(append(repmat('\ ',1,9),...
+                          '$\mathrm{cov}\{|H(\mathbf{k})|^2,|H(\mathbf{k})|^2\}$',...
+                          repmat('\ ',1,10),'$=$'),...
+                   'FontSize',fs);
+        t(6).Interpreter='latex';
+        ah(6).XTick=[1 params.NyNx(1)];
+        ah(6).YTick=[1 params.NyNx(2)];
+        xlabel('$k_x$','Interpreter','latex','FontSize',fs); 
+        ylabel('$k_y$','Interpreter','latex','FontSize',fs); 
+        axis image
+
+        axes(ah(7))
+        imagesc(decibel(fftshift(v2s(pSbar2))))
+        caxis([-40 0])
+        t(7)=title(append(repmat('\ ',1,10),...
+                          '$|\mathrm{cov}\{H(\mathbf{k}),H^*(\mathbf{k})\}|^2$',...
+                          repmat('\ ',1,10),'$+$'),...
+                   'FontSize',fs);
+        t(7).Interpreter='latex';
+        ah(7).XTick=[1 params.NyNx(1)];
+        ah(7).YTick=[1 params.NyNx(2)];
+        xlabel('$k_x$','Interpreter','latex','FontSize',fs); 
+        ylabel('$k_y$','Interpreter','latex','FontSize',fs); 
+        axis image
+
+        axes(ah(8))
+        imagesc(decibel(fftshift(v2s(Sbar2))))
+        caxis([-40 0])
+        t(8)=title('$|\mathrm{cov}\{H(\mathbf{k}),H(\mathbf{k})\}|^2$','FontSize',fs);
+        t(8).Interpreter='latex';
+        % Ticks represent indices only
+        ah(8).XTick=[1 params.NyNx(1)];
+        ah(8).YTick=[1 params.NyNx(2)];
+        xlabel('$k_x$','Interpreter','latex','FontSize',fs); 
+        ylabel('$k_y$','Interpreter','latex','FontSize',fs); 
+        axis image
+
+        saveas(gcf,...
+               sprintf('covgammiosl_demo4_dftmtx_%ix%i_s2%inu%irh%i_%s_v2.eps',...
+                       params.NyNx.*params.dydx,th.*[1 10 1],date),'epsc')
+    end
 elseif strcmp(th,'demo5')
    % [IN PROGRESS] Visual demonstration of the indexing scheme implemented in the DIAGONALS
    % method
@@ -1527,6 +1700,9 @@ elseif strcmp(th,'demo6')
    % for the full field: datum='30-Apr-2025';
    % for 'random' 66.7% of field: 
    datum='11-May-2025'; params.mask='random';
+   % msk='fullx'; datum='14-May-2025';
+   % TODO: set up fullx msk case!
+   keyboard
    try
      % If we have already calculated the estimates, load them
      demo6vars=load(sprintf('covgammiosl_demo6_calcs_%s.mat',datum));
@@ -1847,12 +2023,16 @@ elseif strcmp(th,'demo7')
 
    % We need a suite of estimates; set msk to full for a  unit taper, or random 
    % for a 66.7% observed field with the specified mask
-   msk='random'; %'full';
+   %msk='random'; %'full';
+   msk='fullx';
+   % TODO: set up fullx msk case!
+   keyboard
    try
      % In case we already calculated the estimates, we will try loading them
-     datum='11-May-2025';
-     % full case: '01-May-2025';%'30-Apr-2025';
-     % for random case: '11-May-2025';
+     datum='14-May-2025';
+     % fullx case, inc only in x: '14-May-2025';
+     % full case, inc evenly in x and y: '01-May-2025';%'30-Apr-2025';
+     % for random case, inc evenly in x and y: '11-May-2025';
      demo7calcs=load(sprintf('covgammiosl_demo7_calcs_%s_%s.mat',datum,msk));
      thhats=demo7calcs.thhats;
      covempt=demo7calcs.covempt;
@@ -2161,8 +2341,13 @@ elseif strcmp(th,'demo8')
    % covariance, all as a function of the PERCENT OF MISSINGNESS, either due to
    % random deletions or a growing mask
 
+   % TODO: Make an option to display multiple experiments at once that use the
+   % same mask, specifically for increasing values of rho. Color code connecting
+   % line segment with value of rho; use same color in decorrelation radius
+   % circle!
+
    % The Matern and regular grid parameters
-   th1=[3 0.5 4];
+   th1=[3 0.5 10];
    params.NyNx=[88 88];params.dydx=[1 1];
    params.blurs=-1;params.taper=1;                                            
    ifinv=[1 1 1];                                                              
@@ -2171,10 +2356,14 @@ elseif strcmp(th,'demo8')
    % matrix or a region name that we have worked with previously
    %params.mask='puss';
    %params.mask='random';datum='30-Apr-2025';% for random
-   %params.mask='france';datum='09-May-2025';%'30-Apr-2025'
+   params.mask='france';datum='15-May-2025'; 
+   % france for rh=10: '15-May-2025';
+   % france for rh=8: '14-May-2025';
+   % france for rh=6: '13-May-2025';
+   % france for rh=4: '09-May-2025';%'30-Apr-2025'
    %params.mask='Italy';datum='08-May-2025';
    %params.mask='doves';datum='11-May-2025';
-   params.mask='newjersey';datum='11-May-2025';
+   %params.mask='newjersey';datum='11-May-2025';
    if isfield(params,'mask')
      % If you provided a mask, randomly select the grid index location that the
      % mask will be centered on (p.mymx) to be passed onto MASKIT
@@ -2260,6 +2449,7 @@ elseif strcmp(th,'demo8')
      % Calculate parameter covariance up to 4 different ways and plot as a
      % function of the percentage of the regular grid that is missing. We may 
      % choose not to include the dftmtx method so that we can look at larger grids
+keyboard
      incdft=0;
      for ind=1:numel(missarr)
        params.taper=tapersv(:,:,ind);
@@ -2467,6 +2657,11 @@ elseif strcmp(th,'demo8')
        axes(ha(xnd))
        imagesc(tapersv(:,:,ind))
        caxis([0 1])
+              hold on
+       % Show the decorrelation length scale (the correlation is 1/3 of the
+       % variance at a distance of pi*rho) 
+       dc(ind,1:2)=circ(pi*th1(3),[],[pi*th1(3) params.NyNx(2)-pi*th1(3)]); 
+       set(dc(ind,1),'color','b'); delete(dc(ind,2))
        title(sprintf('$%0.1f\\%%$: Tx;',100*prcmiss(ind)),'Interpreter','latex')
        longticks
        axis image
@@ -2541,4 +2736,199 @@ elseif strcmp(th,'demo8')
      sprintf('covgammiosl_demo8_missing_Ny%iNx%i_dy%idx%i_s2%inu%irh%i_%s_2_%i.eps',...
        params.NyNx,params.dydx,th1.*[1 10 1],date,pnd),'epsc') 
    end
+elseif strcmp(th,'demo9')
+   % Growing domain asymptotics study looking at whether the blurred Fisher 
+   % inverse evaluated at the truth converges to the parameter covariance 
+   % calculated at the truth with increasing sample size; all more idealized
+   % than one may expect in practice. Compare to DEMO6, which does consider
+   % sampling.
+   params=[];params.dydx=[1 1];params.blurs=-1;params.taper=1;ifinv=[1 1 1];
+   np=3;
+
+   % Labels
+   labs={'\sigma^2,\sigma^2', '\nu,\nu', '\rho,\rho', '\sigma^2,\nu',...
+         '\sigma^2,\rho', '\nu,\rho'};
+   % Color friendly palette
+   clrs=['#1B9E77','#D95F02','#7570B3'];
+   % Font size for latex interpreted text
+   fs=11;
+
+   % For now, small values so that we have a chance at forming the data vector
+   % and finding an estimate for small grids 
+   rh=6;
+   th1=[3 0.5 rh];
+   % Sample growing grid length as multiples of pi rho from logspace 
+   loggs=logspace(0.5,1,5);
+
+   try
+     % If we have already calculated the estimates, load them
+     datum='29-May-2025';
+     demo9vars=load(sprintf('covgammiosl_demo9_calcs_%s.mat',datum));
+     % The calculated covariance will be exact; calculated using method 2 when
+     % the grid size is less than about 120^2, then using method 3 when the grid
+     % size is larger. These methods are always the same.
+     covth=demo9vars.covth;
+     covF =demo9vars.covF;
+     Ns   =demo9vars.Ns;
+   catch
+     for ind=1:size(loggs,2)
+       % Create a larger grid with length linearly increasing in pi rho
+       gs=rh*pi*loggs(ind); 
+       params.NyNx=[floor(gs) floor(gs)];
+       if isfield(params,'mask'); if strcmp(params.mask,'random'); 
+           [~,I]=muckit(randn(params.NyNx),params,0.667); 
+           tapersv{ind}=I;
+           params.taper=tapersv{ind};
+       end; end
+       % Number of samples, prod(NyNx / dydx)
+       Ns(ind)=prod(params.NyNx./params.dydx);
+       if prod(params.NyNx)<120^2
+         % Calculate the covariance using the 'dftmtx' method
+         covthi=covthosl(th1,params,2,ifinv);
+       else
+         % Calculate the covariance using the 'diagonals' method
+         covthi=covthosl(th1,params,3,ifinv);
+       end
+       k=knums(params);
+       [~,covFi]=fishiosl(k,th1,params);
+       % Store the unique values in [s2s2 nunu rhrh s2nu s2rh nurh] order
+       covth(ind,:)=trilos(covthi);
+       covF(ind,:) =trilos(covFi);
+     end
+     % Consider saving your calculations by setting 'svcalcs'
+     svcalcs=1;
+     if svcalcs
+       save(sprintf('covgammiosl_demo9_calcs_%s.mat',date),...
+            'covth','covF','params','th1','Ns')
+     end
+   end
+
+   clf;
+   [ah,ha,H]=krijetem(subnum(2,3));
+   colororder({'k',clrs{3}})
+   cmnylim =[minmax([abs(covth) abs(covF)])];
+   cmnrylim=[minmax([covth./covF])];
+   for jnd=1:6
+     axes(ah(jnd))
+     yyaxis left
+     hold on
+     pNs=log10(Ns);
+     % Fit a slope to the covariance calculations as a function of grid length
+     % in log-log
+     mbfcovth(jnd,:) =polyfit(log10(Ns),log10(abs(covth(:,jnd))),1);
+     mbfcovF(jnd,:)  =polyfit(log10(Ns),log10(abs(covF(:,jnd))), 1);
+     mbfratio(jnd,:) =polyfit(log10(Ns),...
+                        log10(covth(:,jnd)./covF(:,jnd)),1);
+     predcovth(jnd,:)=polyval(mbfcovth(jnd,:),pNs);
+     predcovF(jnd,:) =polyval(mbfcovF(jnd,:), pNs);
+     predratio(jnd,:)=polyval(mbfratio(jnd,:),pNs);
+
+     % Plot the absolute covariance calculated from covthosl and the fisher
+     % inverse
+     ll1=loglog(Ns,abs(covth(:,jnd)),...
+            'o','MarkerEdgeColor','k',...
+            'MarkerFaceColor','k');
+     ll2=loglog(Ns,abs(covF(:,jnd)),...
+            's','MarkerEdgeColor','k',...
+            'MarkerFaceColor','k');
+     yyaxis right
+     ll3=loglog(Ns,covth(:,jnd)./covF(:,jnd),...
+            '*','MarkerEdgeColor',clrs{3},...
+            'MarkerFaceColor',clrs{3});
+     % Plot the best fit lines
+     yyaxis left
+     loglog(Ns,10.^(predcovth(jnd,:)),'k-','HandleVisibility','off');
+     loglog(Ns,10.^(predcovF(jnd,:)),'k-','HandleVisibility','off');
+     yyaxis right
+     hold on
+     loglog(Ns,10.^(predratio(jnd,:)),'Color',clrs{3},'LineStyle','-',...
+            'HandleVisibility','off');
+   end
+   for jnd=1:6
+     axes(ah(jnd));
+     % List slopes in the legend and explain in a figure caption
+     [leg1(jnd),legic]=legend(...
+       {append('$\mathrm{cov}\{\theta_0\}, ',num2str(round(abs(mbfcovth(jnd,1)),1)),'$'),...
+       append('$\mathcal{F}^{-1}(\theta_0), ',num2str(round(abs(mbfcovF(jnd,1)),1)),'$'),...
+         sprintf('ratio, %0.1f',mbfratio(jnd,1))},...
+         'Interpreter','latex','BackgroundAlpha',0,'box','off',...
+         'FontSize',fs);
+     % Have the legend markers take up less space
+     legicms = findobj(legic,'Type','line');
+     % Resize the marker in the legend
+     for ind=1:size(legicms,1)
+       if size(legicms(ind).XData,1)==1
+          legicms(ind).XData=0.3;
+       else
+          legicms(ind).XData(1)=0.2;
+          legicms(ind).XData(2)=0.4;
+       end
+     end
+     % Labels, titles, ticks, common limits
+     yyaxis left
+     if jnd==1|jnd==4
+        ylabel('$|\mathrm{cov}\{\theta_i,\theta_j\}|$',...
+               'Interpreter','latex','FontSize',fs)
+     end
+     title(sprintf('$%s$',labs{jnd}),'Interpreter','latex','FontSize',fs)
+     longticks
+     ah(jnd).XRuler.TickLabelGapOffset=-2;
+     box on
+     ylim([0.1*cmnylim(1) 100*cmnylim(2)])
+     xlim(minmax(Ns).*[0.9 1.1])
+     xtks=round(Ns/1e3)*1e3;
+     xtklbs=append(string(round(Ns./1e3)),'e3');
+     set(gca,'Yscale','log','Xscale','log',...
+         'XTick',xtks,'XTickLabel',xtklbs,'XMinorTick','off',...
+         'YMinorTick','off',...
+         'XLim',minmax(xtks).*[0.99 1.15])
+     xla='$Ny \times Nx$ Samples';
+     if jnd>3
+       xlabel(xla,...
+              'Interpreter','latex','FontSize',fs)
+     end
+
+     % Center the right axis on 1
+     yyaxis right
+     set(gca,'Yscale','log','YMinorTick','off','YLim',[0.1*cmnrylim(1) 100*cmnrylim(2)])
+     if jnd==3|jnd==6
+       ylabel('$\mathrm{cov}\{\theta_0\}/_{\mathcal{F}^{-1}}$',...
+              'Interpreter','latex','FontSize',fs)
+     end
+
+     % Create a second x-axis that quotes the length of one side of the grid
+     % in units of pi rho
+     xlb='Length [$\pi\rho$]';
+     if jnd<4
+       [axx(jnd),xl(jnd),yl(jnd)]=...
+         xtraxis(ah(jnd),minmax(loggs),minmax(loggs),xlb);
+       xl(jnd).Interpreter='latex';
+     %  movev(ti(jnd),15);
+     else
+       [axx(jnd),xl(jnd),yl(jnd)]=...
+         xtraxis(ah(jnd),loggs,loggs,[]);
+     end
+     set(axx(jnd),'Xscale','log','FontSize',fs,...
+         'XTick',minmax(loggs),'XTickLabel',round(minmax(loggs)),'XLim',minmax(loggs))
+     longticks
+     ah(jnd).XRuler.TickLabelGapOffset=-2;
+     ah(jnd).XTickLabelRotation=0;
+     axx(jnd).XRuler.TickLabelGapOffset=-3;
+   end      
+
+   % Super title to display the parameters
+   ti=sgtitle(sprintf('$%s%0.2f%s%0.2f%s%0.2f$%s%0.1f%s%0.1f',...
+                  '\sigma^2=',th1(1),' \mathrm{[unit]}^2, \nu=',th1(2),...
+                  ', \rho=',th1(3),' m $|$ dy=',params.dydx(1),...
+                  ', dx=',params.dydx(2)),...
+              'Interpreter','latex');
+   % Shift the figure objects to make space for the title
+   movev([ah(1:3) axx(1:3)],-0.05)
+   movev([ah(4:6) axx(4:6)],-0.01)
+   movev([leg1(1) leg1(2) leg1(3) leg1(4) leg1(5) leg1(6)],0.005)
+
+   % Save the figure
+   saveas(gcf,...
+     sprintf('covgammiosl_demo9_gridsizefish_s2%inu%irh%i_%s.eps',...
+       th1.*[1 10 1],date),'epsc')
 end
