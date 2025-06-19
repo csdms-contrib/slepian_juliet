@@ -1,7 +1,7 @@
 function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah)
 % [a,mag,ah,ah2,cb,ch,spt]=MLECHIPSDOSL(Hk,thhat,scl,params,stit,ah)
 %
-% Makes a four-panel plot of the quadratic residuals and their
+% Makes a FOUR-panel plot of the quadratic residuals and their
 % interpretation for a Matern likelihood model of a single-field
 % Fourier-domain data patch, as well as plots of the actual power spectral
 % density of that data patch and its predicted power spectral density based
@@ -42,7 +42,7 @@ function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah)
 % Maybe should integrate MLECHIPLOS into this one. 
 %
 % Last modified by gleggers-at-princeton.edu, 04/17/2014
-% Last modified by fjsimons-at-alum.mit.edu, 06/26/2018
+% Last modified by fjsimons-at-alum.mit.edu, 06/19/2025
 
 % Some defaults
 defval('stit','Chi-squared residuals')
