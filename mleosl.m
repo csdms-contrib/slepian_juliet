@@ -922,7 +922,7 @@ elseif strcmp(Hx,'demo2')
   clf
 
   % We feed it various things and it calculates a bunch more
-  [ah,ha,yl,xl,tl,ps,ms,o1,o2,ep,ec,axlm,covth]=...
+  [ah,ha,yl,xl,tl,ps,ms,o1,o2,ep,ec,axlm,covth,ttt]=...
       mleplos(thhats,th0,covF0,covavhs,covXpix,[],[],p,...
                   sprintf('MLEOSL-%s',datum),thpix,ifinv);
   
@@ -945,20 +945,10 @@ elseif strcmp(Hx,'demo2')
   figure(1); figna=figdisp([],sprintf('%s_%s_1',Hx,datum),[],1);
 
   % Now that the original figure 2 has been saved, modify the figure by removing
-  % the points and the cross, and by adding the likelihood contours from
-  % MLELCONTOSL for the mean estimate using the covariance matrix of choice
+  % the points and the cross, and by adding the likelihood from MLELCONTOSL
 
   flag=3;
   if flag==3
-      % Make sure MLEPLOS outputs all the handles
-      % Remove the ones that we don't like
-      % Remove the points and the cross
-      delete([ps o1 o2])
-      % Remove the marker at the center indicating the mean observation?
-      delete(ms)
-
-      % Prepare to plot the loglihood contours on the existing axes
-      hold on
       % Calculate the loglihood contours for an estimate within 
       % MLELCONTOSL -- we may specify the range of parameter values as an input, 
       % but discretization of the grid must be manually modified within 
@@ -983,22 +973,27 @@ elseif strcmp(Hx,'demo2')
       defval('ocalc','A')
       switch ocalc
         case 'A'
-          % Fish for a data vector whose parameter estimates are within 5% relative
-          % distance of mobs (this will take a few iterations)
-          thhat=NaN;scl=NaN;
-          while any(abs(thhat.*scl-mobs)./mobs>0.05) | isnan(thhat)
-              % Simulate from the mean observation
-              p.blurs=Inf; Hx=simulosl(mobs,p); p.blurs=-1;
-              % This is where it would be good to load the simulation parameters; in
-              % case we came in from a simulation with p.blurs=-1, this will need to
-              % be uncommented:
-              % p.blurs=-1; Hx=simulosl(mobs,p);
-
-              % Calculate the MLE for the data vector - no more gratuitous output
-              [thhat,~,lpars,scl,~,~,Hk]=mleosl(Hx,[],p,[],[],[],[],0);
+          % What are we staying close to?
+          closeto=th0;
+          %closeto=mobs;
+          fname=fullfile(getenv('IFILES'),'HASHES',...
+                         hash([struct2array(orderfields(p)) closeto],'SHA-1'));
+          if ~exist(sprintf('%s.mat',fname),'file')
+              % Fish for a data vector whose parameter estimates are within X% relative
+              % distance of a certain target (this will take a few iterations)
+              thhat=NaN; scl=NaN;
+              while any(abs(thhat.*scl-closeto)./closeto>0.01) | isnan(thhat)
+                  % Simulate from the mean observation
+                  p.blurs=Inf; Hx=simulosl(mobs,p);
+                  % Calculate the MLE for the data vector - no more gratuitous output
+                  [thhat,~,lpars,scl,~,~,Hk]=mleosl(Hx,[],p,[],[],[],[],0);
+              end
+              [Lgrid,Lcon,thR,xcon,ycon]=...
+                  mlelcontosl(Hk,thhat,scl,p,covcont,thcont,runinpar);
+              save(fname,'thhat','scl','p','Hk','Lgrid','Lcon','thR','xcon','ycon')
+          else
+              load(fname)
           end
-          [Lgrid,Lcon,thR,xcon,ycon]=...
-              mlelcontosl(Hk,thhat,scl,p,covcont,thcont,runinpar);
         case 'B'
           % Scale any data vector simulated from the truth and calculate 
           % the likelihood surface for this observation with mobs, which assumes the
@@ -1014,7 +1009,6 @@ elseif strcmp(Hx,'demo2')
           % Simulate N data vectors from the truth, calculate the 
           % likelihood surface from each observation and their MLE solution, and
           % plot the contours of the average surface 
-          
           N=25;
           for cnd=1:N
               thhat=NaN; 
@@ -1031,21 +1025,41 @@ elseif strcmp(Hx,'demo2')
       
       % Plot the contours; set a grayscale coloring scheme
       figure(2)
-      pcomb=nchoosek(1:length(mobs),2);
+      % Remove the points and the cross
+      delete([ps o1 o2])
+      % Remove the marker at the center indicating the mean observation
+      delete(ms)
+      % Remove the other annotations
+      delete(ttt)
+      delete(ep)
+      delete(ec)
+
+      % Prepare to plot the loglihood contours on the existing axes
+      % Find the pairwise combinations for the cross-plot convention: s2-nu,
+      % s2-rho, nu-rho
+      pcomb=nchoosek(1:np,2);
       for ind=1:np
-          xi=pcomb(ind,1);yi=pcomb(ind,2);
+          xi=pcomb(ind,1); yi=pcomb(ind,2);
           axes(ah(ind))
           hold on
-          [cont,ch(ind)]=contour(xcon{ind}/scl(xi),ycon{ind}/scl(yi),...
-                                 Lgrid(:,:,ind),Lcon(ind,:));
-          set(ch(ind),'EdgeColor',[0.33 0.33 0.33],'LineStyle','-');
+          [cont,ch(ind)]=contourf(xcon{ind}/scl(xi),ycon{ind}/scl(yi),...
+                                  Lgrid(:,:,ind),Lcon(ind,:));
+          % This doesn't seem to do much now
+          ch(ind).LineWidth=0.1;
+          % [cont,ch(ind)]=contour(xcon{ind}/scl(xi),ycon{ind}/scl(yi),...
+          %                        Lgrid(:,:,ind),Lcon(ind,:));
+          % set(ch(ind),'EdgeColor',grey(3),'LineStyle','-');
+          cmap=flipud(gray(10));
+          % Cut off the last bit
+          cmap(end,:)=[1 1 1]; 
+          colormap(cmap)
+          bottom(ch(ind),ah(ind))
+          box on
       end
-      % bottom
-      bottom(ch(ind),ah(ind))
+      hold off
       keyboard
-      figure(2);  figna=figdisp([],sprintf('%s_%s_3','demo2',datum),[],1);
+      figure(2); figna=figdisp([],sprintf('%s_%s_3','demo2',datum),[],1);
   end
-
 elseif strcmp(Hx,'demo3')
   disp('This does not exist, numbering kept for consistency only')
 elseif strcmp(Hx,'demo4')
