@@ -46,11 +46,15 @@ end
 sclcovX=covthosl(thhat,params,cvg,[1 1 1]);
 sclcovX=sclcovX./[diag(sqrt(sclcovX))*diag(sqrt(sclcovX))'];
 
+% Print this out
+obscov
+sclcovX
+
 switch oneortwo
  case 1
   % Plot
   clf
-  fig2print(gcf,'portrait')  
+  fig2print(gcf,'portrait')
   ah=gca;
   imagesc(sclcovX)
   covannotate(ah,np)
@@ -131,13 +135,13 @@ defval('ifinv',repelem(1,np))
 if np==6
   xc=[3.5 3.5];
   yc=[0.5 6.5];
-  labs={'D','f2','r','s2','nu','rho'};
+  labs={'D','f^2','r','\sigma^2','\nu','\rho'};
 elseif np==5
   xc=[2.5 2.5];
   yc=[0.5 5.5];
-  labs={'D','f2','r','s2','nu','rho'};
+  labs={'D','f^2','r','\sigma^2','\nu','\rho'};
 elseif np==3
-  labs={'s2','nu','rho'};
+  labs={'\sigma^2','\nu','\rho'};
 end
 labs(~ifinv)={''};
 
@@ -154,8 +158,8 @@ end
 axis image
 
 % Labels and such
-set(ah,'xtick',1:np,'XTickLabel',labs)
-set(ah,'ytick',1:np,'YTickLabel',labs)
+set(ah,'xtick',1:np,'XTickLabel',labs,'FontSize',12)
+set(ah,'ytick',1:np,'YTickLabel',labs,'FontSize',12)
 longticks(ah)
 movev(ah,.05)
 
