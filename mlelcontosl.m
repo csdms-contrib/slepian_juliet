@@ -77,7 +77,7 @@ if ~ischar(Hk)
     % Number of standard deviations the grid extends
     defval('stdOut',2);         
     % Standard deviations to which the contours refer
-    stdCon=1:stdOut;
+    stdCon=0.2:0.2:stdOut;
     % Fineness of the loglihood grids
     fine=50;
 
@@ -87,7 +87,7 @@ if ~ischar(Hk)
     % Label contour loglihood values
     optClabel=true;  
     % Show the STD pairs from which contours are calculated
-    optSD=false;      
+    optSD=true;      
     % Plot an error ellipse about the calculated solution
     optErrE=false;
     
@@ -126,9 +126,9 @@ if ~ischar(Hk)
     Csn=covthn(1,2);
     Csr=covthn(1,3);
     Cnr=covthn(2,3);
-    
+
     % Set the Matern parameter range that the figures will span
-    defval('thRange',[thhat2'+stdOut*thhatsd2.*[-1 1]]);
+    defval('thRange',[repmat(thhat2',1,2)+stdOut*thhatsd2*[-1 1]]);
     
     % Calculate the Matern parameter values for each contour
     preCon=repmat(thhat2',1,length(stdCon))+thhatsd2*stdCon;
