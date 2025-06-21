@@ -105,7 +105,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver,cm)
 % mleosl('demo1',N,th,p)
 %
 % Statistical study of a series of simulations using MLEPLOS
-% mleosl('demo2','16-May-2025')
+% mleosl('demo2','18-May-2025')
 %
 % Covariance study of a series of simulations using COVPLOS
 % mleosl('demo4','14-Oct-2023')
@@ -922,7 +922,7 @@ elseif strcmp(Hx,'demo2')
   clf
 
   % We feed it various things and it calculates a bunch more
-  [ah,ha,yl,xl,ps,ms,o1,o2,ep,ec,axlm,covth]=...
+  [ah,ha,yl,xl,tl,ps,ms,o1,o2,ep,ec,axlm,covth]=...
       mleplos(thhats,th0,covF0,covavhs,covXpix,[],[],p,...
                   sprintf('MLEOSL-%s',datum),thpix,ifinv);
   
@@ -947,6 +947,7 @@ elseif strcmp(Hx,'demo2')
   % Now that the original figure 2 has been saved, modify the figure by removing
   % the points and the cross, and by adding the likelihood contours from
   % MLELCONTOSL for the mean estimate using the covariance matrix of choice
+
   flag=3;
   if flag==3
       % Make sure MLEPLOS outputs all the handles
@@ -979,73 +980,69 @@ elseif strcmp(Hx,'demo2')
       % Calculate the grid and objects used for contouring with MLELCONTOSL, all 
       % organized by cross-parameter pairings in the usual order: 
       % s2-nu, s2-rho, nu-rho
+      defval('ocalc','A')
+      switch ocalc
+        case 'A'
+          % Fish for a data vector whose parameter estimates are within 5% relative
+          % distance of mobs (this will take a few iterations)
+          thhat=NaN;scl=NaN;
+          while any(abs(thhat.*scl-mobs)./mobs>0.05) | isnan(thhat)
+              % Simulate from the mean observation
+              p.blurs=Inf; Hx=simulosl(mobs,p); p.blurs=-1;
+              % This is where it would be good to load the simulation parameters; in
+              % case we came in from a simulation with p.blurs=-1, this will need to
+              % be uncommented:
+              % p.blurs=-1; Hx=simulosl(mobs,p);
 
-      %% %%
-      % Q for Frederik: Do you prefer option A, B, or C for acquiring a data 
-      % vector and estimate for MLELCONTOSL?
-
-      % Option A: fish for a data vector whose parameter estimates are within 
-      % 5% relative distance of mobs (this will take a few iterations)
-      % 
-       thhat=NaN;scl=NaN;
-       while any(abs(thhat.*scl-mobs)./mobs>0.05) | isnan(thhat)
-         % Simulate from the mean observation
-         p.blurs=Inf; Hx=simulosl(mobs,p); p.blurs=-1;
-
-         % This is where it would be good to load the simulation parameters; in
-         % case we came in from a simulation with p.blurs=-1, this will need to
-         % be uncommented:
-         % p.blurs=-1; Hx=simulosl(mobs,p);
-
-         % Calculate the MLE for the data vector
-         [thhat,~,lpars,scl,~,~,Hk]=mleosl(Hx,[],p);
-       end
-       [Lgrid,Lcon,thR,xcon,ycon]=...
+              % Calculate the MLE for the data vector - no more gratuitous output
+              [thhat,~,lpars,scl,~,~,Hk]=mleosl(Hx,[],p,[],[],[],[],0);
+          end
+          [Lgrid,Lcon,thR,xcon,ycon]=...
               mlelcontosl(Hk,thhat,scl,p,covcont,thcont,runinpar);
+        case 'B'
+          % Scale any data vector simulated from the truth and calculate 
+          % the likelihood surface for this observation with mobs, which assumes the
+          % process underlying the data is close to MOBS (as it should be). This is
+          % quick, but the likelihood surface will likely not be centered on MOBS
+          p.blurs=Inf; Hx=simulosl(th0,p); p.blurs=-1;
+          shat=nanstd(Hx(:,1));
+          Hk=tospec(Hx./shat,p)/(2*pi);
+          scl=10.^round(log10(abs(mobs))); scl(1)=shat^2;
+          [Lgrid,Lcon,thR,xcon,ycon]=...
+              mlelcontosl(Hk,mobs./scl,scl,p,covcont,thcont,runinpar);
+        case 'C'
+          % Simulate N data vectors from the truth, calculate the 
+          % likelihood surface from each observation and their MLE solution, and
+          % plot the contours of the average surface 
+          
+          N=25;
+          for cnd=1:N
+              thhat=NaN; 
+              while isnan(thhat)
+                  p.blurs=Inf; Hx=simulosl(th0,p); p.blurs=-1;
+                  [thhat,~,lpars,scl,~,~,Hk]=mleosl(Hx,[],p);
+              end
+              [Lgridc{cnd},Lconc{cnd},~,xcon,ycon]=...
+                  mlelcontosl(Hk,thhat,scl,p,covcont,thcont,runinpar);
+          end
+          Lgrid=mean(cat(4,Lgridc{:}),4);
+          Lcon =mean(cat(4,Lconc{:}), 4);
+      end
       
-      % Option B: scale any data vector simulated from the truth and calculate 
-      % the likelihood surface for this observation with mobs, which assumes the
-      % process underlying the data is close to MOBS (as it should be). This is
-      % quick, but the likelihood surface will likely not be centered on MOBS
-      %
-      % p.blurs=Inf; Hx=simulosl(th0,p); p.blurs=-1;
-      % shat=nanstd(Hx(:,1));
-      % Hk=tospec(Hx./shat,p)/(2*pi);
-      % scl=10.^round(log10(abs(mobs))); scl(1)=shat^2;
-      % [Lgrid,Lcon,thR,xcon,ycon]=...
-      %        mlelcontosl(Hk,mobs./scl,scl,p,covcont,thcont,runinpar);
-
-      % Option C: simulate N data vectors from the truth, calculate the 
-      % likelihood surface from each observation and their MLE solution, and
-      % plot the contours of the average surface 
-      %
-      % N=25;
-      % for cnd=1:N
-      %   thhat=NaN; 
-      %   while isnan(thhat)
-      %     p.blurs=Inf; Hx=simulosl(th0,p); p.blurs=-1;
-      %     [thhat,~,lpars,scl,~,~,Hk]=mleosl(Hx,[],p);
-      %   end
-      %   [Lgridc{cnd},Lconc{cnd},~,xcon,ycon]=...
-      %        mlelcontosl(Hk,thhat,scl,p,covcont,thcont,runinpar);
-      % end
-      % Lgrid=mean(cat(4,Lgridc{:}),4);
-      % Lcon =mean(cat(4,Lconc{:}), 4);
-      %% %%
-
       % Plot the contours; set a grayscale coloring scheme
-      figure(2)  
+      figure(2)
       pcomb=nchoosek(1:length(mobs),2);
       for ind=1:np
-        xi=pcomb(ind,1);yi=pcomb(ind,2);
-        axes(ah(ind))
-        hold on
-        [cont,ch(ind)]=contour(xcon{ind}/scl(xi),ycon{ind}/scl(yi),...
-                               Lgrid(:,:,ind),Lcon(ind,:));
-        set(ch(ind),'EdgeColor',[0.33 0.33 0.33],'LineStyle',':');
+          xi=pcomb(ind,1);yi=pcomb(ind,2);
+          axes(ah(ind))
+          hold on
+          [cont,ch(ind)]=contour(xcon{ind}/scl(xi),ycon{ind}/scl(yi),...
+                                 Lgrid(:,:,ind),Lcon(ind,:));
+          set(ch(ind),'EdgeColor',[0.33 0.33 0.33],'LineStyle','-');
       end
       % bottom
       bottom(ch(ind),ah(ind))
+      keyboard
       figure(2);  figna=figdisp([],sprintf('%s_%s_3','demo2',datum),[],1);
   end
 
