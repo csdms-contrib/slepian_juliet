@@ -32,7 +32,7 @@ function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpi
 %
 % OUTPUT:
 %
-% ah,ha,yl,xl,tl,p,m,o1,o2,ep,ec,axlm,cvth  Various axis handles of the plots made
+% ah,ha,yl,xl,tl,p,m,o1,o2,ep,ec,axlm,cvth,ttt  Various axis handles of the plots made
 %
 % This gets used in 'demo2' of MLEOS/MLEROS/MLEROS0/MLEOSL and MASKIT/MUCKIT
 %
@@ -46,7 +46,7 @@ defval('ifinv',[1 1 1])
 
 % Number of times the standard deviation for scale truncation
 nstats=[-3:3]; fax=3;
-pstats=[-2 2];
+pstats=[-1 1];
 tstats=[-3 3];
 vstats=[-2 -1 0 1 2];
 sclth0=10.^round(log10(abs(th0)));
@@ -120,6 +120,10 @@ catch
 end
 
 % Calculate true covariance of estimated parameters
+% The mean estimate doesn't exist, especially given the tradeoffs
+%cvth=covthosl(nanmean(thhats,1),params,cvg,[1 1 1]);
+% Somewhat oddly variable, this appears
+%cvth=covthosl(thhats(randi(size(thhats,1)),:),params,cvg,[1 1 1]);
 cvth=covthosl(th0,params,cvg,[1 1 1]);
 
 figure(1)
@@ -202,13 +206,11 @@ for ind=1:np
   % What is the percentage captured within the range?
   nrx=20; nry=15;
 
-  try
-      set(ah(ind),'XLim',stats([1 end]),'XTick',stats,'XTickLabel',nstats)
-  end
+  set(ah(ind),'XLim',stats([1 end]),'XTick',stats,'XTickLabel',nstats)
 
   % Truth and range based on stdF0
   hold on
-  p0(ind)=plot([th0i th0i],ylim,'k-');
+  p0(ind)=plot([th0i th0i],ylim,'k:');
   halfup=indeks(ylim,1)+range(ylim)/2;
   ps(ind)=plot(th0i+[-1 1]*stdF0,...
 	       [halfup halfup],'k-');
@@ -223,11 +225,10 @@ for ind=1:np
   psavhs(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdavhs));
   % Based on one of them picked at random, numerical Hessian at estimate
   psXpix(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,stdXpix));
-  % Based on the actually observed covariance of these data
-  % In previous versions had used th0i/mobs here also, that didn't summarize it well
-  pobs(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,sobs));
+  % Based on the actually observed mean and covariance of these data
+  pobs(ind)=plot(xnorm,sobs*normpdf(xnorm,mobs,sobs));
   % Include the analytically calculated covariance 
-  pclc(ind)=plot(xnorm,sobs*normpdf(xnorm,th0i,scth));
+  pclc(ind)=plot(xnorm,sobs*normpdf(xnorm,mobs,scth));
 
   % Some annotations
   % Experiment size, he giveth, then taketh away
@@ -264,10 +265,8 @@ for ind=1:np
   delete(get(ah(ind+np),'Title'));
   delete(get(ah(ind+np),'XLabel'));
   % Label the sample values
-  try
-      set(ah(ind+np),'YLim',stats([1 end]),'YTick',stats,...		       
-	 'YTickLabel',round(rondo*stats/sclth0(ind))/rondo);
-  end
+  set(ah(ind+np),'YLim',stats([1 end]),'YTick',stats,...		       
+     'YTickLabel',round(rondo*stats/sclth0(ind))/rondo);
   hold on
   % Plot the sample mean and two standard deviations
   %e(ind)=plot(xlim,[mobs mobs],'-','Color',grey);
@@ -406,8 +405,8 @@ if xver==1
 
     % Plot error ellipses without using ERROR_ELLIPSE
     % https://www.xarg.org/2018/04/how-to-plot-a-covariance-error-ellipse/
-    defval('cl',0.95)
-    % Check this for three variables, 
+    defval('cl',0.68)
+    % Check this for three variables
     % s=-2*log(1-cl);
     s=chi2inv(cl,2);
     
@@ -443,27 +442,23 @@ if xver==1
 		     mobss(p2)+pstats*sobss(p2),'LineWidth',1);
         hold off
         % Label around the truths; note that Figure 1's tick labels are about
-        % the mean (mobss) not the truth (th0), so the ticks will be similar, 
-        % but not the same
-        try          
-            set(ah(ind),'xtick',round(rondo*[th0(p1)+vstats*sobss(p1)])/rondo,...
-	       'ytick',round(rondo*[th0(p2)+vstats*sobss(p2)])/rondo)
-        end
-        axis square; %grid on
-        % To only show lines at +/-2 std and the truth,
-        % Plot the sample mean and two standard deviations
+        % the mean (mobss) not the truth (th0), differently here
+        set(ah(ind),'xtick',round(rondo*[th0(p1)+vstats*sobss(p1)])/rondo,...
+	   'ytick',round(rondo*[th0(p2)+vstats*sobss(p2)])/rondo)
+
+        axis square;
+        %grid on
+        % To only show lines at +/-2 std and the truth
         hold on
+        xlim(th0(p1)+tstats*sobss(p1))
+        ylim(th0(p2)+tstats*sobss(p2))
         e2{ind}=plot(repmat(round(rondo*[th0(p1)+...
                     vstats([1 3 5]).*sobss(p1)])./rondo,2,1),...
                     ylim,'-','Color',grey);
         f2{ind}=plot(xlim,...
                     repmat(round(rondo*[th0(p2)+...
                     vstats([1 3 5]).*sobss(p2)])./rondo,2,1),...
-                    '-','Color',grey);
-        try
-            xlim(th0(p1)+tstats*sobss(p1))
-            ylim(th0(p2)+tstats*sobss(p2))
-        end
+                     '-','Color',grey);
         % Color mix
         cmix=[0 0 0]; cmix([p1 p2])=1/2;
         set([p(ind) m(ind)],'MarkerFaceColor',cmix,'MarkerEdgeColor',cmix,'MarkerSize',2)
@@ -475,6 +470,8 @@ if xver==1
         set([o1(ind) o2(ind)],'LineWidth',1,'Color',grey(3.5))
         set( m(ind)           ,'MarkerFaceColor',grey(3.5),'MarkerEdgeColor',grey(3.5),'MarkerSize',4)
         top(m(ind),ah(ind))
+        bottom(o1(ind),ah(ind))
+        bottom(o2(ind),ah(ind))
 
         % Delete the little cross
         delete([c1(ind) c2(ind)])
@@ -495,6 +492,11 @@ if xver==1
         a=sqrt(s)*V*sqrt(D)*[cos(t); sin(t)];
         ep(ind)=plot(a(1,:)+mobss(p1),a(2,:)+mobss(p2));
 
+        % Count the number of estimates outside the confidence interval
+        cli=round(sum(inpolygon(thhats(:,p1),thhats(:,p2),...
+                                a(1,:)+mobss(p1),a(2,:)+mobss(p2)))/size(thhats,1)*100);
+        disp(sprintf('CL asked %g ; received %g ',cl*100,cli))
+        
         % And for the calculated covariance, too
         znp=zeros(1,np);
         znp([p1 p2])=1;
@@ -523,6 +525,8 @@ if xver==1
             axlm(3,:)=ylim;
         end
         axis square
+        xel=xlim; yel=ylim;
+        ttt(ind)=text(xel(1)+range(xel)/nrx/2,yel(1)+range(yel)/nry,sprintf('%i%%',cli));
         
         hold off
         longticks(ah)
@@ -556,5 +560,5 @@ if xver==1
 end 
 
 % Output
-varns={ah,ha,yl,xl,tl,p,m,o1,o2,ep,ec,axlm,cvth};
+varns={ah,ha,yl,xl,tl,p,m,o1,o2,ep,ec,axlm,cvth,ttt};
 varargout=varns(1:nargout);
