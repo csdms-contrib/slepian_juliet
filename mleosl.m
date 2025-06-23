@@ -921,6 +921,7 @@ elseif strcmp(Hx,'demo2')
   fig2print(gcf,'landscape')
   clf
 
+  % You will also get a second plot
   % We feed it various things and it calculates a bunch more
   [ah,ha,yl,xl,tl,ps,ms,o1,o2,ep,ec,axlm,covth,ttt]=...
       mleplos(thhats,th0,covF0,covavhs,covXpix,[],[],p,...
@@ -1049,9 +1050,13 @@ elseif strcmp(Hx,'demo2')
           [cont,ch(ind)]=contourf(xcon{ind}/sclth0(xi),ycon{ind}/sclth0(yi),...
                                   Lgrid(:,:,ind),Lcon(ind,:));
           % This doesn't seem to do much now
-          ch(ind).LineWidth=0.1;
+          ch(ind).LineWidth=0.5;
           % This is slightly better says Olivia
-          ch(ind).EdgeAlpha=0.4;
+          try
+              ch(ind).EdgeAlpha=0.4;
+          catch
+              keyboard
+          end
           % set(ch(ind),'EdgeColor',grey(3),'LineStyle','-');
           cmap=flipud(gray(10));
           % Cut off the last bit
@@ -1100,24 +1105,23 @@ elseif strcmp(Hx,'demo5')
   % Simulate data, watch the blurring, verify CHOLCHECK inside
   [Hx,th0,p,k,Hk]=simulosl(th0,params,1);
   
-  % Initialize, take defaulted inside MLEOSL for now
-  thini=[];
-
   % Perform the optimization, whatever the quality of the result
-  [thhat,covFHh,lpars,scl,thini,p,Hks,k]=mleosl(Hx,thini,p);
+  [thhat,covFHh,lpars,scl,thini,p,Hks,k]=mleosl(Hx,[],p);
   matscl=[scl(:)*scl(:)'];
 
   % We're going to taper just for what follows
   if isinf(p.blurs)
-    Tx=gettaper(p,'cosine',0.1);
-    % Replicating the treatment applied to Hk in SIMULOSL
-    Hx=Tx(:).*Hx(:,1); Hx=Hx-mean(Hx);
-    p.taper=Tx;
-    Hk=tospec(Hx,p)/(2*pi);
-    if size(Tx)~=1
-        Hk=Hk/sqrt(sum(Tx(:).^2))*sqrt(prod(p.NyNx));
-    end
-    % Note we won't look at the solution, but we use the taper for the residual
+      Tx=gettaper(p,'cosine',0.1);
+      % This gets passed to LOGLIOSL and to MATERNOSP etc
+      p.taper=Tx;
+      % Replicating the treatment applied to Hk in SIMULOSL
+      Hx=Tx(:).*Hx(:,1);
+      Hx=Hx-mean(Hx);
+      Hk=tospec(Hx,p)/(2*pi);
+      if size(Tx)~=1
+          Hk=Hk/sqrt(sum(Tx(:).^2))*sqrt(prod(p.NyNx));
+      end
+      % Note we won't look at the solution, but we use the taper for the residual
   end
 
   if any(isnan(k(:))); return; end
@@ -1156,20 +1160,16 @@ elseif strcmp(Hx,'demo5')
   clf
   ah=krijetem(subnum(2,3)); delete(ah(4:6)); ah=ah(1:3);
 
-  if ~isinf(p.blurs)
-      % Time to rerun LOGLIOS one last time at the solution
-      sclh=scl; sclh(1)=1;
-      % We had this already, just making sure it checks out if we hadn't changed it
-      [L,~,~,momx]=logliosl(k,sclh.*thhat,p,Hks,1);
-      diferm(L,lpars{1})
-  end
-
+  % Time to rerun LOGLIOS one last time at the solution
+  sclh=scl; sclh(1)=1;
+  % We had this already, just making sure it checks out if we hadn't changed it
+  [L,~,~,momx]=logliosl(k,sclh.*thhat,p,Hks,1);
+  diferm(L,lpars{1})
+  
   % Makes an attractive plot that can be used as a judgment for fit
   [cb,xl,t,tt]=mlechiplos(4,Hk,thhat,scl,p,ah,0,th0,covFHh{3});
 
   disp('FJS here fits also MLECHIPSDOSL')
-  disp('FJS here fits the MLELCONTOSL')
-
   % Print the figure!
   disp(' ')
   figna=figdisp(figna,[],[],1)
