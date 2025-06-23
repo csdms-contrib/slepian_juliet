@@ -984,7 +984,7 @@ elseif strcmp(Hx,'demo2')
               thhat=NaN; scl=NaN;
               while any(abs(thhat.*scl-closeto)./closeto>0.01) | isnan(thhat)
                   % Simulate from the mean observation
-                  p.blurs=Inf; Hx=simulosl(mobs,p);
+                  p.blurs=Inf; Hx=simulosl(closeto,p);
                   % Calculate the MLE for the data vector - no more gratuitous output
                   [thhat,~,lpars,scl,~,~,Hk]=mleosl(Hx,[],p,[],[],[],[],0);
               end
@@ -1034,6 +1034,9 @@ elseif strcmp(Hx,'demo2')
       delete(ep)
       delete(ec)
 
+      % Just reusing scl isn't good enough, now it's consitent with MLEPLOS axes
+      sclth0=10.^round(log10(abs(th0)));
+      
       % Prepare to plot the loglihood contours on the existing axes
       % Find the pairwise combinations for the cross-plot convention: s2-nu,
       % s2-rho, nu-rho
@@ -1042,12 +1045,13 @@ elseif strcmp(Hx,'demo2')
           xi=pcomb(ind,1); yi=pcomb(ind,2);
           axes(ah(ind))
           hold on
-          [cont,ch(ind)]=contourf(xcon{ind}/scl(xi),ycon{ind}/scl(yi),...
+          % Contour or controuf
+          [cont,ch(ind)]=contourf(xcon{ind}/sclth0(xi),ycon{ind}/sclth0(yi),...
                                   Lgrid(:,:,ind),Lcon(ind,:));
           % This doesn't seem to do much now
           ch(ind).LineWidth=0.1;
-          % [cont,ch(ind)]=contour(xcon{ind}/scl(xi),ycon{ind}/scl(yi),...
-          %                        Lgrid(:,:,ind),Lcon(ind,:));
+          % This is slightly better says Olivia
+          ch(ind).EdgeAlpha=0.4;
           % set(ch(ind),'EdgeColor',grey(3),'LineStyle','-');
           cmap=flipud(gray(10));
           % Cut off the last bit
