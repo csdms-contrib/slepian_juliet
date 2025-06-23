@@ -19,9 +19,8 @@ function varargout=mlelcontosl(Hk,thhat,scl,params,covth,thRange,runinpar,stit,a
 % scl        The scaling of the Matern parameters and Hk (scl(1))
 % params     Parameter set pertaining to the data, e.g. from SIMULOSL
 % covth      Covariance matrix of the estimates, whichever way computed
-% thRange    Boundary of desired figure; if specified, may reduce number of 
-%            calculations required; [default extends -/+ 5 s.d. from thhat]
-% runinpar     Flag for running each of the 2D parameter space loglihood
+% thRange    Boundary of desired figure in parameter space [defaulted]
+% runinpar   Flag for running each of the 2D parameter space loglihood
 %            calculations in parallel [default]
 % stit       Title for the outputted figure [defaulted]
 % ah         A 4x4 group of axes handles [defaulted]
@@ -55,8 +54,8 @@ function varargout=mlelcontosl(Hk,thhat,scl,params,covth,thRange,runinpar,stit,a
 % CONTOUR, LOGLIOSL
 %
 % Last modified by gleggers-at-alumni.princeton.edu, 05/26/2014
-% Last modified by fjsimons-at-alum.mit.edu, 10/20/2023
-% Last modified by olwalbert-at-princeton.edu, 05/28/2025
+% Last modified by fjsimons-at-alum.mit.edu, 06/23/2025
+% Last modified by olwalbert-at-princeton.edu, 06/23/2025
 
 % Default values for function inputs
 defval('stit','Loglihood contours')
@@ -75,11 +74,11 @@ end
 if ~ischar(Hk)
     % Default values for the loglihood grid and contours
     % Number of standard deviations the grid extends
-    defval('stdOut',2);         
+    defval('stdOut',3); 
     % Standard deviations to which the contours refer
-    stdCon=0.2:0.2:stdOut;
+    stdCon=1:1:stdOut;
     % Fineness of the loglihood grids
-    fine=50;
+    fine=100;
 
     % Default options for figure contruction
     % Shade the plot outside the first contour
