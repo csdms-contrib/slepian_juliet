@@ -404,7 +404,7 @@ if ~isstr(th)
       end
       dSbardth=squeeze(dSbardth);
       % Partial derivative divided by square of periodogram, mthth/Sbar
-      fax=dSbardth./Sbar.^2;
+      fax=dSbardth./repmat(Sbar,1,np).^2;
 
       % To offset the periodograms and their derivatives, we calculate the index
       % offset based on a NyNx grid
