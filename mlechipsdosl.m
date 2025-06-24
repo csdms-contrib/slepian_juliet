@@ -42,13 +42,15 @@ function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah)
 % Maybe should integrate MLECHIPLOS into this one. 
 %
 % Last modified by gleggers-at-princeton.edu, 04/17/2014
-% Last modified by fjsimons-at-alum.mit.edu, 06/19/2025
+% Last modified by fjsimons-at-alum.mit.edu, 06/24/2025
 
 % Some defaults
 defval('stit','Chi-squared residuals')
 defval('ah',krijetem(subnum(2,2)))
 
-% The following is as in MLECHIPLOS
+% The following is as in MLECHIPLOS, need to force SIMULOSL to return theoretical Sb
+% note that in MLECHIPLOS we still had a number of alternatives to compute the same things
+params.blurs=-1;
 
 % So now you have found a solution and you evaluate it at thhat
 [~,~,~,k,~,Sb,Lb]=simulosl(thhat.*scl,params,0);
