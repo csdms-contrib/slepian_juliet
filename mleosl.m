@@ -69,7 +69,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver,cm)
 % scl      The scaling that applies to THHAT and THINI
 % thini    The starting guess used in the optimization procedure [scaled]
 % params   The known constants used inside, see above under INPUT
-% Hk       The spectral-domain version of the spatial-domain vector Hx
+% Hk       The spectral-domain version of the (scaled!) spatial-domain vector Hx
 % k        The wavenumbers on which the estimate is actually based
 %
 % NOTE: 
@@ -124,8 +124,8 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver,cm)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 05/30/2025
-% Last modified by olwalbert-at-princeton.edu, 05/30/2025
+% Last modified by fjsimons-at-alum.mit.edu, 06/24/2025
+% Last modified by olwalbert-at-princeton.edu, 06/24/2025
 
 if ~isstr(Hx)
   defval('algo','unc')
