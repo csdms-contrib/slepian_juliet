@@ -511,11 +511,10 @@ if ~isstr(Hk)
     vars={a,magx,ah,ah2,cb,ch,spt};
     varargout=vars(1:nargout);
 elseif strcmp(Hk,'demo1')
-    % Image source: https://www.alexstrekeisen.it/english/meta/quartzite.php,
-    % accessed on 03-Jun-2025
-    % Thin section
-    pth='~/Documents/ThinSection/';
-    fnam=append(pth,'quartzite_fov7mm.jpg');
+    % Image source: https://www.alexstrekeisen.it/english/meta/quartzite.php
+    % Thin section, keep them insize a directory ROCKS and specify IFILES
+    imnum=2; %2-7 available
+    fnam=fullfile(getenv('IFILES'),'ROCKS',sprintf('quartzite2012_%i.jpg',imnum));
     imdata=imread(fnam);
     immeta=imfinfo(fnam);
     % Initialize grid information
