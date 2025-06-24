@@ -77,8 +77,8 @@ function varargout=blurosy(th,params,xver,method,tsto,dth)
 % BLUROSY('demo3') % should produce no output
 %
 % Last modified by arthur.guillaumin.14-at-ucl.ac.uk, 10/15/2017
-% Last modified by fjsimons-at-alum.mit.edu, 05/13/2025
-% Last modified by olwalbert-at-princeton.edu, 05/13/2025
+% Last modified by fjsimons-at-alum.mit.edu, 06/24/2025
+% Last modified by olwalbert-at-princeton.edu, 06/24/2025
 
 if ~isstr(th)
     % Defaults (avoiding DEFVAL to avoid costly EVALIN statements)
@@ -840,7 +840,7 @@ if ~isempty(tsto) & size(tsto,2)==2
     c=a*b;
     if isfield(params,'taper') & numel(params.taper)>1
         g=params.taper;
-        sg=sum(g.^2,'all');
+        sg=sum(g(:).^2);
         g2=g.*c; 
     else
         g=ones(NyNx);
