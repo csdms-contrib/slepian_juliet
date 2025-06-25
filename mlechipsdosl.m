@@ -1,5 +1,5 @@
-function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah)
-% [a,mag,ah,ah2,cb,ch,spt]=MLECHIPSDOSL(Hk,thhat,scl,params,stit,ah)
+function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah,unts)
+% [a,mag,ah,ah2,cb,ch,spt]=MLECHIPSDOSL(Hk,thhat,scl,params,stit,ah,unts)
 %
 % Makes a FOUR-panel plot of the quadratic residuals and their
 % interpretation for a Matern likelihood model of a single-field
@@ -26,6 +26,7 @@ function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah)
 % params     The structure with the fixed parameters from the experiment
 % stit       Title for the overall figure [defaulted]
 % ah         A quartet of axis handles [defaulted]
+% unts       A unit string for the space variable    
 %
 % OUTPUT:
 %
@@ -98,7 +99,8 @@ function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah)
 % Some defaults
 defval('stit','Chi-squared residuals')
 defval('ah',krijetem(subnum(2,2)))
-
+defval('unts','km')
+       
 if ~isstr(Hk)
     if isreal(Hk)
         % If we provided a real data vector, this is spatial data and we want to
@@ -239,10 +241,10 @@ if ~isstr(Hk)
     om=round(log10(max(k(:))));
 
     % Set up the wavenumber/wavelength axes labels for panels 2-4
-    xstr1=sprintf('x wavenumber (rad/m) %s10^{%i}','\times',om);
-    ystr1=sprintf('y wavenumber (rad/m) %s10^{%i}','\times',om);
-    xstr2='x wavelength (km)';
-    ystr2='y wavelength (km)';
+    xstr1=sprintf('x wavenumber (rad/%s) %s10^{%i}',unts,'\times',om);
+    ystr1=sprintf('y wavenumber (rad/%s) %s10^{%i}',unts,'\times',om);
+    xstr2=sprintf('x wavelength (%s)',unts);
+    ystr2=sprintf('y wavelength (%s)',unts);
 
     % Prepare the overall figure
     fh=gcf;
@@ -355,7 +357,7 @@ if ~isstr(Hk)
         set(fb(i),'EdgeC','w','FaceC','w')
     end
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% PANEL 2: PREDICTED 2D POWER SPECTRUM [Top-right]
     axes(ah(2))
 
@@ -382,11 +384,12 @@ if ~isstr(Hk)
     xtk=get(ah(2),'xtick')*10^om;
     ytk=get(ah(2),'ytick')*10^om;
 
-    % Convert to wavelengths (in m), recognizing the zero wavenumber
-    xtkl=2*pi./xtk/1000;
-    xtkl(isinf(xtkl))=[params.NyNx(2)-1]*params.dydx(2)/1000;
-    ytkl=2*pi./ytk/1000;
-    ytkl(isinf(ytkl))=[params.NyNx(1)-1]*params.dydx(1)/1000;
+    % If in km, convert to m by dividing by 1000
+    % Convert to wavelengths, recognizing the zero wavenumber
+    xtkl=2*pi./xtk;
+    xtkl(isinf(xtkl))=[params.NyNx(2)-1]*params.dydx(2);
+    ytkl=2*pi./ytk;
+    ytkl(isinf(ytkl))=[params.NyNx(1)-1]*params.dydx(1);
 
     % Create and label the wavelength axis
     [ah2(2),xl2(2),yl2(2)]=xtraxis(ah(2),xtk/10^om,round(xtkl),xstr2,...
@@ -414,7 +417,7 @@ if ~isstr(Hk)
     % does it?
     if ~isnan(params.kiso)
         % Place a box giving the wavelength of the isotropic wavenumber cutoff
-        [~,zy]=boxtex('ll',ah(3),sprintf('%2.0f km',2*pi./params.kiso/1000),...
+        [~,zy]=boxtex('ll',ah(3),sprintf('%2.0f %s',2*pi./params.kiso),unts,...
 		      12,[],[],1.1);
         set(zy,'FontSize',get(zy,'FontSize')-1)
     end
@@ -424,9 +427,14 @@ if ~isstr(Hk)
     yl1(3)=ylabel(ystr1);
 
     % Create and label the wavelength axis
-    ah2(3)=xtraxis(ah(3),xtk/10^om,round(xtkl),xstr2,...
-	           ytk/10^om,round(ytkl),ystr2);
-
+    if strcmp(unts,'km')
+        ah2(3)=xtraxis(ah(3),xtk/10^om,round(xtkl),xstr2,...
+	               ytk/10^om,round(ytkl),ystr2);
+    elseif strcmp(unts,'mm')
+        ah2(3)=xtraxis(ah(3),xtk/10^om,round(xtkl,2),xstr2,...
+	               ytk/10^om,round(ytkl,2),ystr2);
+    end
+    
     % Remove the right y-label to avoid clutter
     delete(get(ah2(3),'ylabel'))
 
@@ -498,7 +506,7 @@ if ~isstr(Hk)
         spt=text(df,bounds2X(2)-df+1/2,stit);  
     else
         spt=title(ah2(1),stit);
-        movev(spt,-.05)
+        movev(spt,0)
     end
 
     movev([ah ah2 cb],-.02)
@@ -534,7 +542,7 @@ elseif strcmp(Hk,'demo1')
     while any(p.NyNx>400)
         imdata=imdata(1:dec:end,1:dec:end,:);
         p.NyNx=[size(imdata,1) size(imdata,2)];
-        p.dydx=p.dydx.*dec;
+        p.dydx=p.dydx*dec;
     end
     try
         Hx=double(im2gray(imdata));
@@ -549,7 +557,9 @@ elseif strcmp(Hk,'demo1')
     pt=p;
     Tx=gettaper(pt,'cosine',0.10);
     pt.taper=Tx;
-    % Make the estimate and request covariance using the diagonals method
+    % Make the estimate and request covariance using the sampling method
+    % Give it something close either in thini or aguess
+    thini=[4750 1 0.05];
     thhat=NaN; while isnan(thhat); [thhat,covFHhJ,~,scl,~,~,Hk]=mleosl(Hx,[],pt,[],[],[],[],[],1); end
 
     % Best fits
@@ -569,35 +579,28 @@ elseif strcmp(Hk,'demo1')
     % std  196          0.0094      0.0015329
     % 7 3 5237.7        0.93482     0.050461
     
-    p.blurs=Inf;
-    th=thhat.*scl;
     % Simulate at the estimate, without the taper
-    HxS=simulosl(th,p);
+    p.blurs=Inf;
+    HxS=simulosl(thhat.*scl,p);
 
+    % Make a first figure with the oboserved and the simulated field
+    figure(1)
     fs=12;
     unts='mm';
     axslb={sprintf('field of view 1 [%s]',unts)...
            sprintf('field of view 2 [%s]',unts)};
-    try
-        tlabs=append('$\sigma=$ ',sprintf('%0.0f',round(sqrt(th(1)))),...
-                     ', $\nu=$ ',sprintf('%0.1f',th(2)),...
-                     ', $\rho=$ ',sprintf('%0.2f mm',th(3)),' $|$ ',...
-                     sprintf('%0.1f',p.NyNx(1)*p.dydx(1)),'mm x ',...
-                     sprintf('%0.1f',p.NyNx(2).*p.dydx(2)),'mm');
-    end
-    
-    figure(1)
     clf
     [ah,ha,H]=krijetem(subnum(2,3));
     axes(ah(1))
     image(imdata); axis image; longticks
     ah(1).XTick=[1-0.5 p.NyNx(2)+0.5];
-    ah(1).XTickLabel=[1 round(p.NyNx(2).*p.dydx(2),2)];
+    ah(1).XTickLabel=[1 round(p.NyNx(2).*p.dydx(2),1)];
     ah(1).YTick=[1-0.5 p.NyNx(1)+0.5];
     ah(1).YTickLabel=fliplr([1 round(p.NyNx(1).*p.dydx(1),2)]);
     xlabel(axslb{1})
     ylabel(axslb{2})
     ti(1)=title('Thin section (cross-polarized light)','FontWeight','normal');
+    movev(ti(1),-10)
 
     axes(ah(4))
     imagefnan([1 p.NyNx],[],v2s(HxS,p),'gray'); axis image; longticks
@@ -610,14 +613,18 @@ elseif strcmp(Hk,'demo1')
     ti(4)=title('Synthetic','FontWeight','normal');
 
     figure(2)
-    s2=th(1); nu=th(2); rh=th(3);
-    scl2=scl;scl2(1)=1;
-    % [~,~,nah,nah1,cb,ch,spt]=mlechipsdosl(Hk,thhat,scl2,pt,tlabs);
-     [~,~,nah,nah1,cb,ch,spt]=mlechipsdosl(Hk,thhat,scl2,pt,...
-                sprintf('%s = %i m  %s = %4.2f  %s = %i km | blurs = %s',...
-                         '\sigma',round(sqrt(s2),2),'\nu',nu,'\rho',round(rh),...
-                        num2str(pt.blurs)));
-     % Transfer content of figure(2) to figure(1)
+    % Remember that MLEOSL already returned variance scaled data
+    scl2=scl; scl2(1)=1;
+    [~,~,nah,nah1,cb,ch,spt]=mlechipsdosl(Hk,thhat,scl2,pt,...
+                         sprintf('%s = %i %s = %4.2f  %s = %4.2f %s',...
+                        '\sigma^2',round(thhat(1)*scl(1)),...
+                        '\nu',thhat(2)*scl(2),...
+                        '\rho',round(thhat(3)*scl(3),3),unts),...
+                         [],unts);
+
+    keyboard
+    
+    % Transfer content of figure(2) to figure(1)
     for ind=1:4
         nnd=mod(ind,3)+floor(ind/3)*4+1;
         cah(ind)=copyobj(nah(ind),figure(1));
