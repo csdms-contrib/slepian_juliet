@@ -443,6 +443,7 @@ if ~isstr(Hk)
     % Add a colorbar
     [cb,xcb]=addcb('vert',boundsX0,boundsX0,'gray',df,1);
     set(xcb,'string','quadratic residual X')
+    moveh(cb,0.015)
 
     % Reposition the main axis
     set(ah(3),'position',[getpos(ah(3),1) getpos(ah(3),2) ...
@@ -469,8 +470,8 @@ if ~isstr(Hk)
     yl1(4)=ylabel(ystr1);
 
     % Create and label the wavelength axis
-    ah2(4)=xtraxis(ah(4),xtk/10^om,round(xtkl),xstr2,...
-	           ytk/10^om,round(ytkl),ystr2);
+    ah2(4)=xtraxis(ah(4),xtk/10^om,round(xtkl,rond),xstr2,...
+	           ytk/10^om,round(ytkl,rond),ystr2);
 
     % Return to the main axis and prepare to plot contours
     axes(ah(4)); hold on
@@ -611,6 +612,7 @@ elseif strcmp(Hk,'demo1')
     xlabel(axslb{1})
     ylabel(axslb{2})
     ti(4)=title('Synthetic','FontWeight','normal');
+    movev(ti(4),10)
 
     figure(2)
     % Remember that MLEOSL already returned variance scaled data
