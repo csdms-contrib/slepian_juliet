@@ -392,8 +392,13 @@ if ~isstr(Hk)
     ytkl(isinf(ytkl))=[params.NyNx(1)-1]*params.dydx(1);
 
     % Create and label the wavelength axis
-    [ah2(2),xl2(2),yl2(2)]=xtraxis(ah(2),xtk/10^om,round(xtkl),xstr2,...
-			           ytk/10^om,round(ytkl),ystr2);
+    if strcmp(unts,'km')
+        rond=0;
+    elseif strcmp(unts,'mm')
+        rond=2;
+    end
+    [ah2(2),xl2(2),yl2(2)]=xtraxis(ah(2),xtk/10^om,round(xtkl,rond),xstr2,...
+			           ytk/10^om,round(ytkl,rond),ystr2);
 
     % Return to the main axis and prepare to plot contours
     axes(ah(2)); hold on
@@ -427,13 +432,8 @@ if ~isstr(Hk)
     yl1(3)=ylabel(ystr1);
 
     % Create and label the wavelength axis
-    if strcmp(unts,'km')
-        ah2(3)=xtraxis(ah(3),xtk/10^om,round(xtkl),xstr2,...
-	               ytk/10^om,round(ytkl),ystr2);
-    elseif strcmp(unts,'mm')
-        ah2(3)=xtraxis(ah(3),xtk/10^om,round(xtkl,2),xstr2,...
-	               ytk/10^om,round(ytkl,2),ystr2);
-    end
+    ah2(3)=xtraxis(ah(3),xtk/10^om,round(xtkl,rond),xstr2,...
+	               ytk/10^om,round(ytkl,rond),ystr2);
     
     % Remove the right y-label to avoid clutter
     delete(get(ah2(3),'ylabel'))
