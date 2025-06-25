@@ -147,7 +147,7 @@ if ~isstr(Hk)
         xp1=sqrt(bsxfun(@plus,[ydim*dydx(1)].^2,[(xdim+1)*dydx(2)].^2));
         xm1=sqrt(bsxfun(@plus,[ydim*dydx(1)].^2,[(xdim-1)*dydx(2)].^2));
         
-        scl2=scl;scl2(1)=1;ths=thhat.*scl2;
+        scl2=scl;scl2(1)=1; ths=thhat.*scl2;
         % No, it is not. This results in a blurred spectrum with an erroneous
         % lemniscate geometry.
         % Cyd=2*maternosy(y0,ths)-...
@@ -513,51 +513,81 @@ if ~isstr(Hk)
 elseif strcmp(Hk,'demo1')
     % Image source: https://www.alexstrekeisen.it/english/meta/quartzite.php
     % Thin section, keep them insize a directory ROCKS and specify IFILES
-    imnum=2; %2-7 available
+    imnum=6; %2-7 are available
+    warning off MATLAB:imagesci:tifftagsread:badTagValueDivisionByZero
     fnam=fullfile(getenv('IFILES'),'ROCKS',sprintf('quartzite2012_%i.jpg',imnum));
+    warning off MATLAB:imagesci:tifftagsread:badTagValueDivisionByZero
+    % Read the  image
     imdata=imread(fnam);
     immeta=imfinfo(fnam);
     % Initialize grid information
-    p=[];
     p.NyNx=[immeta.Height immeta.Width];
     % can we use something more physical than pixels?
-    fov=4.6638; % field of view [mm] of the image (height)
+    % field of view [mm] of the image (height) where the width would have been 7mm
+    fov=4.6638; 
     px=4.6638/immeta.Height;
     p.dydx=[px px];
     p.blurs=-1;
 
     % May need to decimate the image if it is too big
+    dec=3;
     while any(p.NyNx>400)
-        imdata=imdata(1:2:end,1:2:end,:);
-        p.NyNx=size(imdata,[1 2]);
-        p.dydx=p.dydx.*2;
+        imdata=imdata(1:dec:end,1:dec:end,:);
+        p.NyNx=[size(imdata,1) size(imdata,2)];
+        p.dydx=p.dydx.*dec;
     end
-
-    Hx=double(im2gray(imdata));
+    try
+        Hx=double(im2gray(imdata));
+    catch
+        Hx=[double(imdata(:,:,1))+double(imdata(:,:,2))+double(imdata(:,:,3))]/3;
+    end
     Hx=Hx(:)-mean(Hx(:));
 
     % Set up the call for the main MLECHIPSDOSL routine, including applying the
-    % smooth taper
+    % smooth taper for the estimation
     p.blurs=-1; p.kiso=NaN;
     pt=p;
     Tx=gettaper(pt,'cosine',0.10);
     pt.taper=Tx;
-    thhat=NaN; while isnan(thhat); [thhat,~,~,scl,~,~,Hk,k]=mleosl(Hx,[],pt); end
+    % Make the estimate and request covariance using the diagonals method
+    thhat=NaN; while isnan(thhat); [thhat,covFHhJ,~,scl,~,~,Hk]=mleosl(Hx,[],pt,[],[],[],[],[],1); end
+
+    % Best fits
+    % im dec
+    % 2 2 4043.5        1.2396      0.031736
+    % 3 2 3848.7        1.3669      0.031397
+    % 4 2 4172.9        1.2024      0.035007
+    % 5 2 4425.0        1.2230      0.035612
+    % 6 2
+    % 7 2
+
+    % 2 3 4823.7        0.93916     0.045664 
+    % 3 3 4458.1        1.07860     0.041598
+    % 4 3 4928.9        0.92742     0.049980
+    % 5 3 5250.8        0.93905     0.050766
+    % 6 3 4876.3        0.90899     0.051175  ACCEPT
+    % std  196          0.0094      0.0015329
+    % 7 3 5237.7        0.93482     0.050461
+    
     p.blurs=Inf;
     th=thhat.*scl;
+    % Simulate at the estimate, without the taper
     HxS=simulosl(th,p);
 
     fs=12;
     unts='mm';
     axslb={sprintf('field of view 1 [%s]',unts)...
            sprintf('field of view 2 [%s]',unts)};
-    tlabs=append('$\sigma=$ ',sprintf('%0.0f',round(sqrt(th(1)))),...
-                 ', $\nu=$ ',sprintf('%0.1f',th(2)),...
-                 ', $\rho=$ ',sprintf('%0.2f mm',th(3)),' $|$ ',...
-                 sprintf('%0.1f',p.NyNx(1)*p.dydx(1)),'mm x ',...
-                 sprintf('%0.1f',p.NyNx(2).*p.dydx(2)),'mm');
-
-    figure(1);clf
+    try
+        tlabs=append('$\sigma=$ ',sprintf('%0.0f',round(sqrt(th(1)))),...
+                     ', $\nu=$ ',sprintf('%0.1f',th(2)),...
+                     ', $\rho=$ ',sprintf('%0.2f mm',th(3)),' $|$ ',...
+                     sprintf('%0.1f',p.NyNx(1)*p.dydx(1)),'mm x ',...
+                     sprintf('%0.1f',p.NyNx(2).*p.dydx(2)),'mm');
+    end
+    
+    figure(1)
+    clf
     [ah,ha,H]=krijetem(subnum(2,3));
     axes(ah(1))
     image(imdata); axis image; longticks
@@ -582,11 +612,12 @@ elseif strcmp(Hk,'demo1')
     figure(2)
     s2=th(1); nu=th(2); rh=th(3);
     scl2=scl;scl2(1)=1;
-    [~,~,nah,nah1,cb,ch,spt]=mlechipsdosl(Hk,thhat,scl2,pt,tlabs);
-    % [~,~,nah,nah1,cb,ch,spt]=mlechipsdosl(Hk,thhat,scl2,pt,...
-    %            sprintf('%s = %i m  %s = %4.2f  %s = %i km | blurs = %s',...
-    %                     '\sigma',round(sqrt(s2),2),'\nu',nu,'\rho',round(rh),...
-    %                     num2str(pt.blurs)));
+    % [~,~,nah,nah1,cb,ch,spt]=mlechipsdosl(Hk,thhat,scl2,pt,tlabs);
+     [~,~,nah,nah1,cb,ch,spt]=mlechipsdosl(Hk,thhat,scl2,pt,...
+                sprintf('%s = %i m  %s = %4.2f  %s = %i km | blurs = %s',...
+                         '\sigma',round(sqrt(s2),2),'\nu',nu,'\rho',round(rh),...
+                        num2str(pt.blurs)));
+     % Transfer content of figure(2) to figure(1)
     for ind=1:4
         nnd=mod(ind,3)+floor(ind/3)*4+1;
         cah(ind)=copyobj(nah(ind),figure(1));
@@ -624,7 +655,8 @@ elseif strcmp(Hk,'demo1')
         if xnd~=3; cah1(xnd).YLabel.String='y wavelength (mm)'; end
     end
     movev([ti(1) ti(4)],0.12)
-    figna=figdisp([],'demo1',[],1);
+    keyboard
+    figna=figdisp([],sprintf('%s_%i','demo1',imnum),[],1);
 elseif strcmp(Hk,'demo2')
     % Bathymetry from GEBCO
     % Source: see pltGEBCO.m for details
