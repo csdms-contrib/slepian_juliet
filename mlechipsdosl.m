@@ -486,7 +486,7 @@ if ~isstr(Hk)
     caxis(caxPSD)
 
     % Option to set the contours to black for visibility
-    %set(hb,'color','k')
+    % set(hb,'color','k')
 
     %% FINAL COSMETIC ADJUSTMENTS
 
@@ -512,7 +512,7 @@ if ~isstr(Hk)
         spt=text(df,bounds2X(2)-df+1/2,stit);  
     else
         spt=title(ah2(1),stit);
-        movev(spt,0)
+        movev(spt,1)
     end
 
     movev([ah ah2 cb],-.02)
@@ -537,6 +537,7 @@ elseif strcmp(Hk,'demo1')
     % Initialize grid information
     p.NyNx=[immeta.Height immeta.Width];
     % can we use something more physical than pixels?
+    unts='mm';
     % field of view [mm] of the image (height) where the width would have been 7mm
     fov=4.6638; 
     px=4.6638/immeta.Height;
@@ -596,18 +597,22 @@ elseif strcmp(Hk,'demo1')
     tts={'data','synthetic'};
     axs={sprintf('dimension 1 [%s]',unts) 
          sprintf('dimension 2 [%s]',unts)};
+    fw='normal';
+    unts='km';
+    cmap=gray;
+
     clf
     [ah,ha,H]=krijetem(subnum(2,2));
     % Plot the datann
-    [tl(1),xl(1),yl(1)]=plotit(flipud(v2s(Hx,p)),p,ah(1),tts{1},axs);
+    [tl(1),xl(1),yl(1)]=plotit(flipud(v2s(Hx,p)),p,ah(1),tts{1},axs,cmap,fw);
     % Plot the synthetic
-    [tl(2),xl(2),yl(2)]=plotit(       v2s(HxS,p),p,ah(3),tts{2},axs);
-keyboard
+    [tl(2),xl(2),yl(2)]=plotit(       v2s(HxS,p),p,ah(3),tts{2},axs,cmap,fw);
+
     % Just prepare for trim and clip on 8.5.0.197613 (R2015a)
     delete(ah([2 4]))
 
-           
     figure(2)
+    clf
     % Remember that MLEOSL already returned variance scaled data
     scl2=scl; scl2(1)=1;
     [~,~,nah,nah1,cb,ch,spt]=mlechipsdosl(Hk,thhat,scl2,pt,...
@@ -617,8 +622,10 @@ keyboard
                         '\rho',round(thhat(3)*scl(3),3),unts),...
                          [],unts);
 
-    keyboard
-    figna=figdisp([],sprintf('%s_%i','demo1',imnum),[],1);
+    figure(1)
+    figna=figdisp([],sprintf('%s_%i','demo1_1',imnum),[],1);
+    figure(2)
+    figna=figdisp([],sprintf('%s_%i','demo1_2',imnum),[],1);
 elseif strcmp(Hk,'demo2')
     % Bathymetry from GEBCO
     % Source: see pltGEBCO.m for details
@@ -685,23 +692,25 @@ elseif strcmp(Hk,'demo2')
     % Make a first figure with the oboserved and the simulated field
     figure(1)
     fs=12;
+    fw='normal';
     unts='km';
-
+    cmap=gray;
+    
     clf
     [ah,ha,H]=krijetem(subnum(2,3));
     axes(ah(1))
     [~,cax]=imagefnan([lon(ndx(1)) lat(tdx(1))],[lon(ndx(end)) lat(tdx(end))],...
-                      v2s(Hx,p),'kelicol'); axis image; longticks
+                      v2s(Hx,p),cmap); axis image; longticks
     xlabel(sprintf('longitude (%s)',char(176)))
     ylabel(sprintf('latitude (%s)',char(176)))
-    ti(1)=title('Bathymetry','FontWeight','normal');
+    ti(1)=title('Bathymetry','FontWeight',fw);
 
     axes(ah(4))
     imagefnan([lon(ndx(1)) lat(tdx(1))],[lon(ndx(end)) lat(tdx(end))],...
-              v2s(HxS,p),'kelicol',cax); axis image; longticks
+              v2s(HxS,p),cmap,cax); axis image; longticks
     xlabel(sprintf('longitude (%s)',char(176)))
     ylabel(sprintf('latitude (%s)',char(176)))
-    ti(4)=title('Synthetic','FontWeight','normal');
+    ti(4)=title('Synthetic','FontWeight',fw);
 
     figure(2)
     scl2=scl;scl2(1)=1;
@@ -859,17 +868,17 @@ elseif strcmp(Hk,'demo3')
 end
 
 % Just the space plots
-function [tl,xl,yl]=plotit(d,p,ah,tts,axs)
+function [tl,xl,yl]=plotit(d,p,ah,tts,axs,cmap,fw)
 % Must make this active
 axes(ah)
-imagefnan([1 p.NyNx(1)],[p.NyNx(2) 1],d);
+imagefnan([1 p.NyNx(1)],[p.NyNx(2) 1],d,cmap);
 axis image
 longticks(ah)
 ah.XTick=     [1 p.NyNx(2)]+[-1 1]*0.5;
 ah.XTickLabel=round([0 p.NyNx(2)].*p.dydx(2));
 ah.YTick=[1 p.NyNx(1)]+[-1 1]*0.5;
 ah.YTickLabel=round([0 p.NyNx(1)].*p.dydx(1));
-tl=title(tts,'FontWeight','normal');
+tl=title(tts,'FontWeight',fw);
 xl=xlabel(axs{1});
 yl=ylabel(axs{2});
-movev(tl,range(ylim)/10);
+movev(tl,range(ylim)/20);
