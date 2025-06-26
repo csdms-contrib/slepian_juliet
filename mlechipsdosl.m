@@ -98,6 +98,7 @@ function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah,unts)
 
 % Some defaults
 defval('stit','Chi-squared residuals')
+% This prevents the passing of any prior existing handles...
 defval('ah',krijetem(subnum(2,2)))
 defval('unts','km')
        
@@ -254,7 +255,7 @@ if ~isstr(Hk)
     % Select non-ridiculous values
     if any(isinf(Xk)); error('Adapt as in MLECHIPLOS and reconcile'); end
     allg=~isnan(Xk);
-
+  
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% PANEL 1: TWICE CHI-SQUARED RESIDUALS AND QQ-PLOT [Top-left]
     axes(ah(1))
@@ -384,19 +385,23 @@ if ~isstr(Hk)
     xtk=get(ah(2),'xtick')*10^om;
     ytk=get(ah(2),'ytick')*10^om;
 
-    % If in km, convert to m by dividing by 1000
-    % Convert to wavelengths, recognizing the zero wavenumber
-    xtkl=2*pi./xtk;
-    xtkl(isinf(xtkl))=[params.NyNx(2)-1]*params.dydx(2);
-    ytkl=2*pi./ytk;
-    ytkl(isinf(ytkl))=[params.NyNx(1)-1]*params.dydx(1);
-
-    % Create and label the wavelength axis
     if strcmp(unts,'km')
         rond=0;
+        convo=1000;
+        unts='m';
     elseif strcmp(unts,'mm')
         rond=2;
+        convo=1;
     end
+
+    % If in km, convert to m by dividing by 1000
+    % Convert to wavelengths, recognizing the zero wavenumber
+    xtkl=2*pi./xtk/convo;
+    xtkl(isinf(xtkl))=[params.NyNx(2)-1]*params.dydx(2)/convo;
+    ytkl=2*pi./ytk/convo;
+    ytkl(isinf(ytkl))=[params.NyNx(1)-1]*params.dydx(1)/convo;
+
+    % Create and label the wavelength axis
     [ah2(2),xl2(2),yl2(2)]=xtraxis(ah(2),xtk/10^om,round(xtkl,rond),xstr2,...
 			           ytk/10^om,round(ytkl,rond),ystr2);
 
@@ -577,7 +582,7 @@ elseif strcmp(Hk,'demo1')
     % 4 3 4928.9        0.92742     0.049980
     % 5 3 5250.8        0.93905     0.050766
     % 6 3 4876.3        0.90899     0.051175  ACCEPT
-    % std  196          0.0094      0.0015329
+    % std  196          0.0094      0.001532
     % 7 3 5237.7        0.93482     0.050461
     
     % Simulate at the estimate, without the taper
@@ -585,35 +590,23 @@ elseif strcmp(Hk,'demo1')
     HxS=simulosl(thhat.*scl,p);
 
     % Make a first figure with the oboserved and the simulated field
-    figure(1)
-    fs=12;
-    unts='mm';
-    axslb={sprintf('field of view 1 [%s]',unts)...
-           sprintf('field of view 2 [%s]',unts)};
+    f1=figure(1);
+    fig2print(f1,'landscape')
+    set(f1,'PaperPositionMode','auto')
+    tts={'data','synthetic'};
+    axs={sprintf('dimension 1 [%s]',unts) 
+         sprintf('dimension 2 [%s]',unts)};
     clf
-    [ah,ha,H]=krijetem(subnum(2,3));
-    axes(ah(1))
-    image(imdata); axis image; longticks
-    ah(1).XTick=[1-0.5 p.NyNx(2)+0.5];
-    ah(1).XTickLabel=[1 round(p.NyNx(2).*p.dydx(2),1)];
-    ah(1).YTick=[1-0.5 p.NyNx(1)+0.5];
-    ah(1).YTickLabel=fliplr([1 round(p.NyNx(1).*p.dydx(1),2)]);
-    xlabel(axslb{1})
-    ylabel(axslb{2})
-    ti(1)=title('Thin section (cross-polarized light)','FontWeight','normal');
-    movev(ti(1),-10)
+    [ah,ha,H]=krijetem(subnum(2,2));
+    % Plot the data
+    [tl(1),xl(1),yl(1)]=plotit(flipud(v2s(Hx,p)),p,ah(1),tts,axs);
+    % Plot the synthetic
+    [tl(2),xl(2),yl(2)]=plotit(flipud(v2s(HxS,p)),p,ah(1),tts,axs);
+    % Just prepare for trim and clip on 8.5.0.197613 (R2015a)
+    delete(ah([2 3 5 6]))
 
-    axes(ah(4))
-    imagefnan([1 p.NyNx],[],v2s(HxS,p),'gray'); axis image; longticks
-    ah(4).XTick=[1-0.5 p.NyNx(2)+0.5];
-    ah(4).XTickLabel=[1 round(p.NyNx(2).*p.dydx(2),2)];
-    ah(4).YTick=[1-0.5 p.NyNx(1)+0.5];
-    ah(4).YTickLabel=fliplr([1 round(p.NyNx(1).*p.dydx(1),2)]);
-    xlabel(axslb{1})
-    ylabel(axslb{2})
-    ti(4)=title('Synthetic','FontWeight','normal');
-    movev(ti(4),10)
-
+keyboard
+           
     figure(2)
     % Remember that MLEOSL already returned variance scaled data
     scl2=scl; scl2(1)=1;
@@ -625,7 +618,100 @@ elseif strcmp(Hk,'demo1')
                          [],unts);
 
     keyboard
+    figna=figdisp([],sprintf('%s_%i','demo1',imnum),[],1);
+elseif strcmp(Hk,'demo2')
+    % Bathymetry from GEBCO
+    % Source: see pltGEBCO.m for details
+    % Data window selected as a subset of the region in DEMO3
+    fnam=fullfile(getenv('IFILES'),'GEBCO','GEBCO2024Grid_AtlanticMERMAIDpatch.mat');
+    dat=load(fnam);
+    % compare
+    [LOLO,LALA]=meshgrid(dat.mlons,dat.mlats);
+    % z2008=gebco(LOLO,LALA,2008);
+    % z2014=gebco(LOLO,LALA,2014);
+    z2019=gebco(LOLO,LALA,2019);
+    % plot(z2019(:),dat.sgelev(:),'.')
+
+    %elev=dat.sgelev;
+    elev=z2019;
+    lat=dat.mlats;
+    lon=dat.mlons;
+    p=dat.p;
+
+    % Crop the region?
+    ndx=500:numel(lon)-1.2e3;
+    tdx=300:1e3;
+
+    % ndx=1000:1500;
+    % tdx=300:700;
+    p.NyNx=[numel(tdx) numel(ndx)];
+
+    % May need to decimate the field if it is too big
+    while any(p.NyNx>400)
+        tdx=tdx(1:2:end);
+        ndx=ndx(1:2:end);
+        p.NyNx=[numel(tdx) numel(ndx)];
+        p.dydx=p.dydx.*2;
+    end
+
+    Hx=double(elev(tdx,ndx));
+    % PLANEFIT
+    Hx=Hx(:)-mean(Hx(:));
+    [~,~,~,~,~,Z]=planefit(v2s(Hx,p));
+    Hx=Hx-Z(:);
+    Hx=Hx(:)-mean(Hx(:));
+          
+    % Set up the call for the main MLECHIPSDOSL routine, including applying the
+    % smooth taper
+    p.blurs=-1; p.kiso=NaN;
+    pt=p;
+    Tx=gettaper(pt,'cosine',0.10);
+    pt.taper=Tx;
+    % Make the estimate and request covariance using the sampling method
+    thhat=NaN; while isnan(thhat); [thhat,covFHhJ,~,scl,~,~,Hk]=mleosl(Hx,[],pt,[],[],[],[],[],1); end
+
+    % With deplaning
+    % Estimated theta :     4.72e+04          1.23        2.5287 
+    % FishJFish. std :      1.34e+03        0.0124      0.045892
     
+    % Without deplaning
+    % Estimated theta :      6.11e+04          1.17        2.9928 
+    % FishJFish. std :      1.94e+03        0.0106      0.060532
+    
+    % Simulate at the estimate, without the taper
+    p.blurs=Inf;
+    HxS=simulosl(thhat.*scl,p);
+
+    % Make a first figure with the oboserved and the simulated field
+    figure(1)
+    fs=12;
+    unts='km';
+
+    clf
+    [ah,ha,H]=krijetem(subnum(2,3));
+    axes(ah(1))
+    [~,cax]=imagefnan([lon(ndx(1)) lat(tdx(1))],[lon(ndx(end)) lat(tdx(end))],...
+                      v2s(Hx,p),'kelicol'); axis image; longticks
+    xlabel(sprintf('longitude (%s)',char(176)))
+    ylabel(sprintf('latitude (%s)',char(176)))
+    ti(1)=title('Bathymetry','FontWeight','normal');
+
+    axes(ah(4))
+    imagefnan([lon(ndx(1)) lat(tdx(1))],[lon(ndx(end)) lat(tdx(end))],...
+              v2s(HxS,p),'kelicol',cax); axis image; longticks
+    xlabel(sprintf('longitude (%s)',char(176)))
+    ylabel(sprintf('latitude (%s)',char(176)))
+    ti(4)=title('Synthetic','FontWeight','normal');
+
+    figure(2)
+    scl2=scl;scl2(1)=1;
+    [~,~,nah,nah1,cb,ch,spt]=mlechipsdosl(Hk,thhat,scl2,pt,...
+                         sprintf('%s = %i %s = %4.2f  %s = %4.2f %s',...
+                        '\sigma^2',round(thhat(1)*scl(1)),...
+                        '\nu',thhat(2)*scl(2),...
+                        '\rho',round(thhat(3)*scl(3),3),unts),...
+                         [],unts);
+
     % Transfer content of figure(2) to figure(1)
     for ind=1:4
         nnd=mod(ind,3)+floor(ind/3)*4+1;
@@ -649,130 +735,9 @@ elseif strcmp(Hk,'demo1')
     end
     f1ch=get(figure(1),'Children');
     set(f1ch(8).Title,'Interpreter','latex')
-    % TODO: Are the wavenumber axes correct?
-    for xnd=[2 3 4]
-        % cah(xnd).XLabel.String='x wavenumber (rad/mm) \times10^{2}';
-        % cah(xnd).YLabel.String='y wavenumber (rad/mm) \times10^{2}';
-        cah1(xnd).XLabel.String='x wavelength (mm)';
-        xtkl=2*pi./get(cah1(xnd),'xtick');
-        xtkl(isinf(xtkl))=[p.NyNx(2)-1]*p.dydx(2);
-        ytkl=2*pi./get(cah1(xnd),'xtick');
-        ytkl(isinf(ytkl))=[p.NyNx(1)-1]*p.dydx(1);
-        cah1(xnd).XTickLabel=round(xtkl,1);
-        cah1(xnd).YTick=cah1(xnd).XTick;
-        cah1(xnd).YTickLabel=round(ytkl,1);
-        if xnd~=3; cah1(xnd).YLabel.String='y wavelength (mm)'; end
-    end
-    movev([ti(1) ti(4)],0.12)
+
     keyboard
-    figna=figdisp([],sprintf('%s_%i','demo1',imnum),[],1);
-elseif strcmp(Hk,'demo2')
-    % Bathymetry from GEBCO
-    % Source: see pltGEBCO.m for details
-    keyboard
-    % Data window selected as a subset of the region in DEMO3
-    pth='~/Documents/OceanFloor/';
-    fnam=append(pth,...
-                'GEBCO2024Grid_AtlanticMERMAIDpatch.mat');
-    dat=load(fnam);
-    elev=dat.sgelev;
-    lat=dat.mlats;
-    lon=dat.mlons;
-    p=dat.p;
-
-    % Crop the region?
-    ndx=500:numel(lon)-1.2e3;
-    tdx=300:1e3;
-
-    % ndx=1000:1500;
-    % tdx=300:700;
-    p.NyNx=[numel(tdx) numel(ndx)];
-
-    % May need to decimate the field if it is too big
-    while any(p.NyNx>400)
-        tdx=tdx(1:2:end);
-        ndx=ndx(1:2:end);
-        p.NyNx=[numel(tdx) numel(ndx)];
-        p.dydx=p.dydx.*2;
-    end
-
-    Hx=double(elev(tdx,ndx));
-    Hx=Hx(:)-mean(Hx(:));
-
-    % Set up the call for the main MLECHIPSDOSL routine, including applying the
-    % smooth taper
-    p.blurs=-1; p.kiso=NaN;
-    pt=p;
-    Tx=gettaper(pt,'cosine',0.10);
-    pt.taper=Tx;
-    thhat=NaN; while isnan(thhat); [thhat,~,~,scl,~,~,Hk,k]=mleosl(Hx,[],pt); end
-    p.blurs=Inf;
-    th=thhat.*scl;
-    HxS=simulosl(th,p);
-
-    fs=12;
-    tlabs=append('$\sigma=$ ',sprintf('%0.0f',round(sqrt(th(1)))),...
-                 ', $\nu=$ ',sprintf('%0.1f',th(2)),...
-                 ', $\rho=$ ',sprintf('%0.2f mm',th(3)),' $|$ ',...
-                 sprintf('%0.1f',p.NyNx(1)*p.dydx(1)),'km x ',...
-                 sprintf('%0.1f',p.NyNx(2).*p.dydx(2)),'km');
-    figure(1);clf
-    [ah,ha,H]=krijetem(subnum(2,3));
-    axes(ah(1))
-    [~,cax]=imagefnan([lon(ndx(1)) lat(tdx(1))],[lon(ndx(end)) lat(tdx(end))],...
-                      v2s(Hx,p),'kelicol'); axis image; longticks
-    xlabel(sprintf('longitude (%s)',char(176)))
-    ylabel(sprintf('latitude (%s)',char(176)))
-    ti(1)=title('Bathymetry','FontWeight','normal');
-
-    axes(ah(4))
-    imagefnan([lon(ndx(1)) lat(tdx(1))],[lon(ndx(end)) lat(tdx(end))],...
-              v2s(HxS,p),'kelicol',cax); axis image; longticks
-    xlabel(sprintf('longitude (%s)',char(176)))
-    ylabel(sprintf('latitude (%s)',char(176)))
-    ti(4)=title('Synthetic','FontWeight','normal');
-
-    figure(2);clf
-    s2=th(1); nu=th(2); rh=th(3);
-    scl2=scl;scl2(1)=1;
-    [~,~,nah,nah1,cb,ch,spt]=mlechipsdosl(Hk,thhat,scl2,pt,tlabs);
-    for ind=1:4
-        nnd=mod(ind,3)+floor(ind/3)*4+1;
-        cah(ind)=copyobj(nah(ind),figure(1));
-        set(cah(ind),'Position',get(ah(nnd),'position'))
-        if ind==3
-            axes(cah(ind))
-            ncb=colorbar();
-            ncb.Location='eastoutside';
-            set(cah(ind),'Position',get(ah(nnd),'position'))
-            ccb=copyobj(cb,figure(1));
-            set(ccb,'Position',get(ncb,'position'))
-            delete(ncb)
-            moveh(ccb,0.02)
-        elseif ind==2|ind==4
-            colormap(jet)
-        end
-        cah1(ind)=copyobj(nah1(ind),figure(1));
-        set(cah1(ind),'Position',get(ah(nnd),'position'))
-        delete(ah(nnd))
-    end
-    f1ch=get(figure(1),'Children');
-    set(f1ch(8).Title,'Interpreter','latex')
-    % TODO: WAVELENGTHS ARE INCORRECT
-    for xnd=[2 3 4]
-        % cah(xnd).XLabel.String='x wavenumber (rad/mm) \times10^{2}';
-        % cah(xnd).YLabel.String='y wavenumber (rad/mm) \times10^{2}';
-        cah1(xnd).XLabel.String='x wavelength (km)';
-        xtkl=2*pi./get(cah1(xnd),'xtick');
-        xtkl(isinf(xtkl))=[p.NyNx(2)-1]*p.dydx(2);
-        ytkl=2*pi./get(cah1(xnd),'xtick');
-        ytkl(isinf(ytkl))=[p.NyNx(1)-1]*p.dydx(1);
-        cah1(xnd).XTickLabel=round(xtkl,1);
-        cah1(xnd).YTick=cah1(xnd).XTick;
-        cah1(xnd).YTickLabel=round(ytkl,1);
-        if xnd~=3; cah1(xnd).YLabel.String='y wavelength (km)'; end
-    end
-    movev([ti(1) ti(4)],0.12)
+    
     figna=figdisp([],'demo2',[],1);
 elseif strcmp(Hk,'demo3')
     % Sea surface height anomaly, near real time
@@ -893,3 +858,16 @@ elseif strcmp(Hk,'demo3')
     figna=figdisp([],'demo3_kiso',[],1);
 end
 
+% Just the space plots
+function [tl,xl,yl]=plotit(d,p,ah,tts,axs)
+imagefnan([1 p.NyNx(1)],[p.NyNx(2) 1],d);
+axis image
+longticks(ah)
+ah.XTick=     [1 p.NyNx(2)]+[-1 1]*0.5;
+ah.XTickLabel=round([0 p.NyNx(2)].*p.dydx(2));
+ah.YTick=[1 p.NyNx(1)]+[-1 1]*0.5;
+ah.YTickLabel=round([0 p.NyNx(1)].*p.dydx(1));
+tl=title(tts,'FontWeight','normal');
+xl=xlabel(axs{1});
+yl=ylabel(axs{2});
+movev(tl,range(ylim)/10);
