@@ -598,14 +598,14 @@ elseif strcmp(Hk,'demo1')
          sprintf('dimension 2 [%s]',unts)};
     clf
     [ah,ha,H]=krijetem(subnum(2,2));
-    % Plot the data
-    [tl(1),xl(1),yl(1)]=plotit(flipud(v2s(Hx,p)),p,ah(1),tts,axs);
+    % Plot the datann
+    [tl(1),xl(1),yl(1)]=plotit(flipud(v2s(Hx,p)),p,ah(1),tts{1},axs);
     % Plot the synthetic
-    [tl(2),xl(2),yl(2)]=plotit(flipud(v2s(HxS,p)),p,ah(1),tts,axs);
-    % Just prepare for trim and clip on 8.5.0.197613 (R2015a)
-    delete(ah([2 3 5 6]))
-
+    [tl(2),xl(2),yl(2)]=plotit(       v2s(HxS,p),p,ah(3),tts{2},axs);
 keyboard
+    % Just prepare for trim and clip on 8.5.0.197613 (R2015a)
+    delete(ah([2 4]))
+
            
     figure(2)
     % Remember that MLEOSL already returned variance scaled data
@@ -860,6 +860,8 @@ end
 
 % Just the space plots
 function [tl,xl,yl]=plotit(d,p,ah,tts,axs)
+% Must make this active
+axes(ah)
 imagefnan([1 p.NyNx(1)],[p.NyNx(2) 1],d);
 axis image
 longticks(ah)
