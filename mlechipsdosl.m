@@ -83,14 +83,9 @@ function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah,unts)
 % [thhat4,~,~,scl4,~,~,Hk4]=mleosl(Hx4.*p.taper(:),[],p);scl4(1)=1;
 % mlechipsdosl(Hk4,thhat4,scl4,p)
 % 
-% % Now with demos as a means of displaying a data field and its synthetic with
-% % the analysis of the residuals
-% % Thin section
-% mlechipsdosl('demo1')
-% % Bathmetry
-% mlechipsdosl('demo2')
-% % Sea surface height anomaly
-% mlechipsdosl('demo3')
+% mlechipsdosl('demo1') % Thin section 
+% mlechipsdosl('demo2') % Bathmetry
+% mlechipsdosl('demo3') % Sea surface height anomaly 
 %
 % Last modified by gleggers-at-princeton.edu, 04/17/2014
 % Last modified by fjsimons-at-alum.mit.edu, 06/26/2018
@@ -546,30 +541,42 @@ elseif strcmp(Hk,'demo1')
 
     % May need to decimate the image if it is too big
     dec=3;
-    while any(p.NyNx>400)
+    if any(p.NyNx>400)
         imdata=imdata(1:dec:end,1:dec:end,:);
         p.NyNx=[size(imdata,1) size(imdata,2)];
         p.dydx=p.dydx*dec;
     end
+    % Convert to gray scale
     try
         Hx=double(im2gray(imdata));
     catch
         Hx=[double(imdata(:,:,1))+double(imdata(:,:,2))+double(imdata(:,:,3))]/3;
     end
+    % Remove constant
     Hx=Hx(:)-mean(Hx(:));
 
     % Set up the call for the main MLECHIPSDOSL routine, including applying the
     % smooth taper for the estimation
-    p.blurs=-1; p.kiso=NaN;
-    pt=p;
-    Tx=gettaper(pt,'cosine',0.10);
+    p.blurs=-1; p.kiso=NaN; 
+    pt=p; Tx=gettaper(pt,'cosine',0.10);
     pt.taper=Tx;
     % Make the estimate and request covariance using the sampling method
-    % Give it something close either in thini or aguess
-    thini=[4750 1 0.05];
-    thhat=NaN; while isnan(thhat); [thhat,covFHhJ,~,scl,~,~,Hk]=mleosl(Hx,[],pt,[],[],[],[],[],1); end
-
-    % Best fits
+    % Don't redo if you had it
+    fname=fullfile(getenv('IFILES'),'HASHES',sprintf('%s-%s',upper(mfilename),hash(Hx,'SHA-1')));
+    if ~exist(sprintf('%s.mat',fname),'file')
+        % You could give it something close either in thini or aguess if you've run it before
+        % but this doesn't always actually make it easier
+        thini=[];
+        thhat=NaN;
+        while isnan(thhat)
+            [thhat,covFHhJ,~,scl,~,~,Hk]=mleosl(Hx,thini,pt,[],[],[],[],[],1);
+        end
+        save(fname,'thhat','scl','Hk','covFHhJ')
+    else
+        load(fname)
+    end
+        
+    % Best fits for a certain image and decimation
     % im dec
     % 2 2 4043.5        1.2396      0.031736
     % 3 2 3848.7        1.3669      0.031397
@@ -595,20 +602,20 @@ elseif strcmp(Hk,'demo1')
     fig2print(f1,'landscape')
     set(f1,'PaperPositionMode','auto')
     tts={'data','synthetic'};
-    axs={sprintf('dimension 1 [%s]',unts) 
-         sprintf('dimension 2 [%s]',unts)};
+    unts='mm';
+    axs={sprintf('dimension 1 (%s)',unts) 
+         sprintf('dimension 2 (%s)',unts)};
     fw='normal';
-    unts='km';
     cmap=gray;
 
     clf
     [ah,ha,H]=krijetem(subnum(2,2));
-    % Plot the datann
+    % Plot the data
     [tl(1),xl(1),yl(1)]=plotit(flipud(v2s(Hx,p)),p,ah(1),tts{1},axs,cmap,fw);
     % Plot the synthetic
     [tl(2),xl(2),yl(2)]=plotit(       v2s(HxS,p),p,ah(3),tts{2},axs,cmap,fw);
 
-    % Just prepare for trim and clip on 8.5.0.197613 (R2015a)
+    % Just prepare for LaTeX trim and clip on 8.5.0.197613 (R2015a)
     delete(ah([2 4]))
 
     figure(2)
@@ -621,14 +628,13 @@ elseif strcmp(Hk,'demo1')
                         '\nu',thhat(2)*scl(2),...
                         '\rho',round(thhat(3)*scl(3),3),unts),...
                          [],unts);
-
+    keyboard
     figure(1)
     figna=figdisp([],sprintf('%s_%i','demo1_1',imnum),[],1);
     figure(2)
     figna=figdisp([],sprintf('%s_%i','demo1_2',imnum),[],1);
 elseif strcmp(Hk,'demo2')
     % Bathymetry from GEBCO
-    % Source: see pltGEBCO.m for details
     % Data window selected as a subset of the region in DEMO3
     fnam=fullfile(getenv('IFILES'),'GEBCO','GEBCO2024Grid_AtlanticMERMAIDpatch.mat');
     dat=load(fnam);
@@ -638,47 +644,57 @@ elseif strcmp(Hk,'demo2')
     % z2014=gebco(LOLO,LALA,2014);
     z2019=gebco(LOLO,LALA,2019);
     % plot(z2019(:),dat.sgelev(:),'.')
-
+    % Decide to keep old GEBCO
     %elev=dat.sgelev;
     elev=z2019;
     lat=dat.mlats;
     lon=dat.mlons;
     p=dat.p;
-
     % Crop the region?
     ndx=500:numel(lon)-1.2e3;
-    tdx=300:1e3;
-
-    % ndx=1000:1500;
-    % tdx=300:700;
-    p.NyNx=[numel(tdx) numel(ndx)];
-
+    tdx=300:1000;
     % May need to decimate the field if it is too big
-    while any(p.NyNx>400)
-        tdx=tdx(1:2:end);
-        ndx=ndx(1:2:end);
-        p.NyNx=[numel(tdx) numel(ndx)];
-        p.dydx=p.dydx.*2;
+    dec=2;
+    if any(p.NyNx>400)
+        tdx=tdx(1:dec:end);
+        ndx=ndx(1:dec:end);
+        p.dydx=p.dydx.*dec;
     end
-
+    p.NyNx=[numel(tdx) numel(ndx)];
+    % Possibly no need for further conversion
     Hx=double(elev(tdx,ndx));
-    % PLANEFIT
-    Hx=Hx(:)-mean(Hx(:));
+    
+    % Remove regional trend
     [~,~,~,~,~,Z]=planefit(v2s(Hx,p));
-    Hx=Hx-Z(:);
+    Hx=Hx-Z;
     Hx=Hx(:)-mean(Hx(:));
           
     % Set up the call for the main MLECHIPSDOSL routine, including applying the
     % smooth taper
     p.blurs=-1; p.kiso=NaN;
-    pt=p;
-    Tx=gettaper(pt,'cosine',0.10);
+    pt=p; Tx=gettaper(pt,'cosine',0.10);
     pt.taper=Tx;
     % Make the estimate and request covariance using the sampling method
-    thhat=NaN; while isnan(thhat); [thhat,covFHhJ,~,scl,~,~,Hk]=mleosl(Hx,[],pt,[],[],[],[],[],1); end
+    % Don't redo if you had it 
+    fname=fullfile(getenv('IFILES'),'HASHES',sprintf('%s-%s',upper(mfilename),hash(Hx,'SHA-1')));
+    if ~exist(sprintf('%s.mat',fname),'file')
+        % You could give it something close either in thini or aguess if you've run it before
+        % but this doesn't always actually make it easier
+        thini=[];
+        thhat=NaN;
+        while isnan(thhat)
+            [thhat,covFHhJ,~,scl,~,~,Hk]=mleosl(Hx,[],pt,[],[],[],[],[],1);
+        end
+        save(fname,'thhat','scl','Hk','covFHhJ')
+    else
+        load(fname)
+    end
 
+keyboard
+    
     % With deplaning
-    % Estimated theta :     4.72e+04          1.23        2.5287 
+    % thhat=[];
+    % scl=[];
     % FishJFish. std :      1.34e+03        0.0124      0.045892
     
     % Without deplaning
@@ -690,27 +706,25 @@ elseif strcmp(Hk,'demo2')
     HxS=simulosl(thhat.*scl,p);
 
     % Make a first figure with the oboserved and the simulated field
-    figure(1)
-    fs=12;
+    f1=figure(1);
+    fig2print(f1,'landscape')
+    set(f1,'PaperPositionMode','auto')
+    tts={'data','synthetic'};
+    axs={sprintf('longitude (%s)',str2mat(176)) 
+         sprintf('latitude (%s)',str2mat(176))};
     fw='normal';
-    unts='km';
-    cmap=gray;
+    cmap=sergeicol;
     
     clf
-    [ah,ha,H]=krijetem(subnum(2,3));
-    axes(ah(1))
-    [~,cax]=imagefnan([lon(ndx(1)) lat(tdx(1))],[lon(ndx(end)) lat(tdx(end))],...
-                      v2s(Hx,p),cmap); axis image; longticks
-    xlabel(sprintf('longitude (%s)',char(176)))
-    ylabel(sprintf('latitude (%s)',char(176)))
-    ti(1)=title('Bathymetry','FontWeight',fw);
+    [ah,ha,H]=krijetem(subnum(2,2));
+    keyboard
+    % Plot the data
+    [tl(1),xl(1),yl(1)]=plotit2(flipud(v2s(Hx,p)),p,ah(1),tts{1},axs,cmap,fw);
+    % Plot the synthetic
+    [tl(2),xl(2),yl(2)]=plotit2(       v2s(HxS,p),p,ah(3),tts{2},axs,cmap,fw);
 
-    axes(ah(4))
-    imagefnan([lon(ndx(1)) lat(tdx(1))],[lon(ndx(end)) lat(tdx(end))],...
-              v2s(HxS,p),cmap,cax); axis image; longticks
-    xlabel(sprintf('longitude (%s)',char(176)))
-    ylabel(sprintf('latitude (%s)',char(176)))
-    ti(4)=title('Synthetic','FontWeight',fw);
+    % Just prepare for LaTeX trim and clip on 8.5.0.197613 (R2015a)
+    delete(ah([2 4]))
 
     figure(2)
     scl2=scl;scl2(1)=1;
@@ -869,6 +883,23 @@ end
 
 % Just the space plots
 function [tl,xl,yl]=plotit(d,p,ah,tts,axs,cmap,fw)
+% Must make this active
+axes(ah)
+imagefnan([1 p.NyNx(1)],[p.NyNx(2) 1],d,cmap);
+axis image
+longticks(ah)
+ah.XTick=     [1 p.NyNx(2)]+[-1 1]*0.5;
+ah.XTickLabel=round([0 p.NyNx(2)].*p.dydx(2));
+ah.YTick=[1 p.NyNx(1)]+[-1 1]*0.5;
+ah.YTickLabel=round([0 p.NyNx(1)].*p.dydx(1));
+tl=title(tts,'FontWeight',fw);
+xl=xlabel(axs{1});
+yl=ylabel(axs{2});
+movev(tl,range(ylim)/20);
+
+% Just the space plots in untethered space coordinates
+function [tl,xl,yl]=plotit2(d,p,ah,tts,axs,cmap,fw)
+keyboard
 % Must make this active
 axes(ah)
 imagefnan([1 p.NyNx(1)],[p.NyNx(2) 1],d,cmap);
