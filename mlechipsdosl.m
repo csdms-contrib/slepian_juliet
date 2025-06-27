@@ -788,7 +788,7 @@ elseif strcmp(Hk,'demo3')
     else
         % Load for real
         % Choose which block to work with:
-        fnum=3; 
+        ind=3; 
         % Hx=block{fnum};
         tmp=load(fullfile(getenv('IFILES'),'TRIBOLOGY',sprintf('%s%s%s','olw_',fnams{ind},'.mat')))
         Hx=tmp.dat;
@@ -842,7 +842,6 @@ elseif strcmp(Hk,'demo3')
     [~,~,~,~,~,Z]=planefit(v2s(Hx,p));
     Hx=Hx(:)-Z(:);
     Hx=Hx(:)-nanmean(Hx(:));
-    Hx=Hx(:);
 
     % Store the dataset as Hx0
     Hx0=Hx;
@@ -858,11 +857,8 @@ elseif strcmp(Hk,'demo3')
     p.blurs=-1; p.kiso=NaN; 
     % Setting kiso makes the residual pattern less complicated, but it does not
     % change the estimate: pi/max(p.dydx);
-    pt=p;
-    Tx=gettaper(pt,'cosine',0.10);
+    pt=p; Tx=gettaper(pt,'cosine',0.10);
     pt.taper=Tx;
-    thhat=NaN;
-    thini=[];
     % Make the estimate and request covariance using the sampling method
     % Don't redo if you had it
     fname=fullfile(getenv('IFILES'),'HASHES',sprintf('%s-%s',upper(mfilename),hash(Hx,'SHA-1')));
@@ -879,12 +875,10 @@ elseif strcmp(Hk,'demo3')
         load(fname)
     end
 
+    % Simulate at the estimate, without the taper
     p.blurs=Inf;
-    th=thhat.*scl;
-    HxS=simulosl(th,p);
+    HxS=simulosl(thhat.*scl,p);
 
-keyboard
-    
     % We will be setting the color axes for the data and the synthetic. 
     % A few options to pick from:
     caxmth=3;
@@ -906,7 +900,6 @@ keyboard
         caxS=prctile(HxS,[5 95]);
     end
 
-
     % Make a first figure with the oboserved and the simulated field
     f1=figure(1);
     fig2print(f1,'landscape')
@@ -922,13 +915,15 @@ keyboard
     clf
     [ah,ha,H]=krijetem(subnum(2,2));
     % Plot the data
-    [tl(1),xl(1),yl(1)]=plotit(flipud(v2s(Hx,p)),p,ah(1),tts{1},axs,cmap,fw,cax);
+    [tl(1),xl(1),yl(1)]=plotit(flipud(v2s(Hx,p)),p,ah(1),tts{1},axs,cmap,cax,fw);
     % Plot the synthetic
-    [tl(2),xl(2),yl(2)]=plotit(       v2s(HxS,p),p,ah(3),tts{2},axs,cmap,fw,caxS);
+    [tl(2),xl(2),yl(2)]=plotit(       v2s(HxS,p),p,ah(3),tts{2},axs,cmap,caxS,fw);
 
     % Just prepare for LaTeX trim and clip on 8.5.0.197613 (R2015a)
     delete(ah([2 4]))
 
+    keyboard
+    
     figure(2)
     clf
     % Remember that MLEOSL already returned variance scaled data
