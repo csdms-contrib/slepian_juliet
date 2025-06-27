@@ -85,7 +85,8 @@ function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah,unts)
 % 
 % mlechipsdosl('demo1') % Thin section 
 % mlechipsdosl('demo2') % Bathmetry
-% mlechipsdosl('demo3') % Sea surface height anomaly 
+% mlechipsdosl('demo3') % Fault roughness
+% mlechipsdosl('demo4') % Sea surface height anomaly 
 %
 % Last modified by gleggers-at-princeton.edu, 04/17/2014
 % Last modified by fjsimons-at-alum.mit.edu, 06/26/2018
@@ -382,8 +383,7 @@ if ~isstr(Hk)
 
     if strcmp(unts,'km')
         rond=0;
-        convo=1000;
-        unts='m';
+        convo=1;
     elseif strcmp(unts,'mm')
         rond=2;
         convo=1;
@@ -391,10 +391,10 @@ if ~isstr(Hk)
 
     % If in km, convert to m by dividing by 1000
     % Convert to wavelengths, recognizing the zero wavenumber
-    xtkl=2*pi./xtk/convo;
-    xtkl(isinf(xtkl))=[params.NyNx(2)-1]*params.dydx(2)/convo;
-    ytkl=2*pi./ytk/convo;
-    ytkl(isinf(ytkl))=[params.NyNx(1)-1]*params.dydx(1)/convo;
+    xtkl=2*pi./xtk*convo;
+    xtkl(isinf(xtkl))=[params.NyNx(2)-1]*params.dydx(2)*convo;
+    ytkl=2*pi./ytk*convo;
+    ytkl(isinf(ytkl))=[params.NyNx(1)-1]*params.dydx(1)*convo;
 
     % Create and label the wavelength axis
     [ah2(2),xl2(2),yl2(2)]=xtraxis(ah(2),xtk/10^om,round(xtkl,rond),xstr2,...
@@ -492,6 +492,7 @@ if ~isstr(Hk)
     axes(cb)
     set(cb,'YAxisLocation','right')
     moveh(cb,0.06)
+    %  moveh(cb,0.01)
     cb.Position(2)=ah(3).Position(2);
     cb.Position(4)=ah(3).Position(4);
     cb.Position(3)=cb.Position(3)/1.75;
@@ -606,18 +607,22 @@ elseif strcmp(Hk,'demo1')
     axs={sprintf('dimension 1 (%s)',unts) 
          sprintf('dimension 2 (%s)',unts)};
     fw='normal';
+    % Common color range
     cmap=gray;
+    cax=prctile([Hx ; HxS],[5 95]);
 
     clf
     [ah,ha,H]=krijetem(subnum(2,2));
     % Plot the data
-    [tl(1),xl(1),yl(1)]=plotit(flipud(v2s(Hx,p)),p,ah(1),tts{1},axs,cmap,fw);
+    [tl(1),xl(1),yl(1)]=plotit(flipud(v2s(Hx,p)),p,ah(1),tts{1},axs,cmap,cax,fw);
     % Plot the synthetic
-    [tl(2),xl(2),yl(2)]=plotit(       v2s(HxS,p),p,ah(3),tts{2},axs,cmap,fw);
+    [tl(2),xl(2),yl(2)]=plotit(       v2s(HxS,p),p,ah(3),tts{2},axs,cmap,cax,fw);
 
     % Just prepare for LaTeX trim and clip on 8.5.0.197613 (R2015a)
     delete(ah([2 4]))
 
+    keyboard
+    
     figure(2)
     clf
     % Remember that MLEOSL already returned variance scaled data
@@ -628,14 +633,14 @@ elseif strcmp(Hk,'demo1')
                         '\nu',thhat(2)*scl(2),...
                         '\rho',round(thhat(3)*scl(3),3),unts),...
                          [],unts);
-    keyboard
+
     figure(1)
     figna=figdisp([],sprintf('%s_%i','demo1_1',imnum),[],1);
     figure(2)
     figna=figdisp([],sprintf('%s_%i','demo1_2',imnum),[],1);
 elseif strcmp(Hk,'demo2')
     % Bathymetry from GEBCO
-    % Data window selected as a subset of the region in DEMO3
+    % Data window selected as a subset of the region in DEMO4
     fnam=fullfile(getenv('IFILES'),'GEBCO','GEBCO2024Grid_AtlanticMERMAIDpatch.mat');
     dat=load(fnam);
     % compare
@@ -653,22 +658,24 @@ elseif strcmp(Hk,'demo2')
     % Crop the region?
     ndx=500:numel(lon)-1.2e3;
     tdx=300:1000;
+    imnum=1;
     % May need to decimate the field if it is too big
-    dec=2;
+    dec=3;
     if any(p.NyNx>400)
         tdx=tdx(1:dec:end);
         ndx=ndx(1:dec:end);
         p.dydx=p.dydx.*dec;
     end
     p.NyNx=[numel(tdx) numel(ndx)];
+    p.lon=lon; p.lat=lat; p.ndx=ndx; p.tdx=tdx;
     % Possibly no need for further conversion
     Hx=double(elev(tdx,ndx));
     
     % Remove regional trend
     [~,~,~,~,~,Z]=planefit(v2s(Hx,p));
-    Hx=Hx-Z;
-    Hx=Hx(:)-mean(Hx(:));
-          
+    km=mean(Hx(:));
+    Hx=Hx(:)-Z(:);
+
     % Set up the call for the main MLECHIPSDOSL routine, including applying the
     % smooth taper
     p.blurs=-1; p.kiso=NaN;
@@ -690,16 +697,9 @@ elseif strcmp(Hk,'demo2')
         load(fname)
     end
 
-keyboard
-    
-    % With deplaning
-    % thhat=[];
-    % scl=[];
-    % FishJFish. std :      1.34e+03        0.0124      0.045892
-    
-    % Without deplaning
-    % Estimated theta :      6.11e+04          1.17        2.9928 
-    % FishJFish. std :      1.94e+03        0.0106      0.060532
+    % With deplaning dec 3
+    % Estimated theta :  46139        1.2558        2.4795
+    % FishJFish. std :      1.25e+03       0.00782      0.038236
     
     % Simulate at the estimate, without the taper
     p.blurs=Inf;
@@ -713,20 +713,31 @@ keyboard
     axs={sprintf('longitude (%s)',str2mat(176)) 
          sprintf('latitude (%s)',str2mat(176))};
     fw='normal';
-    cmap=sergeicol;
-    
+    % Common color range
+    [cmap,~,ziro]=sergeicol;
+    cmap=cmap(1:ziro,:);
+    cax=prctile([Hx ; HxS],[0 100])+km;
+    % Lighten up by subtracting right
+    cax=cax+[0 -500];
+
     clf
     [ah,ha,H]=krijetem(subnum(2,2));
-    keyboard
-    % Plot the data
-    [tl(1),xl(1),yl(1)]=plotit2(flipud(v2s(Hx,p)),p,ah(1),tts{1},axs,cmap,fw);
-    % Plot the synthetic
-    [tl(2),xl(2),yl(2)]=plotit2(       v2s(HxS,p),p,ah(3),tts{2},axs,cmap,fw);
 
+    % Plot the data but keep the mean again
+    [tl(1),xl(1),yl(1)]=plotit2(flipud(v2s(Hx,p))+km,p,ah(1),tts{1},axs,cmap,cax,fw);
+    % Plot the synthetic
+    [tl(2),xl(2),yl(2)]=plotit2(       v2s(HxS,p)+km,p,ah(3),tts{2},axs,cmap,cax,fw);
+
+    %[acb,axcb]=addcb('vert',cax,cax,'sergeicol');
+    %moveh(acb,0.2)
+    
     % Just prepare for LaTeX trim and clip on 8.5.0.197613 (R2015a)
     delete(ah([2 4]))
 
+    keyboard
+
     figure(2)
+    clf
     scl2=scl;scl2(1)=1;
     [~,~,nah,nah1,cb,ch,spt]=mlechipsdosl(Hk,thhat,scl2,pt,...
                          sprintf('%s = %i %s = %4.2f  %s = %4.2f %s',...
@@ -735,34 +746,218 @@ keyboard
                         '\rho',round(thhat(3)*scl(3),3),unts),...
                          [],unts);
 
-    % Transfer content of figure(2) to figure(1)
-    for ind=1:4
-        nnd=mod(ind,3)+floor(ind/3)*4+1;
-        cah(ind)=copyobj(nah(ind),figure(1));
-        set(cah(ind),'Position',get(ah(nnd),'position'))
-        if ind==3
-            axes(cah(ind))
-            ncb=colorbar();
-            ncb.Location='eastoutside';
-            set(cah(ind),'Position',get(ah(nnd),'position'))
-            ccb=copyobj(cb,figure(1));
-            set(ccb,'Position',get(ncb,'position'))
-            delete(ncb)
-            moveh(ccb,0.02)
-        elseif ind==2|ind==4
-            colormap(jet)
-        end
-        cah1(ind)=copyobj(nah1(ind),figure(1));
-        set(cah1(ind),'Position',get(ah(nnd),'position'))
-        delete(ah(nnd))
-    end
-    f1ch=get(figure(1),'Children');
-    set(f1ch(8).Title,'Interpreter','latex')
-
-    keyboard
-    
-    figna=figdisp([],'demo2',[],1);
+    figure(1)
+    figna=figdisp([],sprintf('%s_%i','demo2_1',imnum),[],1);
+    figure(2)
+    figna=figdisp([],sprintf('%s_%i','demo2_2',imnum),[],1);
 elseif strcmp(Hk,'demo3')
+    % Fault roughness examples from data at https://doi.org/10.5281/zenodo.6411819
+    % associated with 10.1029/2022JB025511
+    % parsed and reformatted using readfault.m as mat files
+    % ddir='~/Downloads/guerin_et_al_2022_GRL_data/roughness_analysis'; 
+    fnams={'R1_before_bot','R1_after_bot',...
+           'R1_before_top','R1_after_top',...
+           'S2_before_bot','S2_after_bot',...
+           'S2_before_top','S2_after_top'};
+    foril=1;
+    if ~foril
+        % Load for exploratory purposes
+        for ind=1:numel(fnams);
+            tmp=load(fullfile(getenv('IFILES'),'TRIBOLOGY',sprintf('%s%s%s','olw_',fnams{ind},'.mat')));
+            block{ind}=tmp.dat;
+            p{ind}=[];
+            p{ind}.NyNx=size(block{ind});
+        end
+
+        % Quick visual comparison of the eight block samples
+        clf; [ah,ha,H]=krijetem(subnum(numel(fnams)/2,2));
+        for ind=1:numel(fnams);
+            axes(ah(ind));
+            imagefnan([1 p{ind}.NyNx(2)],[1 p{ind}.NyNx(1)],...
+                      block{ind}-nanmean(block{ind}),[],[-0.01 0.01])
+            title(strrep(sprintf('%s',fnams{ind}),'_',' '))
+        end
+
+        % The smooth experiments taken as full rectangular observations or as
+        % patches estimate values of rho that are smaller than the sample spacing.
+        % Spatially, the smooth surfaces possess many blunt peaks and deep pits,
+        % while the roughened surfaces strike a better balance, though there is more
+        % structure that could possibly be modeled by a higher order polynomial.
+        % All samples possess high gradients between extreme peaks and troughs that
+        % are a challenge to capture in the modeled field.
+    else
+        % Load for real
+        % Choose which block to work with:
+        fnum=3; 
+        % Hx=block{fnum};
+        tmp=load(fullfile(getenv('IFILES'),'TRIBOLOGY',sprintf('%s%s%s','olw_',fnams{ind},'.mat')))
+        Hx=tmp.dat;
+    end
+
+    % Set the grid's parameters so that the grid size is 100mm by 50mm
+    p=[];
+    p.NyNx=size(Hx);
+    p.dydx=[50 100]./p.NyNx;
+    unts='mm';
+
+    
+    % The data itself is measured from an elliptical cross-section, so we will
+    % first crop the dataset to have a rectangular field of observation
+    decm=1;
+    cy=225:decm:p.NyNx(1)-225;
+    cx=450:decm:p.NyNx(2)-450;
+
+    % Now we might choose to work with the full field, use default values for a
+    % few of the datasets, or explore the dataset and capture a patch of
+    % interest based on the displayed axes limits (explr==1)
+
+    % Option to pause and look around
+    explr=0;
+    if fnum==1 & ~explr
+      xl=[1163 1348];yl=[80   250];
+    elseif fnum==3 & ~explr
+      xl=[-30 76]; yl=[406 513];
+    else
+      disp('zoom in to select a data patch for analysis')
+      figure(3); clf
+      hi=imagesc(1:numel(cy),1:numel(cx),Hx(cy,cx));
+      colorbar
+      h = zoom();
+      hpan = pan(gcf);
+      h.ActionPostCallback = @changecolorbar;
+      hpan.ActionPostCallback = @changecolorbar;
+      keyboard
+      yl=floor(xlim);xl=floor(ylim);
+    end
+
+    % Adjust the crop
+    cy=cy(1)+yl(1):cy(1)+yl(2);
+    cx=cx(1)+xl(1):cx(1)+xl(2);
+    % Take the cropped data and adjust the grid parameters 
+    Hx=Hx(cy,cx);
+    p.NyNx=size(Hx)
+    p.dydx=p.dydx*decm;
+
+    % Remove a first order polynomial
+    [~,~,~,~,~,Z]=planefit(v2s(Hx,p));
+    Hx=Hx(:)-Z(:);
+    Hx=Hx(:)-nanmean(Hx(:));
+    Hx=Hx(:);
+
+    % Store the dataset as Hx0
+    Hx0=Hx;
+    % Fill the extreme peaks and troughs outside of mnprc -- mxprc in the
+    % dataset that will be used for the MLE analysis
+    mnprc=7.5;
+    mxprc=92.5;
+    Hx(Hx<prctile(Hx,mnprc))=prctile(Hx,mnprc);
+    Hx(Hx>prctile(Hx,mxprc))=prctile(Hx,mxprc);
+
+    % Set up the call for the main MLECHIPSDOSL routine, including applying the
+    % smooth taper
+    p.blurs=-1; p.kiso=NaN; 
+    % Setting kiso makes the residual pattern less complicated, but it does not
+    % change the estimate: pi/max(p.dydx);
+    pt=p;
+    Tx=gettaper(pt,'cosine',0.10);
+    pt.taper=Tx;
+    thhat=NaN;
+    thini=[];
+    % Make the estimate and request covariance using the sampling method
+    % Don't redo if you had it
+    fname=fullfile(getenv('IFILES'),'HASHES',sprintf('%s-%s',upper(mfilename),hash(Hx,'SHA-1')));
+    if ~exist(sprintf('%s.mat',fname),'file')
+        % You could give it something close either in thini or aguess if you've run it before
+        % but this doesn't always actually make it easier
+        thini=[];
+        thhat=NaN;
+        while isnan(thhat)
+            [thhat,covFHhJ,~,scl,~,~,Hk]=mleosl(Hx,thini,pt,[],[],[],[],[],1);
+        end
+        save(fname,'thhat','scl','Hk','covFHhJ')
+    else
+        load(fname)
+    end
+
+    p.blurs=Inf;
+    th=thhat.*scl;
+    HxS=simulosl(th,p);
+
+keyboard
+    
+    % We will be setting the color axes for the data and the synthetic. 
+    % A few options to pick from:
+    caxmth=3;
+    switch caxmth
+      case 1
+        % halverange based; this is symmetric, which we may not want here
+        % share the same caxis determined from the truncated data
+        cax =halverange(Hx,95);
+        caxS=cax;
+      case 2
+        % percentile based
+        % share the same caxis determined from the truncated data
+        cax =prctile(Hx,[5 95]);
+        caxS=cax;
+     case 3 
+        % percentile based
+        % set distinctly for the truncated data and the synthetic
+        cax =prctile(Hx ,[5 95]);
+        caxS=prctile(HxS,[5 95]);
+    end
+
+
+    % Make a first figure with the oboserved and the simulated field
+    f1=figure(1);
+    fig2print(f1,'landscape')
+    set(f1,'PaperPositionMode','auto')
+    tts={'data','synthetic'};
+    unts='mm';
+    axs={sprintf('dimension 1 (%s)',unts)
+         sprintf('dimension 2 (%s)',unts)};
+    fw='normal';
+    cmap=pink;
+    cmap=cmap(2:end-10,:);
+
+    clf
+    [ah,ha,H]=krijetem(subnum(2,2));
+    % Plot the data
+    [tl(1),xl(1),yl(1)]=plotit(flipud(v2s(Hx,p)),p,ah(1),tts{1},axs,cmap,fw,cax);
+    % Plot the synthetic
+    [tl(2),xl(2),yl(2)]=plotit(       v2s(HxS,p),p,ah(3),tts{2},axs,cmap,fw,caxS);
+
+    % Just prepare for LaTeX trim and clip on 8.5.0.197613 (R2015a)
+    delete(ah([2 4]))
+
+    figure(2)
+    clf
+    % Remember that MLEOSL already returned variance scaled data
+    scl2=scl; scl2(1)=1;
+    [~,~,nah,nah1,cb,ch,spt]=mlechipsdosl(Hk,thhat,scl2,pt,...
+                         sprintf('%s = %i %s = %4.2f  %s = %4.2f %s',...
+                        '\sigma^2',round(thhat(1)*scl(1)),...
+                        '\nu',thhat(2)*scl(2),...
+                        '\rho',round(thhat(3)*scl(3),3),unts),...
+                         [],unts);
+    keyboard
+    figure(1)
+    figna=figdisp([],sprintf('%s_%i','demo4_1',fnum),[],1);
+    figure(2)
+    figna=figdisp([],sprintf('%s_%i','demo4_2',fnum),[],1);
+
+    % Before the experiment, for the rough block cropped to its center, no deplane:
+    % fnum 1, th [0.000118        0.754      106.38],  FishJFish. std : [2.63e-06     0.01        2.446]
+    % fnum 3, th [0.0001381       0.6474     117.78],  FishJFish. std : [3.4e-06      0.00845     3.2111]
+    % Before the experiment, smooth: 
+    % fnum 5, th [ 9.0964e-06     0.68947     36.153], FishJFish. std : [ 7.37e-08    0.0275      0.50783]
+    % fnum 7, th [ 9.6435e-06     0.72163     40.372], FishJFish. std : [ 9.02e-08    0.0245      0.6033]
+    % After the experiment, rough:
+    % fnum 2, th [0.00013773      0.61311    118.61],  FishJFish. std : [ 3.22e-06    0.00837     3.2071]
+    % fnum 4, th [0.00011017      0.55212    154.12],  FishJFish. std : [ 3.21e-06    0.00714     5.4017]
+    % After the experiment, smooth:
+    % fnum 6, th [  9.75e-06      0.557       42.951], FishJFish. std : [ 9.51e-08    0.0177      0.74717]
+    % fnum 8, th [ 1.1422e-05     0.6619      43.266], FishJFish. std : [ 1.13e-07    0.0211      0.68681]
+elseif strcmp(Hk,'demo4')
     % Sea surface height anomaly, near real time
     % Source: https://doi.org/10.48670/moi-00149
     % ``Altimeter satellite gridded Sea Level Anomalies (SLA) computed with respect to a
@@ -882,10 +1077,10 @@ elseif strcmp(Hk,'demo3')
 end
 
 % Just the space plots
-function [tl,xl,yl]=plotit(d,p,ah,tts,axs,cmap,fw)
+function [tl,xl,yl]=plotit(d,p,ah,tts,axs,cmap,cax,fw)
 % Must make this active
 axes(ah)
-imagefnan([1 p.NyNx(1)],[p.NyNx(2) 1],d,cmap);
+imagefnan([1 p.NyNx(1)],[p.NyNx(2) 1],d,cmap,cax);
 axis image
 longticks(ah)
 ah.XTick=     [1 p.NyNx(2)]+[-1 1]*0.5;
@@ -898,18 +1093,30 @@ yl=ylabel(axs{2});
 movev(tl,range(ylim)/20);
 
 % Just the space plots in untethered space coordinates
-function [tl,xl,yl]=plotit2(d,p,ah,tts,axs,cmap,fw)
-keyboard
+function [tl,xl,yl]=plotit2(d,p,ah,tts,axs,cmap,cax,fw)
 % Must make this active
 axes(ah)
-imagefnan([1 p.NyNx(1)],[p.NyNx(2) 1],d,cmap);
+imagefnan([p.lon(p.ndx(1)) p.lat(p.tdx(1))],[p.lon(p.ndx(end)) p.lat(p.tdx(end))],d,cmap,cax)
 axis image
 longticks(ah)
-ah.XTick=     [1 p.NyNx(2)]+[-1 1]*0.5;
-ah.XTickLabel=round([0 p.NyNx(2)].*p.dydx(2));
-ah.YTick=[1 p.NyNx(1)]+[-1 1]*0.5;
-ah.YTickLabel=round([0 p.NyNx(1)].*p.dydx(1));
+ext=[p.lon(p.ndx(1)) p.lon(p.ndx(end))];
+ah.XTick=ext;
+ah.XTickLabel=round(ext,2);
+wait=[p.lat(p.tdx(1)) p.lat(p.tdx(end))];
+ah.YTick=wait;
+ah.YTickLabel=round(wait,2);
 tl=title(tts,'FontWeight',fw);
 xl=xlabel(axs{1});
 yl=ylabel(axs{2});
 movev(tl,range(ylim)/20);
+
+% For exploring the demo4 datasets
+function changecolorbar(src, ~)
+% straight from https://www.mathworks.com/matlabcentral/answers/1449774-dynamic-colorbar-change-with-window-size-corresponding-with-different-data-area
+h = gco;
+xl = xlim; 
+yl = ylim;
+x = find(h.XData>=xl(1) &  h.XData<=xl(2));
+iy = find(h.YData>=yl(1) &  h.YData<=yl(2));
+C = h.CData(ix,iy);
+caxis([min(C(:)) max(C(:))]);
