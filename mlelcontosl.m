@@ -454,4 +454,248 @@ elseif strcmp(Hk,'demo1')
             figna=figdisp([],[],[],1);
         end
     end
+elseif strcmp(Hk,'demo2')
+  % Calculate a 3D loglikelihood ellipsoid and volume for a dataset very close 
+  % to th0 and compare to empirical and predicted ellipsoids and volumes
+
+  % Load an experiment
+  datum='27-May-2025'; trims=100;
+  [th0,thhats,p,covX,covavhs,thpix,~,~,~,~,momx,covXpix,covF0]=osload(datum,trims);
+  mobs=mean(thhats);
+  cobs=cov(thhats);
+  ncobs=cobs./[diag(sqrt(cobs))*diag(sqrt(cobs))']';
+  sobs=std(thhats);
+
+  n='mleosl';
+  f4=sprintf('%s_diagn_%s',n,datum);
+  np=3;
+  % The loglikelihoods from estimate
+  [~,~,~,~,L]=osrdiag(f4,pwd,np); 
+
+  % Predict the covariance at th0
+  p.taper=1;
+  covth=covthosl(th0,p,2,[1 1 1]);
+
+  % Go fish... for a data vector whose estimate is within P% of th0
+  P=0.02;
+  thhat=NaN;scl=NaN;
+  while any(abs(thhat.*scl-th0)./th0>P) | isnan(thhat)
+     % Simulate from the mean observation
+     ps=p; ps.blurs=Inf; Hx=simulosl(th0,ps); 
+
+     % This is where it would be good to load the simulation parameters; in
+     % case we came in from a simulation with p.blurs=-1, this will need to
+     % be uncommented:
+     % p.blurs=-1; Hx=simulosl(mobs,p);
+
+     % Calculate the MLE for the data vector
+     [thhat,~,lpars,scl,~,~,Hk]=mleosl(Hx,[],p);
+  end
+  % Calculate the ellipsoids for the observed and predicted covariance
+  e{1}=hyperellipsoid(mobs,cobs,3,[]);
+  [e{2},V]=hyperellipsoid(th0,covth,3,[]);
+  % Calculate the loglikelihoods for the parameter space (volume) straight from
+  % LOGLIOSL
+  thR=[minmax(thhats(:,1));minmax(thhats(:,2));minmax(thhats(:,3))].*[0.95 1.05];
+  fine=40;
+  thRlin{1}=linspace(thR(1,1),thR(1,2),fine);
+  thRlin{2}=linspace(thR(2,1),thR(2,2),fine);
+  thRlin{3}=linspace(thR(3,1),thR(3,2),fine);
+  [thg{1},thg{2},thg{3}]=meshgrid(thRlin{1},thRlin{2},thRlin{3});
+  thg{1}=thg{1}(:);
+  thg{2}=thg{2}(:);
+  thg{3}=thg{3}(:);
+  K=knums(p);
+  parfor kk=1:fine^3
+    Lg{kk}=logliosl(K,[thg{1}(kk)./scl(1) thg{2}(kk) thg{3}(kk)],p,Hk);
+  end
+  thg{1}=reshape(thg{1},[fine fine fine]);
+  thg{2}=reshape(thg{2},[fine fine fine]);
+  thg{3}=reshape(thg{3},[fine fine fine]);
+  Lgrid=reshape(cat(1,Lg{:}),[fine fine fine]);
+
+  % 95% ellipsoid for the observed covariance colormapped by the loglikelihood
+  % calculated along its surface for a data vector that is within P% of the truth
+  es{1}=e{1}(:,:,1);es{1}=es{1}(:);
+  es{2}=e{1}(:,:,2);es{2}=es{2}(:);
+  es{3}=e{1}(:,:,3);es{3}=es{3}(:);
+  parfor kk=1:size(es{1},1)
+    Le{kk}=logliosl(K,[es{1}(kk)./scl(1) es{2}(kk) es{3}(kk)],p,Hk);
+  end
+  Lc{1}=reshape(cat(1,Le{:}),size(e{2},[1 2]));
+
+  % 95% predicted ellipsoid colored by loglikelihood
+  es{1}=e{2}(:,:,1);es{1}=es{1}(:);
+  es{2}=e{2}(:,:,2);es{2}=es{2}(:);
+  es{3}=e{2}(:,:,3);es{3}=es{3}(:);
+  parfor kk=1:size(es{1},1)
+    Le{kk}=logliosl(K,[es{1}(kk)./scl(1) es{2}(kk) es{3}(kk)],p,Hk);
+  end
+  Lc{2}=reshape(cat(1,Le{:}),size(e{2},[1 2]));
+
+  % Create a figure with ellipsoids in the top row: emp, pred, like
+  % and density heat maps in the bottom row: emp, pred, like
+  [ah,ha,H]=krijetem(subnum(2,3));
+  % Discretize the colormap so that we can see some contouring of the surfaces
+  colormap(pink(18))
+  % FaceAlpha for the surfaces
+  fa=0.9;
+  axes(ah(1))
+  % 95% ellipsoid for thhats -- parameterized by mean(thhats) and
+  % cov(thhats)
+  s{1}=surf(e{1}(:,:,1),e{1}(:,:,2),e{1}(:,:,3),'FaceColor','k','FaceAlpha',0.05,...
+         'EdgeColor','none');
+  hold on
+  s{2}=surf(e{2}(:,:,1),e{2}(:,:,2),e{2}(:,:,3),'FaceColor','b','FaceAlpha',0.05,...
+         'EdgeColor','none');
+  h(1)=scatter3(thhats(:,1),thhats(:,2),thhats(:,3),10,L,...
+               'filled','MarkerFaceAlpha',fa);
+ % [X,Y,Z]=ellipsoid(mobs(:,1),mobs(:,2),mobs(:,3),...
+ %                   numstd*sobs(:,1),numstd*sobs(:,2),numstd*sobs(:,3));
+ % s=surf(X,Y,Z,'FaceAlpha',0.2);
+ % e=eig(ncobs);
+ % rotate(s,[0,0,1],e(1));
+ % rotate(s,[0,1,0],e(2));
+ % rotate(s,[0,0,1],e(3));
+ % rotate(s,[-1,0,0],atand(ncobs(2,3)));
+ % rotate(s,[0,-1,0],atand(ncobs(1,3)));
+ % rotate(s,[0,0,-1],atand(ncobs(1,2)));
+  % p(1)=plot3();
+  %lg=legend(sprintf('N=%i',size(thhats,1)))
+  ti(1)=title({'\bf{Empirical}','estimates'});
+  hold off
+
+  axes(ah(2))
+  s{3}=surf(e{2}(:,:,1),e{2}(:,:,2),e{2}(:,:,3),Lc{1},...
+           'EdgeColor','none','FaceAlpha',fa);
+%  s{3}=surf(e{2}(:,:,1),e{2}(:,:,2),e{2}(:,:,3),'FaceColor','k','FaceAlpha',0.1,...
+%         'EdgeColor',clrs(2,:),'EdgeAlpha',0.05);
+  ti(2)=title({'\bf{Empirical}','95% ellipsoid'});
+
+  axes(ah(3))
+  s{4}=surf(e{2}(:,:,1),e{2}(:,:,2),e{2}(:,:,3),Lc{2},...
+           'EdgeColor','none','FaceAlpha',fa);
+  ti(3)=title({'\bf{Predicted}','95% ellipsoid'});
+
+  axes(ah(4))
+  % Cross-section cut down rho revealing interior in s2 and nu planes; easiest
+  % way is to set chunk to be cut to NaN and set the AlphaData for the plot
+  Lgrid4=Lgrid;
+  Lgrid4(thg{1}<th0(1)&thg{2}<th0(2))=deal(NaN);
+  hs{1}=slice(thRlin{1},thRlin{2},thRlin{3},Lgrid4,...
+              [minmax(thRlin{1}) min(thg{1}(thg{1}>th0(1)))],...
+              [minmax(thRlin{2}) min(thg{2}(thg{2}>th0(2)))],...
+              minmax(thRlin{3}));
+  set(hs{1},'EdgeColor','none','FaceAlpha',fa,'FaceColor','interp');
+
+  % th0slc=[th0(1) max(thRlin{1});...
+  %         th0(2) max(thRlin{2});...
+  %         th0(3) max(thRlin{3})];
+  % slice(thRlin{1},thRlin{2},thRlin{3},Lgrid,...
+  %       th0slc(1,1),th0slc(2,1),th0slc(3,1),'FaceAlpha',0.2)
+  % hold on
+  % slice(thRlin{1},thRlin{2},thRlin{3},Lgrid,th0slc(1,2),th0slc(2,2),th0slc(3,2))
+
+  axes(ah(5))
+  % Cross-section cut through along nu revealing interior in s2 and rh planes
+  Lgrid5=Lgrid;
+  Lgrid5(thg{1}<th0(1)&thg{3}>th0(3))=deal(NaN);
+  hs{2}=slice(thRlin{1},thRlin{2},thRlin{3},Lgrid5,...
+              [minmax(thRlin{1}) min(thg{1}(thg{1}>th0(1)))],...
+              minmax(thRlin{2}),...
+              [minmax(thRlin{3}) max(thg{3}(thg{3}<th0(3)))]);
+  set(hs{2},'EdgeColor','none','FaceAlpha',fa,'FaceColor','interp');
+
+  cb=colorbar('horizontal');cb.Label.String='loglikelihood';
+  cb.Location='southoutside';
+  movev(cb,-0.06)
+
+  % Make sure that adding the colorbar did not permanently shrink the image axis
+  ah(5).Position(4)=ah(4).Position(4);
+  ah(5).Position(2)=ah(4).Position(2);
+
+  axes(ah(6))
+  % Planar cut along the eigenvector of the long axis of the error ellipsoid
+  s2s=e{2}(:,:,1);s2s=s2s(:);nus=e{2}(:,:,2);nus=nus(:);rhs=e{2}(:,:,3);rhs=rhs(:);
+  % rotang=rad2deg(1/2*atan2(2*covth(2,3),covth(2,2)-covth(3,3)));
+  % s2-rh, rotated about the eigenvector for the nu axis
+  rotang{1}=rad2deg(atan2(unique(rhs(s2s==max(s2s))),max(s2s)));
+  hslice=surf(thRlin{1},thRlin{2},zeros(fine));
+  %rotate(hslice,-1.*V(:,3),rotang{1})
+  % or just rotate about nu to prevent jagged edges
+  rotate(hslice,[0 -1 0],rotang{1})
+  xd{1}=get(hslice,'XData');
+  yd{1}=get(hslice,'YData');
+  zd{1}=get(hslice,'ZData');
+  delete(hslice)
+  % nu-rh, rotated about the s2 axis
+  % rotang{3}=rad2deg(atan2(unique(rhs(nus==max(nus))),max(nus)));
+  % hslice=surf(thRlin{1},thRlin{2},zeros(fine));
+  % rotate(hslice,[1 0 0],rotang{3})
+
+  hs{3}=slice(thRlin{1},thRlin{2},thRlin{3},Lgrid,xd{1},yd{1},th0(3)+zd{1});
+  hs{3}.FaceColor='interp';
+  hs{3}.EdgeColor='none';
+  hs{3}.DiffuseStrength=0.8;
+  
+  axes(ah(6))
+  hold on 
+  hx=slice(thRlin{1},thRlin{2},thRlin{3},Lgrid,max(thRlin{1}),[],[]);
+  hx.FaceColor='interp';
+  hx.FaceAlpha=fa;
+  hx.EdgeColor='none';
+  hy=slice(thRlin{1},thRlin{2},thRlin{3},Lgrid,[],minmax(thRlin{2}),[]);
+  set(hy(1),'FaceColor','interp','FaceAlpha',fa/3,'EdgeColor','none')
+  set(hy(2),'FaceColor','interp','FaceAlpha',fa/3,'EdgeColor','none')
+  hz=slice(thRlin{1},thRlin{2},thRlin{3},Lgrid,[],[],min(thRlin{3}));
+  hz.FaceColor='interp';
+  hz.FaceAlpha=fa;
+  hz.EdgeColor='none';
+
+  for ind=1:6
+    axes(ah(ind))
+    % plot th0 
+    hold on
+    scatter3(th0(:,1),th0(:,2),th0(:,3),'ko','filled')
+    if ind>1
+      % plot the estimate associated with the data vector we use to calculate
+      % the loglikelihoods
+      scatter3(thhat(:,1).*scl(:,1),thhat(:,2).*scl(:,2),thhat(:,3).*scl(:,3),'c^','filled')
+    end
+    % set x,y,z,c limits to be the same
+    xlim(minmax([minmax(thRlin{1}) minmax(e{1}(:,:,1)) minmax(e{2}(:,:,1))]))
+    ylim(minmax([minmax(thRlin{2}) minmax(e{1}(:,:,2)) minmax(e{2}(:,:,2))]))
+    zlim(minmax([minmax(thRlin{3}) minmax(e{1}(:,:,3)) minmax(e{2}(:,:,3))]))
+    caxis(minmax(L))
+    % other cosmetics
+    xlabel('\sigma^2');  ylabel('\nu');  zlabel('\rho')
+    grid on
+    box on
+    longticks
+    % The azimuth and elevation perspective
+    azel=[-50 7];
+    view(azel)
+  end
+  movev([ah(1:3)],-0.04)
+  movev([ah(4:6)],0.04)
+
+  % Some additional 3D visualization ideas for another time:
+  %
+  % e{3}=isosurface(thg{1},thg{2},thg{3},Lgrid,12);
+  % s(3)=patch(e{3});
+  %
+  % scatter3(thg{1}(:),thg{2}(:),thg{3}(:),10,Lgrid(:))
+  %
+  % surf(thRlin{1},thRlin{2},Lgrid(:,:,5),Lgrid(:,:,5))
+  %
+  % contourslice(Lgrid,[1:2:fine],[],[],10)
+
+  % Information about the experiment
+  sti=sgtitle(sprintf('th0=[%0.2e %0.2f %0.2e]; %ix%i grid; %ix%i km; blur %s; %s',...
+        th0,p.NyNx,p.NyNx.*p.dydx./1000,ps.blurs));
+  linkprop(ah,'CameraPosition')
+  keyboard
+  set(gcf,'Renderer','painters')
+  figna=figdisp([],sprintf('demo2_%s',date),[],1);
+  saveas(gcf,sprintf('mlelcontosl_demo2_%s.fig',date),'fig')
 end
