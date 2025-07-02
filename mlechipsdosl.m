@@ -788,9 +788,9 @@ elseif strcmp(Hk,'demo3')
     else
         % Load for real
         % Choose which block to work with:
-        ind=3; 
+        fnum=3; 
         % Hx=block{fnum};
-        tmp=load(fullfile(getenv('IFILES'),'TRIBOLOGY',sprintf('%s%s%s','olw_',fnams{ind},'.mat')))
+        tmp=load(fullfile(getenv('IFILES'),'TRIBOLOGY',sprintf('%s%s%s','olw_',fnams{fnum},'.mat')));
         Hx=tmp.dat;
     end
 
@@ -922,8 +922,10 @@ elseif strcmp(Hk,'demo3')
     % Just prepare for LaTeX trim and clip on 8.5.0.197613 (R2015a)
     delete(ah([2 4]))
 
-    keyboard
-    
+    % Run fnum 3 for the paper figures
+    % True theta :    4.3413e-05        1.6389       0.10333
+    %                 4.13e-06          0.0228       0.0042244
+   
     figure(2)
     clf
     % Remember that MLEOSL already returned variance scaled data
@@ -936,9 +938,9 @@ elseif strcmp(Hk,'demo3')
                          [],unts);
     keyboard
     figure(1)
-    figna=figdisp([],sprintf('%s_%i','demo4_1',fnum),[],1);
+    figna=figdisp([],sprintf('%s_%i','demo3_1',fnum),[],1);
     figure(2)
-    figna=figdisp([],sprintf('%s_%i','demo4_2',fnum),[],1);
+    figna=figdisp([],sprintf('%s_%i','demo3_2',fnum),[],1);
 
     % Before the experiment, for the rough block cropped to its center, no deplane:
     % fnum 1, th [0.000118        0.754      106.38],  FishJFish. std : [2.63e-06     0.01        2.446]
