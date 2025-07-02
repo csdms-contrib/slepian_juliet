@@ -124,8 +124,8 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver,cm)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/24/2025
-% Last modified by olwalbert-at-princeton.edu, 06/24/2025
+% Last modified by fjsimons-at-alum.mit.edu, 07/02/2025
+% Last modified by olwalbert-at-princeton.edu, 07/02/2025
 
 if ~isstr(Hx)
   defval('algo','unc')
@@ -284,9 +284,9 @@ if ~isstr(Hx)
   % Always scale the data sets but don't forget to reapply at the very end
   shat=nanstd(Hx(:,1));
   % Scale the data; don't reorder the next three lines!
-  Hx(:,1)=Hx(:,1)./shat;
+  Hx(:,1)=Hx(:,1)/shat;
   % Rescale the initial value so the output applies to both THHAT and THINI
-  thini(1)=thini(1).*scl(1)/shat^2;
+  thini(1)=thini(1)*scl(1)/shat^2;
   % And with these new scalings you have no more business for the first scale
   % though for the derived quantity you need to retain them
   sclh=[shat^2 scl(2:3)];
@@ -301,7 +301,13 @@ if ~isstr(Hx)
   end
 
   % Always demean the data sets - think about deplaning as well?
-  Hx(:,1)=Hx(:,1)-nanmean(Hx(:,1));
+  if size(Tx)==1
+    Hx(:,1)=Hx(:,1)-nanmean(Hx(:,1));
+  else
+    Hxt=v2s(Hx(:,1),params);
+    Hxt(~Tx)=deal(NaN);
+    Hx(:,1)=Hx(:,1)-nanmean(Hxt(:));
+  end
 
   % Turn the tapered observation vector to the spectral domain
   % Watch the 2pi in SIMULOSL
@@ -798,6 +804,11 @@ elseif strcmp(Hx,'demo1')
     % Simulate data from the same lithosphere, watch the blurring
     [Hx,th0,p,k,Hk]=simulosl(th0,params,xver);
 
+    if strcmp(p.mask,'cosine')
+        Tx=gettaper(p,'cosine',0.1);
+        p.taper=Tx;
+    end
+
     % Check the dimensions of space and spectrum are right
     difer(length(Hx)-length(k(:)),[],[],NaN)
 
@@ -995,6 +1006,49 @@ elseif strcmp(Hx,'demo2')
           else
               load(fname)
           end
+
+          % If the grid were sufficiently dense by setting the 'fineness' inside of
+          % MLELCONTOSL, we could query the likelihood
+          % along the error ellipses as so
+          % for ind=1:3
+          %   [inpoly{ind},onpoly{ind}]=...
+          %       inpolygon(thR(pcomb(ind,1),:),thR(pcomb(ind,2),:),...
+          %                 ep(ind).XData(:),ep(ind).YData(:));
+          % end
+          %
+          % However, instead of hoping to densify accordingly, it is much more
+          % efficient to calculate LOGLIOSL along the ellipses themselves, which 
+          % means we won't be using MLELCONTOSL after all
+          % Lell=nan(3,numel(ep(1).XData));
+          % for jnd=1:numel(ep(1).XData)
+          %   Lell(1,jnd)=logliosl(k(:),...
+          %                 [ep(1).XData(jnd) ep(1).YData(jnd).*scl(2) thhat(3).*scl(3)],...
+          %                 p, Hk);
+          %   Lell(2,jnd)=logliosl(k(:),...
+          %                 [ep(2).XData(jnd) thhat(2).*scl(2) ep(2).YData(jnd).*scl(3)],...
+          %                 p, Hk);
+          %   Lell(3,jnd)=logliosl(k(:),...
+          %                 [thhat(1) ep(3).XData(jnd).*scl(2) ep(3).YData(jnd).*scl(3)],...
+          %                 p, Hk);
+          % end
+          % Find the most common loglikelihood on each cross-plot ellipse, rounded
+          % to some decimal place
+          % Lmost=mode(round(Lell,1)');
+          % Doesn't look great, but neither do these 
+          %Lmost=mean(Lell');
+          %Lmost=median(Lell');
+
+          % Alternatively, we could visualize the loglikelihood along the ellipse as:
+          % figure();
+          % cax=minmax(Lell(:));
+          % subplot(131);scatter3(ep(1).XData,ep(1).YData,Lell(1,:),5,Lell(1,:))
+          % caxis(cax)
+          % subplot(132);scatter3(ep(2).XData,ep(2).YData,Lell(2,:),5,Lell(2,:))
+          % caxis(cax)
+          % subplot(133);scatter3(ep(3).XData,ep(3).YData,Lell(3,:),5,Lell(3,:))
+          % caxis(cax)
+          % colorbar
+          % linkprop(get(gcf,'Children'),'CameraPosition')
         case 'B'
           % Scale any data vector simulated from the truth and calculate 
           % the likelihood surface for this observation with mobs, which assumes the
@@ -1046,7 +1100,7 @@ elseif strcmp(Hx,'demo2')
           xi=pcomb(ind,1); yi=pcomb(ind,2);
           axes(ah(ind))
           hold on
-          % Contour or controuf
+          % Contour or contourf
           [cont,ch(ind)]=contourf(xcon{ind}/sclth0(xi),ycon{ind}/sclth0(yi),...
                                   Lgrid(:,:,ind),Lcon(ind,:));
           % This doesn't seem to do much now
