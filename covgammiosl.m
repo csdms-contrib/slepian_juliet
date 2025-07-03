@@ -242,7 +242,7 @@ if ~isstr(th)
       % Exact calculation of the gradient of the empirical periodograms using
       % Isserlis' Rule, which provides an equivalence with the linear combination
       % of transposed and conjugated Fourier Transforms of the autocovariance
-      % (see Walden+1999 eqs 7-8):
+      % (see Walden+1994 eqs 7-8):
       %   In 1-D, cov{|Hk|^2,|Hk'|^2} = U'*Cmn*U + U'*Cmn*U.'
       % We calculate the Matern autocovariance calculated a NyNx^2 by NyNx^2
       % distance grid that incorporates all possible lag pairs, which in the 
@@ -1329,8 +1329,10 @@ elseif strcmp(th,'demo4')
       params.taper=1;
     end
   
-    dydx=params.dydx;NyNx=params.NyNx;
-    ys=0:NyNx(1)-1;xs=0:NyNx(2)-1;
+    dydx=params.dydx;
+    NyNx=params.NyNx;
+    ys=0:NyNx(1)-1;
+    xs=0:NyNx(2)-1;
     [grdx,grdy]=meshgrid(xs(:),ys(:));
     grdx=grdx(:).*dydx(2);
     grdy=grdy(:).*dydx(1);
