@@ -79,7 +79,7 @@ if ~ischar(Hk)
     stdCon=1:1:stdOut;
     stdCon=0.2:0.2:stdOut
     % Fineness of the loglihood grids
-    fine=200;
+    fine=200; fine=50
 
     % Default options for figure contruction
     % Shade the plot outside the first contour
@@ -190,20 +190,20 @@ if ~ischar(Hk)
           thRxij=thR(xi,j);
           switch i
             case 1
-              parfor kk=1:fine-1,NumWorkers
+              parfor (kk=1:fine-1,NumWorkers)
                 % kk: vertical axis 
                 th=[thRxij thR(yi,kk) thhat2(3)];
                 Lg{kk}=logliosl(K,th,params,Hk);
               end
               Lgrid(:,j,i)=cat(1,Lg{:});
             case 2
-              parfor kk=1:fine-1,NumWorkers
+              parfor (kk=1:fine-1,NumWorkers)
                   th=[thRxij thhat(2) thR(yi,kk)];
                   Lg{kk}=logliosl(K,th,params,Hk);
               end
               Lgrid(:,j,i)=cat(1,Lg{:});
             case 3
-              parfor kk=1:fine-1,NumWorkers
+              parfor (kk=1:fine-1,NumWorkers)
                 th=[thhat(1) thRxij thR(yi,kk)];
                 Lg{kk}=logliosl(K,th,params,Hk);
               end
@@ -247,6 +247,8 @@ if ~ischar(Hk)
     thTick=repmat(thhat3',size(stds))+thhatsd*stds;
     thTickLa=cell(size(thTick));
 
+    keyboard
+    
     % Convert those tickmark values to strings for tickmark labels
     for i=1:length(stds)
         % For tickmarks on even standard deviations, round and scale the value
