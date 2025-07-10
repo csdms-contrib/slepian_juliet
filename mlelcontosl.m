@@ -78,9 +78,9 @@ if ~ischar(Hk)
     defval('stdOut',2);
     % Standard deviations to which the contours refer
     stdCon=1:1:stdOut;
-    stdCon=0.2:0.2:stdOut
+    stdCon=0.2:0.2:stdOut;
     % Fineness of the loglihood grids
-    fine=200; fine=50
+    fine=200;
 
     % Default options for figure contruction
     % Shade the plot outside the first contour
@@ -130,6 +130,9 @@ if ~ischar(Hk)
 
     % Set the Matern parameter range that the figures will span
     defval('thRange',[repmat(thhat2',1,2)+stdOut*thhatsd2*[-1 1]]);
+
+    % FJS Make the range bigger to never run out??
+    thRange=thRange.*repmat([0.9 1.1],3,1);
     
     % Calculate the Matern parameter values for each contour
     preCon=repmat(thhat2',1,length(stdCon))+thhatsd2*stdCon;
