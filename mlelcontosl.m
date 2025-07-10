@@ -74,11 +74,12 @@ end
 if ~ischar(Hk)
     % Default values for the loglihood grid and contours
     % Number of standard deviations the grid extends
-    defval('stdOut',3); 
+    defval('stdOut',2);
     % Standard deviations to which the contours refer
     stdCon=1:1:stdOut;
+    stdCon=0.2:0.2:stdOut
     % Fineness of the loglihood grids
-    fine=100;
+    fine=200;
 
     % Default options for figure contruction
     % Shade the plot outside the first contour
@@ -189,20 +190,20 @@ if ~ischar(Hk)
           thRxij=thR(xi,j);
           switch i
             case 1
-              parfor (kk=1:fine-1,NumWorkers)
+              parfor kk=1:fine-1,NumWorkers
                 % kk: vertical axis 
                 th=[thRxij thR(yi,kk) thhat2(3)];
                 Lg{kk}=logliosl(K,th,params,Hk);
               end
               Lgrid(:,j,i)=cat(1,Lg{:});
             case 2
-              parfor (kk=1:fine-1,NumWorkers)
+              parfor kk=1:fine-1,NumWorkers
                   th=[thRxij thhat(2) thR(yi,kk)];
                   Lg{kk}=logliosl(K,th,params,Hk);
               end
               Lgrid(:,j,i)=cat(1,Lg{:});
             case 3
-              parfor (kk=1:fine-1,NumWorkers)
+              parfor kk=1:fine-1,NumWorkers
                 th=[thhat(1) thRxij thR(yi,kk)];
                 Lg{kk}=logliosl(K,th,params,Hk);
               end
