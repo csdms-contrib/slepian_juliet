@@ -989,17 +989,19 @@ elseif strcmp(Hx,'demo2')
           closeto=th0;
           %closeto=mobs;
           fname=fullfile(getenv('IFILES'),'HASHES',...
-                         hash([struct2array(orderfields(p)) closeto],'SHA-1'));
-          if ~exist(sprintf('%s.mat',fname),'file')
-              % Fish for a data vector whose parameter estimates are within X% relative
+                         sprintf('MLEOSL-%s',hash([struct2array(orderfields(p)) closeto],'SHA-1')));
+          if ~exist(sprintf('s.mat',fname),'file')
+              % Fish for a data vector whose parameter estimates are within P% relative
               % distance of a certain target (this will take a few iterations)
               thhat=NaN; scl=NaN;
-              while any(abs(thhat.*scl-closeto)./closeto>0.01) | isnan(thhat)
+              P=20;
+              while any(abs(thhat.*scl-closeto)./closeto>P/100) | isnan(thhat)
                   % Simulate from the mean observation
                   p.blurs=Inf; Hx=simulosl(closeto,p);
                   % Calculate the MLE for the data vector - no more gratuitous output
                   [thhat,~,lpars,scl,~,~,Hk]=mleosl(Hx,[],p,[],[],[],[],0);
               end
+              % Remember COVCONT is whichever covariance gets used, THCONT is the axis range
               [Lgrid,Lcon,thR,xcon,ycon]=...
                   mlelcontosl(Hk,thhat,scl,p,covcont,thcont,runinpar);
               save(fname,'thhat','scl','p','Hk','Lgrid','Lcon','thR','xcon','ycon')
@@ -1089,7 +1091,7 @@ elseif strcmp(Hx,'demo2')
       delete(ep)
       delete(ec)
 
-      % Just reusing scl isn't good enough, now it's consitent with MLEPLOS axes
+      % Just reusing scl isn't good enough, now it's consistent with MLEPLOS axes
       sclth0=10.^round(log10(abs(th0)));
       
       % Prepare to plot the loglihood contours on the existing axes
@@ -1100,7 +1102,7 @@ elseif strcmp(Hx,'demo2')
           xi=pcomb(ind,1); yi=pcomb(ind,2);
           axes(ah(ind))
           hold on
-          % Contour or contourf
+          % CONTOUR or CONTOURF
           [cont,ch(ind)]=contourf(xcon{ind}/sclth0(xi),ycon{ind}/sclth0(yi),...
                                   Lgrid(:,:,ind),Lcon(ind,:));
           % This doesn't seem to do much now
@@ -1108,15 +1110,14 @@ elseif strcmp(Hx,'demo2')
           % This is slightly better says Olivia
           try
               ch(ind).EdgeAlpha=0.4;
-          catch
-              keyboard
           end
           % set(ch(ind),'EdgeColor',grey(3),'LineStyle','-');
           cmap=flipud(gray(10));
           % Cut off the last bit
-          cmap(end,:)=[1 1 1]; 
+          cmap(end,:)=[1 1 1];
           colormap(cmap)
           bottom(ch(ind),ah(ind))
+          % Make open the axes a smidgen?
           box on
       end
       hold off
