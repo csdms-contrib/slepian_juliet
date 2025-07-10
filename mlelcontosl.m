@@ -248,7 +248,7 @@ if ~ischar(Hk)
     thTick=repmat(thhat3',size(stds))+thhatsd*stds;
     thTickLa=cell(size(thTick));
 
-    keyboard
+    % FJS to OLW The gratuitous plot doesn't match the desired one
     
     % Convert those tickmark values to strings for tickmark labels
     for i=1:length(stds)
@@ -481,9 +481,9 @@ elseif strcmp(Hk,'demo2')
   covth=covthosl(th0,p,2,[1 1 1]);
 
   % Go fish... for a data vector whose estimate is within P% of th0
-  P=0.02;
+  P=2;
   thhat=NaN;scl=NaN;
-  while any(abs(thhat.*scl-th0)./th0>P) | isnan(thhat)
+  while any(abs(thhat.*scl-th0)./th0>(P/100)) | isnan(thhat)
      % Simulate from the mean observation
      ps=p; ps.blurs=Inf; Hx=simulosl(th0,ps); 
 
