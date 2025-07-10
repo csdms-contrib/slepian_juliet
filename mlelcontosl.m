@@ -41,6 +41,7 @@ function varargout=mlelcontosl(Hk,thhat,scl,params,covth,thRange,runinpar,stit,a
 % EXAMPLE:
 %
 % mlelcontosl('demo1')
+% mlelcontosl('demo2')
 %
 % [Hx,th0,params,k,Hk]=simulosl;
 % [thhat,covFHh,lpars,scl,thini,params,Hk,k]=mleosl(Hx,[],params,[],[],[],[],1,2);
