@@ -86,7 +86,8 @@ function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah,unts)
 % mlechipsdosl('demo1') % Thin section 
 % mlechipsdosl('demo2') % Bathmetry
 % mlechipsdosl('demo3') % Fault roughness
-% mlechipsdosl('demo4') % Sea surface height anomaly 
+% mlechipsdosl('demo4') % Venus
+% mlechipsdosl('demo5') % Sea surface height anomaly 
 %
 % Last modified by gleggers-at-princeton.edu, 04/17/2014
 % Last modified by fjsimons-at-alum.mit.edu, 06/26/2018
@@ -180,6 +181,8 @@ if ~isstr(Hk)
         params=pd;
         [kk,~,~,kx,ky]=knums(pd); 
         k=kk(:);
+
+        % See Vanmarcke 2010 differencing
     else
         % Same as it always was:
         % The following is as in MLECHIPLOS, need to force SIMULOSL to return theoretical Sb
@@ -205,11 +208,11 @@ if ~isstr(Hk)
     % Calculate residuals, removing values at the zero wavenumber and
     % wavenumbers above the minimum wavenumber "params.kiso"
     Xk(k==0)=NaN;
-    % Xk(k>params.kiso)=NaN;
+    Xk(k>params.kiso)=NaN;
     % An additional adjustment to try is reducing the annular radius of the
     % residuals a bit in case the data filter was not applied as quoted (recall 
     % conversation w Sofia on June 11 2025)
-    Xk(k>params.kiso.*0.8)=NaN;
+    %Xk(k>params.kiso.*0.8)=NaN;
 
     % And this should be the same thing again, except how it treats k=0
     [Lbar,~,~,momx,~,Xk1]=logliosl(k,thhat.*scl,params,Hk,1);
@@ -422,7 +425,7 @@ if ~isstr(Hk)
     % does it?
     if ~isnan(params.kiso)
         % Place a box giving the wavelength of the isotropic wavenumber cutoff
-        [~,zy]=boxtex('ll',ah(3),sprintf('%2.0f %s',2*pi./params.kiso),unts,...
+        [~,zy]=boxtex('ll',ah(3),sprintf('%2.0f %s',2*pi./params.kiso,unts),...
 		      12,[],[],1.1);
         set(zy,'FontSize',get(zy,'FontSize')-1)
     end
@@ -955,6 +958,123 @@ elseif strcmp(Hk,'demo3')
     % fnum 6, th [  9.75e-06      0.557       42.951], FishJFish. std : [ 9.51e-08    0.0177      0.74717]
     % fnum 8, th [ 1.1422e-05     0.6619      43.266], FishJFish. std : [ 1.13e-07    0.0211      0.68681]
 elseif strcmp(Hk,'demo4')
+    % Load a patch of Venus; the ``secret'' to passing the test at this point is
+    % decimating the data, or using blurs>-1. We don't want to do the latter, so
+    % choose a patch that is large to begin with. Below are some options:
+    imnum=2;
+    pth='~/Documents/Venus/';
+    fnam='plmVenus_D-5.mat';
+    if imnum==1
+      topo=modload(fullfile(pth,fnam),'V0010_03');
+      tdx1=1;      ndx1=1;
+      [tdx2,ndx2]=size(topo.dataP.dp);
+    elseif imnum==2
+      topo=modload(fullfile(pth,fnam),'V0022_03');
+      tdx1=1;      ndx1=1;
+      [tdx2,ndx2]=size(topo.dataP.dp);
+    elseif imnum==3
+      topo=modload(fullfile(pth,fnam),'V0066_03');
+      tdx1=1;      ndx1=1;
+      [tdx2,ndx2]=size(topo.dataP.dp);
+    end
+    unts=topo.dataP.unit;
+    p=topo.params;
+    % It would be nice to work with km and not m; make the conversion in dydx
+    unts='km';
+    p.dydx=p.dydx/1e3;
+    elev=topo.dataP.dp;
+    % Decimate
+    dec=2;
+    p.dydx=p.dydx.*dec;
+    tdx=tdx1:dec:tdx2;
+    ndx=ndx1:dec:ndx2;
+    Hx=elev(tdx,ndx);
+    p.NyNx=size(Hx);
+
+    % Remove any planar trends
+    [~,~,~,~,~,Z]=planefit(v2s(Hx,p));
+    km=mean(Hx(:));
+    Hx=Hx(:)-Z(:);
+    Hx=Hx-mean(Hx);
+    Hx=Hx(:);
+
+    % Option to fill the extreme peaks and troughs outside of mnprc -- mxprc in
+    % the dataset that will be used for the MLE analysis
+    % This is not so important to these datasets
+    mnprc=1;
+    mxprc=99;
+    Hx(Hx<prctile(Hx,mnprc))=prctile(Hx,mnprc);
+    Hx(Hx>prctile(Hx,mxprc))=prctile(Hx,mxprc);
+    Hx=Hx-mean(Hx);
+
+    % Set up the call for the main MLECHIPSDOSL routine, including applying the
+    % smooth taper
+    p.blurs=-1; 
+    p.kiso=pi./max(p.dydx);
+    pt=p; Tx=gettaper(pt,'cosine',0.1);
+    pt.taper=Tx;
+    % Make the estimate and request covariance using the sampling method
+    % Don't redo if you had it
+    fname=fullfile(getenv('IFILES'),'HASHES',sprintf('%s-%s',upper(mfilename),hash(Hx,'SHA-1')));
+    if ~exist(sprintf('%s.mat',fname),'file')
+        % You could give it something close either in thini or aguess if you've run it before
+        % but this doesn't always actually make it easier
+        thini=[];
+        thhat=NaN;
+        while isnan(thhat)
+            [thhat,covFHhJ,~,scl,~,~,Hk]=mleosl(Hx,[],pt,[],[],[],[],[],1);
+        end
+        save(fname,'thhat','scl','Hk','covFHhJ')
+    else
+        load(fname)
+    end
+    % Simulate at the estimate, without the taper
+    p.blurs=Inf;
+    HxS=simulosl(thhat.*scl,p);
+
+    % Make a first figure with the oboserved and the simulated field
+    f1=figure(1);
+    fig2print(f1,'landscape')
+    set(f1,'PaperPositionMode','auto')
+    tts={'data','synthetic'};
+    axs={sprintf('longitude (%s)',str2mat(176))
+         sprintf('latitude (%s)',str2mat(176))};
+    fw='normal';
+    % Common color range
+    cmap=kelicol;
+    cax1=prctile(Hx ,[1 99]);
+    cax2=prctile(HxS,[1 99]);
+
+    clf
+    [ah,ha,H]=krijetem(subnum(2,2));
+
+    p.lon=topo.geo.lonrDx; p.lat=topo.geo.latrDx; p.ndx=[1 2]; p.tdx=[1 2];
+    % Plot the data but keep the mean again
+    [tl(1),xl(1),yl(1)]=plotit2(flipud(v2s(Hx,p))+km,p,ah(1),tts{1},axs,cmap,cax1,fw);
+    % Plot the synthetic
+    [tl(2),xl(2),yl(2)]=plotit2(       v2s(HxS,p)+km,p,ah(3),tts{2},axs,cmap,cax2,fw);
+
+    %[acb,axcb]=addcb('vert',cax,cax,'sergeicol');
+    %moveh(acb,0.2)
+
+    % Just prepare for LaTeX trim and clip on 8.5.0.197613 (R2015a)
+    delete(ah([2 4]))
+
+    figure(2)
+    clf
+    scl2=scl;scl2(1)=1;
+    [~,~,nah,nah1,cb,ch,spt]=mlechipsdosl(Hk,thhat,scl2,pt,...
+                         sprintf('%s = %i %s = %4.2f  %s = %4.2f %s',...
+                        '\sigma^2',round(thhat(1)*scl(1)),...
+                        '\nu',thhat(2)*scl(2),...
+                        '\rho',round(thhat(3)*scl(3),3),unts),...
+                         [],unts);
+
+    figure(1)
+    figna=figdisp([],sprintf('%s_%i','demo4_1',imnum),[],1);
+    figure(2)
+    figna=figdisp([],sprintf('%s_%i','demo4_2',imnum),[],1);
+elseif strcmp(Hk,'demo5')
     % Sea surface height anomaly, near real time
     % Source: https://doi.org/10.48670/moi-00149
     % ``Altimeter satellite gridded Sea Level Anomalies (SLA) computed with respect to a
