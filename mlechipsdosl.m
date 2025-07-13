@@ -365,6 +365,8 @@ if ~isstr(Hk)
     c11=[kx(1) ky(end)]/10^om;
     cmn=[kx(end) ky(1)]/10^om;
 
+keyboard
+    
     % Remove the zero wavenumber value (to avoid issues with the
     % colorscale) and those at wavenumbers above the isotropic cutoff
     Sb(k==0)=NaN;
@@ -643,7 +645,7 @@ elseif strcmp(Hk,'demo1')
     figna=figdisp([],sprintf('%s_%i','demo1_2',imnum),[],1);
 elseif strcmp(Hk,'demo2')
     % Bathymetry from GEBCO
-    % Data window selected as a subset of the region in DEMO4
+    % Data window selected as a subset of the region in DEMO5
     fnam=fullfile(getenv('IFILES'),'GEBCO','GEBCO2024Grid_AtlanticMERMAIDpatch.mat');
     dat=load(fnam);
     % compare
@@ -713,7 +715,7 @@ elseif strcmp(Hk,'demo2')
     p.blurs=Inf;
     HxS=simulosl(thhat.*scl,p);
 
-    % Make a first figure with the oboserved and the simulated field
+    % Make a first figure with the observed and the simulated field
     f1=figure(1);
     fig2print(f1,'landscape')
     set(f1,'PaperPositionMode','auto')
@@ -967,7 +969,8 @@ elseif strcmp(Hk,'demo4')
     % decimating the data, or using blurs>-1. We don't want to do the latter, so
     % choose a patch that is large to begin with. Below are some options:
     imnum=2;
-    pth='~/Documents/Venus/';
+    % pth='~/Documents/Venus/';
+    pth=fullfile(getenv('IFILES'),'VENUS','DATA','plmData');
     fnam='plmVenus_D-5.mat';
     if imnum==1
       topo=modload(fullfile(pth,fnam),'V0010_03');
@@ -984,6 +987,7 @@ elseif strcmp(Hk,'demo4')
     end
     unts=topo.dataP.unit;
     p=topo.params;
+
     % It would be nice to work with km and not m; make the conversion in dydx
     unts='km';
     p.dydx=p.dydx/1e3;
@@ -1195,7 +1199,7 @@ elseif strcmp(Hk,'demo5')
     end
     keyboard
     movev([ti(1) ti(4)],0.12)
-    figna=figdisp([],'demo3_kiso',[],1);
+    figna=figdisp([],'demo5_kiso',[],1);
 end
 
 % Just the space plots
