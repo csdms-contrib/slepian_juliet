@@ -971,6 +971,8 @@ elseif strcmp(Hx,'demo2')
               axlm(2,:).*10^round(log10(th0(2)));...
               axlm(3,:).*10^round(log10(th0(3)))];
 
+      % FJS avoid cutoffs when contours extend too far
+      
       % Set the covariance matrix from which the number of standard deviations
       % out from the mean observation is calculated for contour placement
       covcont=cobs; %covth;
@@ -986,15 +988,14 @@ elseif strcmp(Hx,'demo2')
       switch ocalc
         case 'A'
           % What are we staying close to?
-          closeto=th0;
+          closeto=th0; P=17;
           %closeto=mobs;
           fname=fullfile(getenv('IFILES'),'HASHES',...
-                         sprintf('MLEOSL-%s',hash([struct2array(orderfields(p)) closeto],'SHA-1')));
+                         sprintf('MLEOSL-%s',hash([struct2array(orderfields(p)) closeto P thcont(:)'],'SHA-1')));
           if ~exist(sprintf('s.mat',fname),'file')
               % Fish for a data vector whose parameter estimates are within P% relative
               % distance of a certain target (this will take a few iterations)
               thhat=NaN; scl=NaN;
-              P=20;
               while any(abs(thhat.*scl-closeto)./closeto>P/100) | isnan(thhat)
                   % Simulate from the mean observation
                   p.blurs=Inf; Hx=simulosl(closeto,p);
