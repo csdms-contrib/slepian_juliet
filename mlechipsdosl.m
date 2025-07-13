@@ -362,11 +362,11 @@ if ~isstr(Hk)
     axes(ah(2))
 
     % The top-left and bottom-right wavenumbers, scaled
-    c11=[kx(1) ky(end)]/10^om;
-    cmn=[kx(end) ky(1)]/10^om;
+    % The negatives are to trick IMAGEFNAN - we want a Nyquist, if even, at the top and the left,
+    % and we want the zero right on the grid line
+    c11=[kx(1)   -ky(1)]/10^om;
+    cmn=[kx(end) -ky(end)]/10^om;
 
-keyboard
-    
     % Remove the zero wavenumber value (to avoid issues with the
     % colorscale) and those at wavenumbers above the isotropic cutoff
     Sb(k==0)=NaN;
@@ -408,10 +408,17 @@ keyboard
     % Return to the main axis and prepare to plot contours
     axes(ah(2)); hold on
 
+    exx=xlim; eyy=ylim;
+    
     % Calculate and plot contours
-    [~,ch(1)]=contour(kx/10^om,fliplr(ky/10^om),sclSb,conPSD,'LineW',2);
+    %    [~,ch(1)]=contour(kx/10^om,fliplr(ky/10^om),sclSb,conPSD,'LineW',2);
+    [~,ch(1)]=contour(kx/10^om,ky/10^om,sclSb,conPSD,'LineW',2);
+    
     colormap(jet)
     caxis(caxPSD)
+
+    axes(ah(2))
+    axis([exx eyy])
 
     % Option to set the contours to black for visibility
     %set(hb,'color','k')
@@ -481,9 +488,14 @@ keyboard
     % Return to the main axis and prepare to plot contours
     axes(ah(4)); hold on
 
+    exx=xlim; eyy=ylim;
+    
     % Place contours from the predicted power spectrum onto this true one
-    [~,ch(2)]=contour(kx/10^om,fliplr(ky/10^om),sclSb,conPSD,'LineW',2);
+    [~,ch(2)]=contour(kx/10^om,ky/10^om,sclSb,conPSD,'LineW',2);
     caxis(caxPSD)
+
+    axes(ah(4))
+    axis([exx eyy])
 
     % Option to set the contours to black for visibility
     % set(hb,'color','k')
