@@ -124,8 +124,8 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver,cm)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 07/02/2025
-% Last modified by olwalbert-at-princeton.edu, 07/02/2025
+% Last modified by fjsimons-at-alum.mit.edu, 07/10/2025
+% Last modified by olwalbert-at-princeton.edu, 07/10/2025
 
 if ~isstr(Hx)
   defval('algo','unc')
@@ -988,7 +988,7 @@ elseif strcmp(Hx,'demo2')
       switch ocalc
         case 'A'
           % What are we staying close to?
-          closeto=th0; P=17;
+          closeto=th0; P=1;
           %closeto=mobs;
           fname=fullfile(getenv('IFILES'),'HASHES',...
                          sprintf('MLEOSL-%s',hash([struct2array(orderfields(p)) closeto P thcont(:)'],'SHA-1')));
@@ -1098,6 +1098,8 @@ elseif strcmp(Hx,'demo2')
       % Prepare to plot the loglihood contours on the existing axes
       % Find the pairwise combinations for the cross-plot convention: s2-nu,
       % s2-rho, nu-rho
+      % We're done with scl but for the plot
+      scl(1)=1;
       pcomb=nchoosek(1:np,2);
       for ind=1:np
           xi=pcomb(ind,1); yi=pcomb(ind,2);
@@ -1120,6 +1122,10 @@ elseif strcmp(Hx,'demo2')
           bottom(ch(ind),ah(ind))
           % Make open the axes a smidgen?
           box on
+          dd(ind)=plot(thcont(xi,1)*[1 1]/scl(xi),ylim,'k');
+          ff(ind)=plot(thcont(xi,2)*[1 1]/scl(xi),ylim,'k');
+          gg(ind)=plot(xlim,thcont(yi,1)*[1 1]/scl(yi),'k');
+          ee(ind)=plot(xlim,thcont(yi,2)*[1 1]/scl(yi),'k');
       end
       hold off
       keyboard
