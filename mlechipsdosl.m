@@ -653,7 +653,7 @@ elseif strcmp(Hk,'demo2')
     z2019=gebco(LOLO,LALA,2019);
     % plot(z2019(:),dat.sgelev(:),'.')
     % Decide to keep old GEBCO
-    %elev=dat.sgelev;
+    % elev=dat.sgelev;
     elev=z2019;
     lat=dat.mlats;
     lon=dat.mlons;
@@ -663,14 +663,17 @@ elseif strcmp(Hk,'demo2')
     tdx=300:1000;
     imnum=1;
     % May need to decimate the field if it is too big
-    dec=3;
     if any(p.NyNx>400)
+        dec=3;
         tdx=tdx(1:dec:end);
         ndx=ndx(1:dec:end);
         p.dydx=p.dydx.*dec;
     end
     p.NyNx=[numel(tdx) numel(ndx)];
-    p.lon=lon; p.lat=lat; p.ndx=ndx; p.tdx=tdx;
+    p.lon=lon;
+    p.lat=lat;
+    p.ndx=ndx;
+    p.tdx=tdx;
     % Possibly no need for further conversion
     Hx=double(elev(tdx,ndx));
     
@@ -681,8 +684,10 @@ elseif strcmp(Hk,'demo2')
 
     % Set up the call for the main MLECHIPSDOSL routine, including applying the
     % smooth taper
-    p.blurs=-1; p.kiso=NaN;
-    pt=p; Tx=gettaper(pt,'cosine',0.10);
+    p.blurs=-1;
+    p.kiso=NaN;
+    pt=p;
+    Tx=gettaper(pt,'cosine',0.10);
     pt.taper=Tx;
     % Make the estimate and request covariance using the sampling method
     % Don't redo if you had it 
