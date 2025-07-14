@@ -83,10 +83,10 @@ function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah,unts)
 % [thhat4,~,~,scl4,~,~,Hk4]=mleosl(Hx4.*p.taper(:),[],p);scl4(1)=1;
 % mlechipsdosl(Hk4,thhat4,scl4,p)
 % 
-% mlechipsdosl('demo1') % Thin section 
-% mlechipsdosl('demo2') % Bathmetry
+% mlechipsdosl('demo1') % Quartzite thin section 
+% mlechipsdosl('demo2') % Atlantic bathymetry
 % mlechipsdosl('demo3') % Fault roughness
-% mlechipsdosl('demo4') % Venus
+% mlechipsdosl('demo4') % Venus topography
 % mlechipsdosl('demo5') % Sea surface height anomaly 
 %
 % Last modified by gleggers-at-princeton.edu, 04/17/2014
@@ -980,7 +980,7 @@ elseif strcmp(Hk,'demo4')
     % Load a patch of Venus; the ``secret'' to passing the test at this point is
     % decimating the data, or using blurs>-1. We don't want to do the latter, so
     % choose a patch that is large to begin with. Below are some options:
-    imnum=2;
+    imnum=1;
     % pth='~/Documents/Venus/';
     pth=fullfile(getenv('IFILES'),'VENUS','DATA','plmData');
     fnam='plmVenus_D-5.mat';
@@ -1062,9 +1062,10 @@ elseif strcmp(Hk,'demo4')
          sprintf('latitude (%s)',str2mat(176))};
     fw='normal';
     % Common color range
-    cmap=kelicol;
-    cax1=prctile(Hx ,[1 99]);
-    cax2=prctile(HxS,[1 99]);
+    cmap=flipud(kelicol);
+    % Be like Gabe
+    cax1=prctile(Hx ,[5 95]);
+    cax2=prctile(HxS,[5 95]);
 
     clf
     [ah,ha,H]=krijetem(subnum(2,2));
@@ -1090,7 +1091,6 @@ elseif strcmp(Hk,'demo4')
                         '\nu',thhat(2)*scl(2),...
                         '\rho',round(thhat(3)*scl(3),3),unts),...
                          [],unts);
-
     figure(1)
     figna=figdisp([],sprintf('%s_%i','demo4_1',imnum),[],1);
     figure(2)
