@@ -364,6 +364,11 @@ if ~isstr(Hk)
     % The top-left and bottom-right wavenumbers, scaled
     % The negatives are to trick IMAGEFNAN - we want a Nyquist, if even, at the top and the left,
     % and we want the zero right on the grid line
+    % FJS Re-check this - the below does Venus right, but the old one (no negative, fliplr below)
+    % looked right in the PDF of the fine samplings, but not on the screen - so
+    % perhaps there is a rendering thing going on. Anyway, we are going with the
+    % one where the small grids look right in the rendering, that is all
+
     c11=[kx(1)   -ky(1)]/10^om;
     cmn=[kx(end) -ky(end)]/10^om;
 
@@ -756,8 +761,6 @@ elseif strcmp(Hk,'demo2')
     % Just prepare for LaTeX trim and clip on 8.5.0.197613 (R2015a)
     delete(ah([2 4]))
 
-    keyboard
-
     figure(2)
     clf
     scl2=scl;scl2(1)=1;
@@ -767,6 +770,8 @@ elseif strcmp(Hk,'demo2')
                         '\nu',thhat(2)*scl(2),...
                         '\rho',round(thhat(3)*scl(3),3),unts),...
                          [],unts);
+
+    keyboard
 
     figure(1)
     figna=figdisp([],sprintf('%s_%i','demo2_1',imnum),[],1);
