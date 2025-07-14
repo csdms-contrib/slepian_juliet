@@ -638,8 +638,6 @@ elseif strcmp(Hk,'demo1')
     % Just prepare for LaTeX trim and clip on 8.5.0.197613 (R2015a)
     delete(ah([2 4]))
 
-    keyboard
-    
     figure(2)
     clf
     % Remember that MLEOSL already returned variance scaled data
@@ -651,6 +649,8 @@ elseif strcmp(Hk,'demo1')
                         '\rho',round(thhat(3)*scl(3),3),unts),...
                          [],unts);
 
+    keyboard
+    
     figure(1)
     figna=figdisp([],sprintf('%s_%i','demo1_1',imnum),[],1);
     figure(2)
@@ -980,7 +980,7 @@ elseif strcmp(Hk,'demo4')
     % Load a patch of Venus; the ``secret'' to passing the test at this point is
     % decimating the data, or using blurs>-1. We don't want to do the latter, so
     % choose a patch that is large to begin with. Below are some options:
-    imnum=1;
+    imnum=3;
     % pth='~/Documents/Venus/';
     pth=fullfile(getenv('IFILES'),'VENUS','DATA','plmData');
     fnam='plmVenus_D-5.mat';
@@ -1063,9 +1063,13 @@ elseif strcmp(Hk,'demo4')
     fw='normal';
     % Common color range
     cmap=flipud(kelicol);
-    % Be like Gabe
-    cax1=prctile(Hx ,[5 95]);
-    cax2=prctile(HxS,[5 95]);
+    % Be like Gabe? With the planefit, his 5 95 is too restrictive
+    perx=[2.5 97.5];
+    perx=[2.5 97.5];
+    perx=[1 99];
+    cax1=prctile(Hx ,perx);
+    cax1=prctile([Hx HxS],perx);
+    cax2=prctile(HxS,perx); cax2=cax1;
 
     clf
     [ah,ha,H]=krijetem(subnum(2,2));
