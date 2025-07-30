@@ -234,9 +234,11 @@ if ~isstr(Hk)
     % Bounds of 2X residuals to how (functions as axis bounds in panel 1)
     bounds2X=2*boundsX0;
     % Color axis for the power spectral densities (panels 2 and 4)
-    caxPSD=[-5 0];
+    caxPSD=[-5 0]; % Venus only
+    caxPSD=[-3.5 0]
     % Contours to be plotted on the power spectral density plots
     conPSD=[-5:-1];
+    conPSD=[-3.5:-1] % Venus only
     % Get order of magnitude of last wavenumber for scaling
     om=round(log10(max(k(:))));
 
@@ -368,7 +370,6 @@ if ~isstr(Hk)
     % looked right in the PDF of the fine samplings, but not on the screen - so
     % perhaps there is a rendering thing going on. Anyway, we are going with the
     % one where the small grids look right in the rendering, that is all
-
     c11=[kx(1)   -ky(1)]/10^om;
     cmn=[kx(end) -ky(end)]/10^om;
 
@@ -667,6 +668,7 @@ elseif strcmp(Hk,'demo2')
     dat=load(fnam);
     % compare
     [LOLO,LALA]=meshgrid(dat.mlons,dat.mlats);
+    % Note that this will triggger parallel pool
     % z2008=gebco(LOLO,LALA,2008);
     % z2014=gebco(LOLO,LALA,2014);
     z2019=gebco(LOLO,LALA,2019);
@@ -985,7 +987,7 @@ elseif strcmp(Hk,'demo4')
     % Load a patch of Venus; the ``secret'' to passing the test at this point is
     % decimating the data, or using blurs>-1. We don't want to do the latter, so
     % choose a patch that is large to begin with. Below are some options:
-    imnum=3;
+    imnum=2;
     % pth='~/Documents/Venus/';
     pth=fullfile(getenv('IFILES'),'VENUS','DATA','plmData');
     fnam='plmVenus_D-5.mat';
@@ -1063,8 +1065,8 @@ elseif strcmp(Hk,'demo4')
     fig2print(f1,'landscape')
     set(f1,'PaperPositionMode','auto')
     tts={'data','synthetic'};
-    axs={sprintf('longitude (%s)',str2mat(176))
-         sprintf('latitude (%s)',str2mat(176))};
+    axs={sprintf('transformed longitude (%s)',str2mat(176))
+         sprintf('transformed latitude (%s)',str2mat(176))};
     fw='normal';
     % Common color range
     cmap=flipud(kelicol);
@@ -1100,6 +1102,9 @@ elseif strcmp(Hk,'demo4')
                         '\nu',thhat(2)*scl(2),...
                         '\rho',round(thhat(3)*scl(3),3),unts),...
                          [],unts);
+
+    keyboard
+
     figure(1)
     figna=figdisp([],sprintf('%s_%i','demo4_1',imnum),[],1);
     figure(2)
