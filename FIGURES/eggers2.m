@@ -7,6 +7,10 @@ function eggers2
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 % Last modified by fjsimons-at-alum.mit.edu, 06/23/2018
+% Last modified by olwalbert-at-princeton.edu, 11/14/2025
+
+% Option for loglog sdf
+llsdf=1;
  
 % Metric conversion
 mfromkm=1000;
@@ -36,7 +40,11 @@ k=unique([linspace(k(1),k(2),50)...
 % Spatial axes, for the distance [m]
 x=linspace(0,(Nx-1)*dx,100);
 % New range for Ky
-newr=[-0.1 1.1];
+if llsdf
+  newr=[1e-6 1.1];
+else
+  newr=[-0.1 1.1];
+end
 % New ticks for Ky
 newy=[0 1/3 2/3 1];
 
@@ -66,17 +74,38 @@ for ind=1:length(S2)
   th0=[S2(ind) NU(ind) RH(ind)];
   % The normalized spectral density%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   axes(ah(ind))
-  Sk= maternos(k,th0,2);
+  Sk= maternos(k,th0,[],2);
   % Conversion is happening 
-  pS(ind)=semilogx(k*mfromkm,Sk/S0(ind));
-  % Do this before the extra axis, the plus one is crucial
-  set(ah(ind),'xlim',klims,'ygrid','on')
+  if llsdf
+    pS(ind)=loglog(k*mfromkm,Sk/S0(ind));
+  else
+    pS(ind)=semilogx(k*mfromkm,Sk/S0(ind));
+  end
   % Keep track of maximum for plotting only
   hold on
+  % Do this before the extra axis, the plus one is crucial
+  if llsdf
+    set(ah(ind),'xlim',klims)
+    pgy{ind}=plot(newr,[exes(3:end) ; exes(3:end)],'k:');
+  else
+    set(ah(ind),'xlim',klims,'ygrid','on')
+  end
   % Remove the last one since it's so close to the axis
-  pg{ind}=plot([exes(1:end-1) ; exes(1:end-1)],newr,':');
+  pg{ind}=plot([exes(1:end-1) ; exes(1:end-1)],newr,'k:');
   % Remove the ones where the labels will be
-  pgg{ind}=plot([exes(end-1) ; exes(end-1)],[0.41 0.99],'w-');
+  if llsdf
+    yremr=[0.03 0.3];
+    yreml=[0.5 1.5].*10.^(-3+0.5.*[1;2;3]);
+  else
+    yremr=[0.41 0.99];
+    yreml=[0.01 0.19]+([1;2;3]-1)*0.2;
+  end
+  pgg{ind}=plot([exes(end-1) ; exes(end-1)],yremr,'w-');
+  if llsdf
+    % White
+    pgyg(1)=plot([exes(1) exes(2)*3],[exes(end-1) ; exes(end-1)],'w-');
+    pgyg(2)=plot([exes(3)*0.8 exes(end)],[exes(end) ; exes(end)],'w-');
+  end
   % Plot some Matern percentages!
   pers=[25 50 75];
   for ond=1:length(pers)
@@ -84,15 +113,25 @@ for ind=1:length(S2)
     hold on
     ppr{ind}(ond)=plot([Kprc(ond) Kprc(ond)]*mfromkm,newr,'k-');
     % White
-    pww{ind}(ond)=plot([exes(1) exes(1)],[0.01 0.19]+(ond-1)*0.2,'w-',...
+    pww{ind}(ond)=plot([exes(1) exes(1)],yreml(ond,:),'w-',...
                        'linew',2);
     % White
-    pwx{ind}(ond)=plot([exes(2) exes(2)],[0.01 0.19]+(ond-1)*0.2,'w-',...
+    pwx{ind}(ond)=plot([exes(2) exes(2)],yreml(ond,:),'w-',...
                        'linew',1);
     % Annotate the percentiles
-    al(ond,ind)=text(xla,0.1-0.035+(ond-1)*0.2,...
+    if llsdf
+      yla=10^(-3+0.5*ond);
+    else
+      yla=0.1-0.035+(ond-1)*0.2;
+    end
+    al(ond,ind)=text(xla,yla,...
                      sprintf('%s_{%i} = %i km','\lambda',...
                              pers(ond),round(2*pi/Kprc(ond)/mfromkm)));
+  end
+  if llsdf
+    ylim([1e-3 1.1])
+  else
+    ylim(newr)
   end
   hold off
 
@@ -102,7 +141,7 @@ for ind=1:length(S2)
   xl(ind)=xlabel('wavenumber (rad/km)');
   
   % Put on the wavelength axis
-  set(ah(ind),'ylim',newr,'xtick',exes)
+  set(ah(ind),'xtick',exes)
   [axx(ind),xl(ind),yl(ind)]=...
       xtraxis(ah(ind),xtil,xtil,...
 	      sprintf('wavelength (km)'));
@@ -111,9 +150,14 @@ for ind=1:length(S2)
   shrink(axx(ind),1,0.99); movev(axx(ind),-0.001)
   % Legends on the extra axis
   axes(axx(ind))
-  aa(1,ind)=text(xa,0.9,sprintf('%s = %3.1f km','\sigma',sqrt(S2(ind))/mfromkm));
-  aa(2,ind)=text(xa,0.7,sprintf('%s = %3.2f %s','\nu',NU(ind),'  '));
-  aa(3,ind)=text(xa,0.5,sprintf('%s = %i km','\rho',RH(ind) /mfromkm));
+  if llsdf
+    ya=[0.2 0.1 0.05];
+  else
+    ya=[0.9 0.7 0.5];
+  end
+  aa(1,ind)=text(xa,ya(1),sprintf('%s = %3.1f km','\sigma',sqrt(S2(ind))/mfromkm));
+  aa(2,ind)=text(xa,ya(2),sprintf('%s = %3.2f %s','\nu',NU(ind),'  '));
+  aa(3,ind)=text(xa,ya(3),sprintf('%s = %i km','\rho',RH(ind) /mfromkm));
   
   % The correlation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   axes(ah(ind+ncol))
@@ -146,15 +190,14 @@ for ind=1:length(S2)
   % Sizes of the fields
   params.NyNx=[Nx Nx];
   % Spectral blurring using BLUROS or BLUROSY
-  params.blurs=0;
+  params.blurs=Inf;
   % Space decorrelation using QUARTER
-  params.quart=1; disp('Quartering')
+  % params.quart=1; disp('Quartering')
   % Isotropic filtering
-  params.kiso=pi/sqrt(prod(params.dydx)); disp('Isotropic filtering')
-  params.kiso=NaN; disp('(Rather) no filtering')
+  % params.kiso=pi/sqrt(prod(params.dydx)); disp('Isotropic filtering')
+  % params.kiso=NaN; disp('(Rather) no filtering')
   % Perform the actual simulation
   Hx=simulosl([S2(ind) NU(ind) RH(ind)],params);
-  keyboard
   % Plot it up to within twice the actual or sample variance
   Hxm=mean(Hx);
   Hx=Hx-Hxm;
