@@ -1304,6 +1304,7 @@ end
 
 % Just the space plots
 function [tl,xl,yl,cb]=plotit(d,p,ah,tts,axs,cmap,cax,fw,km)
+defval('km',0)
 % Must make this active
 axes(ah)
 imagefnan([1 p.NyNx(1)],[p.NyNx(2) 1],d,cmap,cax);
