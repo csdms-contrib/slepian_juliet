@@ -1,5 +1,5 @@
 function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah,unts)
-% [a,mag,ah,ah2,cb,ch,spt]=MLECHIPSDOSL(Hk,thhat,scl,params,stit,ah,unts)
+% [a,mag,ah,ah2,cb,ch,spt,cll]=MLECHIPSDOSL(Hk,thhat,scl,params,stit,ah,unts)
 %
 % Makes a FOUR-panel plot of the quadratic residuals and their
 % interpretation for a Matern likelihood model of a single-field
@@ -36,6 +36,7 @@ function varargout=mlechipsdosl(Hk,thhat,scl,params,stit,ah,unts)
 % cb          Colorbar (panel 3) handle
 % ch          Contour (panels 2 and 4) handles
 % spt         Supertitle handle
+% cll         Handles to contour labels
 %
 % SEE ALSO:
 %
@@ -418,8 +419,9 @@ if ~isstr(Hk)
     
     % Calculate and plot contours
     %    [~,ch(1)]=contour(kx/10^om,fliplr(ky/10^om),sclSb,conPSD,'LineW',2);
-    [~,ch(1)]=contour(kx/10^om,ky/10^om,sclSb,conPSD,'LineW',2);
-    
+    [cl{1},ch(1)]=contour(kx/10^om,ky/10^om,sclSb,conPSD,'LineW',2);
+    cll{1}=clabel(cl{1});
+
     colormap(jet)
     caxis(caxPSD)
 
@@ -497,7 +499,8 @@ if ~isstr(Hk)
     exx=xlim; eyy=ylim;
     
     % Place contours from the predicted power spectrum onto this true one
-    [~,ch(2)]=contour(kx/10^om,ky/10^om,sclSb,conPSD,'LineW',2);
+    [cl{2},ch(2)]=contour(kx/10^om,ky/10^om,sclSb,conPSD,'LineW',2);
+    cll{2}=clabel(cl{2});
     caxis(caxPSD)
 
     axes(ah(4))
@@ -541,11 +544,11 @@ if ~isstr(Hk)
     set(gcf,'color','W','InvertH','off')
 
     % Collect output
-    vars={a,magx,ah,ah2,cb,ch,spt};
+    vars={a,magx,ah,ah2,cb,ch,spt,cll};
     varargout=vars(1:nargout);
 elseif strcmp(Hk,'demo1')
     % Image source: https://www.alexstrekeisen.it/english/meta/quartzite.php
-    % Thin section, keep them insize a directory ROCKS and specify IFILES
+    % Thin section, keep them inside a directory ROCKS and specify IFILES
     imnum=6; %2-7 are available
     warning off MATLAB:imagesci:tifftagsread:badTagValueDivisionByZero
     fnam=fullfile(getenv('IFILES'),'ROCKS',sprintf('quartzite2012_%i.jpg',imnum));
@@ -577,7 +580,8 @@ elseif strcmp(Hk,'demo1')
         Hx=[double(imdata(:,:,1))+double(imdata(:,:,2))+double(imdata(:,:,3))]/3;
     end
     % Remove constant
-    Hx=Hx(:)-mean(Hx(:));
+    km=mean(Hx(:));
+    Hx=Hx(:)-km;
 
     % Set up the call for the main MLECHIPSDOSL routine, including applying the
     % smooth taper for the estimation
@@ -632,30 +636,48 @@ elseif strcmp(Hk,'demo1')
     fw='normal';
     % Common color range
     cmap=gray;
-    cax=prctile([Hx ; HxS],[5 95]);
+    cax=prctile([Hx ; HxS],[5 95])
 
     clf
     [ah,ha,H]=krijetem(subnum(2,2));
     % Plot the data
-    [tl(1),xl(1),yl(1)]=plotit(flipud(v2s(Hx,p)),p,ah(1),tts{1},axs,cmap,cax,fw);
+    [tl(1),xl(1),yl(1),cb1(1)]=plotit(flipud(v2s(Hx,p)),p,ah(1),tts{1},axs,cmap,cax,fw,km);
     % Plot the synthetic
-    [tl(2),xl(2),yl(2)]=plotit(       v2s(HxS,p),p,ah(3),tts{2},axs,cmap,cax,fw);
+    [tl(2),xl(2),yl(2),cb1(2)]=plotit(       v2s(HxS,p),p,ah(3),tts{2},axs,cmap,cax,fw,km);
 
+    label(ah([1 3 2 4]),'ul',[],0,0)
+    
     % Just prepare for LaTeX trim and clip on 8.5.0.197613 (R2015a)
     delete(ah([2 4]))
 
+    % Labels etc
+    cb1(1).XLabel.String='8-bit grey scale';
+    cb1(2).XLabel.String='dd';
+
+    delete(cb1(2))
+    delete(tl([1 2]))
+    allofem=findobj('FontSize',10);
+    for ondex=1:length(allofem)
+        set(allofem(ondex),'FontSize',9)
+    end
+    
     figure(2)
     clf
     % Remember that MLEOSL already returned variance scaled data
     scl2=scl; scl2(1)=1;
-    [~,~,nah,nah1,cb,ch,spt]=mlechipsdosl(Hk,thhat,scl2,pt,...
+    [~,~,nah,nah1,cb,ch,spt,cll]=mlechipsdosl(Hk,thhat,scl2,pt,...
                          sprintf('%s = %i %s = %4.2f  %s = %4.2f %s',...
                         '\sigma^2',round(thhat(1)*scl(1)),...
                         '\nu',thhat(2)*scl(2),...
                         '\rho',round(thhat(3)*scl(3),3),unts),...
                          [],unts);
+    [bh,th]=label([nah1(1) nah([3 2 4])],'ul',[],2,0);
 
-    keyboard
+    % Now prettify the contour labels
+    % blablabl
+    % we'll grab 'xdata' and 'ydata'
+    % fillbox(ext2lrtb(ext2lrtb(cll{2}(4)))
+keyboard
     
     figure(1)
     figna=figdisp([],sprintf('%s_%i','demo1_1',imnum),[],1);
@@ -663,7 +685,7 @@ elseif strcmp(Hk,'demo1')
     figna=figdisp([],sprintf('%s_%i','demo1_2',imnum),[],1);
 elseif strcmp(Hk,'demo2')
     % Bathymetry from GEBCO
-    % Data window selected as a subset of the region in DEMO5
+    % Data window selected as a subset of the region in DEMO2
     fnam=fullfile(getenv('IFILES'),'GEBCO','GEBCO2024Grid_AtlanticMERMAIDpatch.mat');
     dat=load(fnam);
     % compare
@@ -729,7 +751,7 @@ elseif strcmp(Hk,'demo2')
     % With deplaning dec 3
     % Estimated theta :  46139        1.2558        2.4795
     % FishJFish. std :      1.25e+03       0.00782      0.038236
-    
+
     % Simulate at the estimate, without the taper
     p.blurs=Inf;
     HxS=simulosl(thhat.*scl,p);
@@ -751,27 +773,43 @@ elseif strcmp(Hk,'demo2')
 
     clf
     [ah,ha,H]=krijetem(subnum(2,2));
-
     % Plot the data but keep the mean again
-    [tl(1),xl(1),yl(1)]=plotit2(flipud(v2s(Hx,p))+km,p,ah(1),tts{1},axs,cmap,cax,fw);
+    [tl(1),xl(1),yl(1),cb1(1)]=plotit2(flipud(v2s(Hx,p))+km,p,ah(1),tts{1},axs,cmap,cax,fw);
     % Plot the synthetic
-    [tl(2),xl(2),yl(2)]=plotit2(       v2s(HxS,p)+km,p,ah(3),tts{2},axs,cmap,cax,fw);
+    [tl(2),xl(2),yl(2),cb1(2)]=plotit2(       v2s(HxS,p)+km,p,ah(3),tts{2},axs,cmap,cax,fw);
 
-    %[acb,axcb]=addcb('vert',cax,cax,'sergeicol');
-    %moveh(acb,0.2)
-    
+    label(ah([1 3 2 4]),'ul',[],0,0)
+
     % Just prepare for LaTeX trim and clip on 8.5.0.197613 (R2015a)
     delete(ah([2 4]))
 
+    % Labels etc
+    cb1(1).XLabel.String='8-bit grey scale';
+    cb1(2).XLabel.String='dd';
+
+    delete(cb1(2))
+    delete(tl([1 2]))
+    allofem=findobj('FontSize',10);
+    for ondex=1:length(allofem)
+        set(allofem(ondex),'FontSize',9)
+    end
+    
     figure(2)
     clf
     scl2=scl;scl2(1)=1;
-    [~,~,nah,nah1,cb,ch,spt]=mlechipsdosl(Hk,thhat,scl2,pt,...
+    [~,~,nah,nah1,cb,ch,spt,cll]=mlechipsdosl(Hk,thhat,scl2,pt,...
                          sprintf('%s = %i %s = %4.2f  %s = %4.2f %s',...
                         '\sigma^2',round(thhat(1)*scl(1)),...
                         '\nu',thhat(2)*scl(2),...
                         '\rho',round(thhat(3)*scl(3),3),unts),...
                          [],unts);
+
+    [bh,th]=label([nah1(1) nah([3 2 4])],'ul',[],2,0);
+
+    % Now prettify the contour labels
+    % blablabl
+    % we'll grab 'xdata' and 'ydata'
+    % fillbox(ext2lrtb(ext2lrtb(cll{2}(4)))
 
     keyboard
 
@@ -829,7 +867,6 @@ elseif strcmp(Hk,'demo3')
     p.dydx=[50 100]./p.NyNx;
     unts='mm';
 
-    
     % The data itself is measured from an elliptical cross-section, so we will
     % first crop the dataset to have a rectangular field of observation
     decm=1;
@@ -903,7 +940,7 @@ elseif strcmp(Hk,'demo3')
     else
         load(fname)
     end
-
+    
     % Simulate at the estimate, without the taper
     p.blurs=Inf;
     HxS=simulosl(thhat.*scl,p);
@@ -944,9 +981,11 @@ elseif strcmp(Hk,'demo3')
     clf
     [ah,ha,H]=krijetem(subnum(2,2));
     % Plot the data
-    [tl(1),xl(1),yl(1)]=plotit(flipud(v2s(Hx,p)),p,ah(1),tts{1},axs,cmap,cax,fw);
+    [tl(1),xl(1),yl(1),cb1(1)]=plotit(flipud(v2s(Hx,p)),p,ah(1),tts{1},axs,cmap,cax,fw);
     % Plot the synthetic
-    [tl(2),xl(2),yl(2)]=plotit(       v2s(HxS,p),p,ah(3),tts{2},axs,cmap,caxS,fw);
+    [tl(2),xl(2),yl(2),cb1(2)]=plotit(       v2s(HxS,p),p,ah(3),tts{2},axs,cmap,caxS,fw);
+
+    label(ah([1 3 2 4]),'ul',[],0,0)
 
     % Just prepare for LaTeX trim and clip on 8.5.0.197613 (R2015a)
     delete(ah([2 4]))
@@ -954,17 +993,35 @@ elseif strcmp(Hk,'demo3')
     % Run fnum 3 for the paper figures
     % True theta :    4.3413e-05        1.6389       0.10333
     %                 4.13e-06          0.0228       0.0042244
-   
+
+    % Labels etc
+    cb1(1).XLabel.String='8-bit grey scale';
+    cb1(2).XLabel.String='dd';
+
+    delete(cb1(2))
+    delete(tl([1 2]))
+    allofem=findobj('FontSize',10);
+    for ondex=1:length(allofem)
+        set(allofem(ondex),'FontSize',9)
+    end
+    
     figure(2)
     clf
     % Remember that MLEOSL already returned variance scaled data
     scl2=scl; scl2(1)=1;
-    [~,~,nah,nah1,cb,ch,spt]=mlechipsdosl(Hk,thhat,scl2,pt,...
+    [~,~,nah,nah1,cb,ch,spt,cll]=mlechipsdosl(Hk,thhat,scl2,pt,...
                          sprintf('%s = %i %s = %4.2f  %s = %4.2f %s',...
                         '\sigma^2',round(thhat(1)*scl(1)),...
                         '\nu',thhat(2)*scl(2),...
                         '\rho',round(thhat(3)*scl(3),3),unts),...
                          [],unts);
+    [bh,th]=label([nah1(1) nah([3 2 4])],'ul',[],2,0);
+
+    % Now prettify the contour labels
+    % blablabl
+    % we'll grab 'xdata' and 'ydata'
+    % fillbox(ext2lrtb(ext2lrtb(cll{2}(4)))
+
     keyboard
     figure(1)
     figna=figdisp([],sprintf('%s_%i','demo3_1',fnum),[],1);
@@ -1083,25 +1140,41 @@ elseif strcmp(Hk,'demo4')
 
     p.lon=topo.geo.lonrDx; p.lat=topo.geo.latrDx; p.ndx=[1 2]; p.tdx=[1 2];
     % Plot the data but keep the mean again
-    [tl(1),xl(1),yl(1)]=plotit2(flipud(v2s(Hx,p))+km,p,ah(1),tts{1},axs,cmap,cax1,fw);
+    [tl(1),xl(1),yl(1),cb1(1)]=plotit2(flipud(v2s(Hx,p))+km,p,ah(1),tts{1},axs,cmap,cax1,fw);
     % Plot the synthetic
-    [tl(2),xl(2),yl(2)]=plotit2(       v2s(HxS,p)+km,p,ah(3),tts{2},axs,cmap,cax2,fw);
+    [tl(2),xl(2),yl(2),cb1(2)]=plotit2(       v2s(HxS,p)+km,p,ah(3),tts{2},axs,cmap,cax2,fw);
 
-    %[acb,axcb]=addcb('vert',cax,cax,'sergeicol');
-    %moveh(acb,0.2)
+    label(ah([1 3 2 4]),'ul',[],0,0)
 
     % Just prepare for LaTeX trim and clip on 8.5.0.197613 (R2015a)
     delete(ah([2 4]))
 
+    % Labels etc
+    cb1(1).XLabel.String='8-bit grey scale';
+    cb1(2).XLabel.String='dd';
+
+    delete(cb1(2))
+    delete(tl([1 2]))
+    allofem=findobj('FontSize',10);
+    for ondex=1:length(allofem)
+        set(allofem(ondex),'FontSize',9)
+    end
+
     figure(2)
     clf
     scl2=scl;scl2(1)=1;
-    [~,~,nah,nah1,cb,ch,spt]=mlechipsdosl(Hk,thhat,scl2,pt,...
+    [~,~,nah,nah1,cb,ch,spt,cll]=mlechipsdosl(Hk,thhat,scl2,pt,...
                          sprintf('%s = %i %s = %4.2f  %s = %4.2f %s',...
                         '\sigma^2',round(thhat(1)*scl(1)),...
                         '\nu',thhat(2)*scl(2),...
                         '\rho',round(thhat(3)*scl(3),3),unts),...
                          [],unts);
+    [bh,th]=label([nah1(1) nah([3 2 4])],'ul',[],2,0);
+
+    % Now prettify the contour labels
+    % blablabl
+    % we'll grab 'xdata' and 'ydata'
+    % fillbox(ext2lrtb(ext2lrtb(cll{2}(4)))
 
     keyboard
 
@@ -1110,6 +1183,7 @@ elseif strcmp(Hk,'demo4')
     figure(2)
     figna=figdisp([],sprintf('%s_%i','demo4_2',imnum),[],1);
 elseif strcmp(Hk,'demo5')
+    % WILL REQUIRE CLEANUP WITH CLABELS ETC
     % Sea surface height anomaly, near real time
     % Source: https://doi.org/10.48670/moi-00149
     % ``Altimeter satellite gridded Sea Level Anomalies (SLA) computed with respect to a
@@ -1229,7 +1303,7 @@ elseif strcmp(Hk,'demo5')
 end
 
 % Just the space plots
-function [tl,xl,yl]=plotit(d,p,ah,tts,axs,cmap,cax,fw)
+function [tl,xl,yl,cb]=plotit(d,p,ah,tts,axs,cmap,cax,fw,km)
 % Must make this active
 axes(ah)
 imagefnan([1 p.NyNx(1)],[p.NyNx(2) 1],d,cmap,cax);
@@ -1243,6 +1317,12 @@ tl=title(tts,'FontWeight',fw);
 xl=xlabel(axs{1});
 yl=ylabel(axs{2});
 movev(tl,range(ylim)/20);
+% Put a colorbar
+goodpos=[getpos(ah,1) getpos(ah,2)-getpos(ah,4)/5 getpos(ah,3) getpos(ah,4)/15];
+
+% cb=colorbarf('hor',10,'Helvetica',goodpos);
+% If it's funky FLOOR the first one, CEIL the last one, and ROUND the rest
+cb=addcb(goodpos,cax,cax,cmap,round(km+linspace(min(cax),max(cax),6)));
 
 % Just the space plots in untethered space coordinates
 function [tl,xl,yl]=plotit2(d,p,ah,tts,axs,cmap,cax,fw)
