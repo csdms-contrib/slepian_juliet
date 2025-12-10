@@ -541,12 +541,14 @@ if ~isstr(Hk)
     movev([ah(1) ah(2) ah2(1) ah2(2)],0.01)
 
     % Set figure background color to white
-    set(gcf,'color','W','InvertH','off')
+    set(gcf,'color','W','InvertHardcopy','off')
 
     % Collect output
     vars={a,magx,ah,ah2,cb,ch,spt,cll};
     varargout=vars(1:nargout);
 elseif strcmp(Hk,'demo1')
+    % Save the string
+    demo=Hk;
     % Image source: https://www.alexstrekeisen.it/english/meta/quartzite.php
     % Thin section, keep them inside a directory ROCKS and specify IFILES
     imnum=6; %2-7 are available
@@ -641,9 +643,9 @@ elseif strcmp(Hk,'demo1')
     clf
     [ah,ha,H]=krijetem(subnum(2,2));
     % Plot the data
-    [tl(1),xl(1),yl(1),cb1(1)]=plotit(flipud(v2s(Hx,p)),p,ah(1),tts{1},axs,cmap,cax,fw,km);
+    [tl(1),xl(1),yl(1),cb1(1)]=plotit(flipud(v2s(Hx,p)),p,ah(1),tts{1},axs,cmap,cax,fw,km,[],demo);
     % Plot the synthetic
-    [tl(2),xl(2),yl(2),cb1(2)]=plotit(       v2s(HxS,p),p,ah(3),tts{2},axs,cmap,cax,fw,km);
+    [tl(2),xl(2),yl(2),cb1(2)]=plotit(       v2s(HxS,p),p,ah(3),tts{2},axs,cmap,cax,fw,km,[],demo);
 
     label(ah([1 3 2 4]),'ul',[],0,0)
     
@@ -680,10 +682,12 @@ elseif strcmp(Hk,'demo1')
 keyboard
     
     figure(1)
-    figna=figdisp([],sprintf('%s_%i','demo1_1',imnum),[],1);
+    figna=figdisp([],sprintf('%s_%i',sprintf('%s_1',demo),imnum),[],1);
     figure(2)
-    figna=figdisp([],sprintf('%s_%i','demo1_2',imnum),[],1);
+    figna=figdisp([],sprintf('%s_%i',sprintf('%s_2',demo),imnum),[],1);
 elseif strcmp(Hk,'demo2')
+    % Save the string
+    demo=Hk;
     % Bathymetry from GEBCO
     % Data window selected as a subset of the region in DEMO2
     fnam=fullfile(getenv('IFILES'),'GEBCO','GEBCO2024Grid_AtlanticMERMAIDpatch.mat');
@@ -814,10 +818,12 @@ elseif strcmp(Hk,'demo2')
     keyboard
 
     figure(1)
-    figna=figdisp([],sprintf('%s_%i','demo2_1',imnum),[],1);
+    figna=figdisp([],sprintf('%s_%i',sprintf('%s_1',demo),imnum),[],1);
     figure(2)
-    figna=figdisp([],sprintf('%s_%i','demo2_2',imnum),[],1);
+    figna=figdisp([],sprintf('%s_%i',sprintf('%s_2',demo),imnum),[],1);
 elseif strcmp(Hk,'demo3')
+    % Save the string
+    demo=Hk;
     % Fault roughness examples from data at https://doi.org/10.5281/zenodo.6411819
     % associated with 10.1029/2022JB025511
     % parsed and reformatted using readfault.m as mat files
@@ -981,9 +987,9 @@ elseif strcmp(Hk,'demo3')
     clf
     [ah,ha,H]=krijetem(subnum(2,2));
     % Plot the data
-    [tl(1),xl(1),yl(1),cb1(1)]=plotit(flipud(v2s(Hx,p)),p,ah(1),tts{1},axs,cmap,cax,fw);
+    [tl(1),xl(1),yl(1),cb1(1)]=plotit(flipud(v2s(Hx,p)),p,ah(1),tts{1},axs,cmap,cax,fw,[],4,demo);
     % Plot the synthetic
-    [tl(2),xl(2),yl(2),cb1(2)]=plotit(       v2s(HxS,p),p,ah(3),tts{2},axs,cmap,caxS,fw);
+    [tl(2),xl(2),yl(2),cb1(2)]=plotit(       v2s(HxS,p),p,ah(3),tts{2},axs,cmap,caxS,fw,[],4,demo);
 
     label(ah([1 3 2 4]),'ul',[],0,0)
 
@@ -995,7 +1001,7 @@ elseif strcmp(Hk,'demo3')
     %                 4.13e-06          0.0228       0.0042244
 
     % Labels etc
-    cb1(1).XLabel.String='8-bit grey scale';
+    cb1(1).XLabel.String='rock surface relief';
     cb1(2).XLabel.String='dd';
 
     delete(cb1(2))
@@ -1004,6 +1010,9 @@ elseif strcmp(Hk,'demo3')
     for ondex=1:length(allofem)
         set(allofem(ondex),'FontSize',9)
     end
+
+    % Remove the xlabel
+    delete(ah(1).XLabel)
     
     figure(2)
     clf
@@ -1024,9 +1033,9 @@ elseif strcmp(Hk,'demo3')
 
     keyboard
     figure(1)
-    figna=figdisp([],sprintf('%s_%i','demo3_1',fnum),[],1);
+    figna=figdisp([],sprintf('%s_%i',sprintf('%s_1',demo),fnum),[],1);
     figure(2)
-    figna=figdisp([],sprintf('%s_%i','demo3_2',fnum),[],1);
+    figna=figdisp([],sprintf('%s_%i',sprintf('%s_2',demo),fnum),[],1);
 
     % Before the experiment, for the rough block cropped to its center, no deplane:
     % fnum 1, th [0.000118        0.754      106.38],  FishJFish. std : [2.63e-06     0.01        2.446]
@@ -1041,6 +1050,8 @@ elseif strcmp(Hk,'demo3')
     % fnum 6, th [  9.75e-06      0.557       42.951], FishJFish. std : [ 9.51e-08    0.0177      0.74717]
     % fnum 8, th [ 1.1422e-05     0.6619      43.266], FishJFish. std : [ 1.13e-07    0.0211      0.68681]
 elseif strcmp(Hk,'demo4')
+    % Save the string
+    demo=Hk;
     % Load a patch of Venus; the ``secret'' to passing the test at this point is
     % decimating the data, or using blurs>-1. We don't want to do the latter, so
     % choose a patch that is large to begin with. Below are some options:
@@ -1080,6 +1091,7 @@ elseif strcmp(Hk,'demo4')
     [~,~,~,~,~,Z]=planefit(v2s(Hx,p));
     km=mean(Hx(:));
     Hx=Hx(:)-Z(:);
+    % Next line inconsequential
     Hx=Hx-mean(Hx);
     Hx=Hx(:);
 
@@ -1117,6 +1129,12 @@ elseif strcmp(Hk,'demo4')
     p.blurs=Inf;
     HxS=simulosl(thhat.*scl,p);
 
+    % Quick isotropic filter - doublecheck
+    HkS=tospec(HxS,p);
+    k=knums(p);
+    HkS(k>p.kiso)=0;
+    HxS=tospace(HkS,p);
+
     % Make a first figure with the oboserved and the simulated field
     f1=figure(1);
     fig2print(f1,'landscape')
@@ -1130,19 +1148,22 @@ elseif strcmp(Hk,'demo4')
     % Be like Gabe? With the planefit, his 5 95 is too restrictive
     perx=[2.5 97.5];
     perx=[2.5 97.5];
-    perx=[1 99];
+    %perx=[1 99];
     cax1=prctile(Hx ,perx);
-    cax1=prctile([Hx HxS],perx);
-    cax2=prctile(HxS,perx); cax2=cax1;
+    cax1=prctile([Hx ; HxS],perx);
+    cax2=prctile(HxS,perx);
 
+    cax1=[-1000 2000];
+    cax2=cax1;
+    
     clf
     [ah,ha,H]=krijetem(subnum(2,2));
 
     p.lon=topo.geo.lonrDx; p.lat=topo.geo.latrDx; p.ndx=[1 2]; p.tdx=[1 2];
     % Plot the data but keep the mean again
-    [tl(1),xl(1),yl(1),cb1(1)]=plotit2(flipud(v2s(Hx,p))+km,p,ah(1),tts{1},axs,cmap,cax1,fw);
+    [tl(1),xl(1),yl(1),cb1(1)]=plotit2(flipud(v2s(Hx,p))+km,p,ah(1),tts{1},axs,cmap,cax1,fw,0,0,demo);
     % Plot the synthetic
-    [tl(2),xl(2),yl(2),cb1(2)]=plotit2(       v2s(HxS,p)+km,p,ah(3),tts{2},axs,cmap,cax2,fw);
+    [tl(2),xl(2),yl(2),cb1(2)]=plotit2(       v2s(HxS,p)+km,p,ah(3),tts{2},axs,cmap,cax2,fw,0,0,demo);
 
     label(ah([1 3 2 4]),'ul',[],0,0)
 
@@ -1150,7 +1171,7 @@ elseif strcmp(Hk,'demo4')
     delete(ah([2 4]))
 
     % Labels etc
-    cb1(1).XLabel.String='8-bit grey scale';
+    cb1(1).XLabel.String='Venus topography';
     cb1(2).XLabel.String='dd';
 
     delete(cb1(2))
@@ -1160,6 +1181,9 @@ elseif strcmp(Hk,'demo4')
         set(allofem(ondex),'FontSize',9)
     end
 
+    % Remove the xlabel
+    delete(ah(1).XLabel)
+    
     figure(2)
     clf
     scl2=scl;scl2(1)=1;
@@ -1179,9 +1203,9 @@ elseif strcmp(Hk,'demo4')
     keyboard
 
     figure(1)
-    figna=figdisp([],sprintf('%s_%i','demo4_1',imnum),[],1);
+    figna=figdisp([],sprintf('%s_%i',sprintf('%s_1',demo),imnum),[],1);
     figure(2)
-    figna=figdisp([],sprintf('%s_%i','demo4_2',imnum),[],1);
+    figna=figdisp([],sprintf('%s_%i',sprintf('%s_2',demo),imnum),[],1);
 elseif strcmp(Hk,'demo5')
     % WILL REQUIRE CLEANUP WITH CLABELS ETC
     % Sea surface height anomaly, near real time
@@ -1303,8 +1327,9 @@ elseif strcmp(Hk,'demo5')
 end
 
 % Just the space plots
-function [tl,xl,yl,cb]=plotit(d,p,ah,tts,axs,cmap,cax,fw,km)
+function [tl,xl,yl,cb]=plotit(d,p,ah,tts,axs,cmap,cax,fw,km,fax,demo)
 defval('km',0)
+defval('fax',1)
 % Must make this active
 axes(ah)
 imagefnan([1 p.NyNx(1)],[p.NyNx(2) 1],d,cmap,cax);
@@ -1319,14 +1344,21 @@ xl=xlabel(axs{1});
 yl=ylabel(axs{2});
 movev(tl,range(ylim)/20);
 % Put a colorbar
-goodpos=[getpos(ah,1) getpos(ah,2)-getpos(ah,4)/5 getpos(ah,3) getpos(ah,4)/15];
-
+if strcmp(demo,'demo1')
+   par=1;
+elseif strcmp(demo,'demo3')
+    par=0.8;
+end
+goodpos=[getpos(ah,1)+(getpos(ah,3)*(1-par))/2 getpos(ah,2)-getpos(ah,4)/5 getpos(ah,3)*par getpos(ah,4)/15];    
 % cb=colorbarf('hor',10,'Helvetica',goodpos);
 % If it's funky FLOOR the first one, CEIL the last one, and ROUND the rest
-cb=addcb(goodpos,cax,cax,cmap,round(km+linspace(min(cax),max(cax),6)));
+%cb=addcb(goodpos,cax,cax,cmap,round(km+linspace(min(cax),max(cax),6)));
+cb=addcb(goodpos,cax,cax,cmap,round(10^fax*(km+linspace(min(cax),max(cax),6)))/10^fax);
 
 % Just the space plots in untethered space coordinates
-function [tl,xl,yl]=plotit2(d,p,ah,tts,axs,cmap,cax,fw)
+function [tl,xl,yl,cb]=plotit2(d,p,ah,tts,axs,cmap,cax,fw,km,fax,demo)
+defval('km',0)
+defval('fax',1)
 % Must make this active
 axes(ah)
 imagefnan([p.lon(p.ndx(1)) p.lat(p.tdx(1))],[p.lon(p.ndx(end)) p.lat(p.tdx(end))],d,cmap,cax)
@@ -1342,6 +1374,20 @@ tl=title(tts,'FontWeight',fw);
 xl=xlabel(axs{1});
 yl=ylabel(axs{2});
 movev(tl,range(ylim)/20);
+% Put a colorbar
+if strcmp(demo,'demo4')
+   par=1;
+elseif strcmp(demo,'demo2')
+    par=0.8;
+end
+goodpos=[getpos(ah,1)+(getpos(ah,3)*(1-par))/2 getpos(ah,2)-getpos(ah,4)/5 getpos(ah,3)*par getpos(ah,4)/15];    
+% cb=colorbarf('hor',10,'Helvetica',goodpos);
+% If it's funky FLOOR the first one, CEIL the last one, and ROUND the rest
+%cb=addcb(goodpos,cax,cax,cmap,round(km+linspace(min(cax),max(cax),6)));
+bla=10^fax*(km+linspace(min(cax),max(cax),6))
+cb=addcb(goodpos,cax,cax,cmap,[ceil(bla(1)) round(bla(2:end-1)) floor(bla(end))]/10^fax);
+xbt=cb.XTick;
+cb.XTick=[xbt(1:end-1) bla(end)];
 
 % For exploring the demo4 datasets
 function changecolorbar(src, ~)
