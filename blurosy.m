@@ -371,6 +371,7 @@ elseif strcmp(th,'demo2')
     % The expectation of the periodogram
     axes(ah(3))
     imagesc(log10(v2s(Sbar,p))); axis image
+    keyboard
     t(3)=title(sprintf('expectation | %s [%0.2g %g %0.2g]',...
                        '\theta =',th));
     % t(3)=title(sprintf('expectation | %s [%g %g %gx]',...
@@ -858,6 +859,7 @@ if ~isempty(tsto) & size(tsto,2)==2
     end
     % The next two lines are the most expensive part of calculating JMATRIX
     % method 3, so we provide gpuArrays when it will help
+    % I think this is just the correlation calculation (17 of VoWE)
     f =fftn(g,two_n).*conj(fftn(g2,two_n));
     cg=ifftn(f);
     if mkgpuarr
