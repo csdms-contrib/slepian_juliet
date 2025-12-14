@@ -1,7 +1,11 @@
 function varargout=simulosl(th0,params,xver,varargin)
 % [Hx,th0,params,k,Hk,Sb,Lb,gane,miy]=SIMULOSL(th0,params,xver)
-% [gane,miy,ax,legs]=SIMULOSL('demo4',th0,params,ptype,N,rindj,npr,ah,gane,miy,pix)
+% [gane,miy,ax,legs,ppme]=SIMULOSL('demo4',th0,params,ptype,N,rindj,npr,ah,gane,miy,pix)
 %
+% Changed in Dec 2025 to accommodate plotting bias from EGGERS7 as opposed to
+% EGGERS4 by subtracting the truth as opposed to just relabeling the y axis relative. 
+% This means we would need to redo EGGERS4 also if ever
+% 
 % Simulates a univariate two-dimensional Matern covariance field,
 % either (blurs=-1,0,1,N>1) in the spectral domain via MATERNOSP,
 % which does not (blurs=0,1) or does (blurs=-1, blurs>1) account for
@@ -88,7 +92,7 @@ function varargout=simulosl(th0,params,xver,varargin)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 % Last modified by olwalbert-at-princeton.edu, 04/01/2025
-% Last modified by fjsimons-at-alum.mit.edu, 04/01/2025
+% Last modified by fjsimons-at-alum.mit.edu, 12/13/2025
 
 % Here is the true parameter vector and the only variable that gets used 
 defval('th0',[1e6 2.5 2e4]);
@@ -354,7 +358,7 @@ elseif strcmp(th0,'demo4')
   % Axis equalization parameters
   if nargin>8;  gane=varargin{6}; end; 
   if nargin>9;   miy=varargin{7}; end; 
-  if nargin>10;   pix=varargin{8}; end; defval('pix',1)
+  if nargin>10;  pix=varargin{8}; end; defval('pix',1)
   
   % Last default which wasn't an input
   defval('keepdata',0)
@@ -370,7 +374,7 @@ elseif strcmp(th0,'demo4')
   % Might need cleanup if you change your opinion on what the hash should contain
   % system(sprintf('mv %s %s',fnams1,fnams2))
 
-  if ~exist(fnams,'file') 
+  if ~exist(fnams,'file')
     % Values and statistics that will be collected and kept
     [h,s,n,r,b,hm,hv,sm,nm,rm,sv,nv,rv,h05,h95,s05,s95,n05,n95,r05,r95,s50,n50,r50,nn]=...
 	deal(nan(length(rindj),1));
@@ -435,9 +439,9 @@ elseif strcmp(th0,'demo4')
 	    % variables, rather than taking the word of "covh" for it
 	    Hx=simulosl(th0,p);
 	    try
-	      % Make reasonable guesses from the data themselves, then invert
-	      [th,covh,~,scl]=mleosl(Hx,[var(Hx) 2.0 sqrt(prod(p.dydx.*p.NyNx))/5],p);
-	      % It it was a single NaN, fix the dimensions so it's NaN for all
+	        % Make reasonable guesses from the data themselves, then invert
+	        [th,covh,~,scl]=mleosl(Hx,[var(Hx) 2.0 sqrt(prod(p.dydx.*p.NyNx))/5],p,[],[],[],[],[],0);
+	        % It it was a single NaN, fix the dimensions so it's NaN for all
 	      if isnan(th); [th,scl]=deal(nan(1,length(th0))); disp('NaN set'); end
 	      % Output was scaled, so apply the scaling
 	      thht(sndex,:)=th.*scl;
@@ -480,6 +484,7 @@ elseif strcmp(th0,'demo4')
          n05(index)=prctile(thhator(:,2),05); n95(index)=prctile(thhator(:,2),95);
          r05(index)=prctile(thhator(:,3),05); r95(index)=prctile(thhator(:,3),95);
          % Keep ONE MLE-estimate for every data patch size, as an example
+         % FJS Should change it to pick the first non-NaN
          s(index)=thhat(1,1);
          n(index)=thhat(1,2);
          r(index)=thhat(1,3);
@@ -543,11 +548,11 @@ elseif strcmp(th0,'demo4')
     defval('gane',range([lb ; be ; ub])/20)
     defval('miy',[min([be ; lb]) max([be ; ub])]+[-gane gane]);
   end
-          
+
   % Vertical and horizontal guides to where brute-force bias is about a third
-  plot(2*pi*[th0(3) th0(3)]/1e3,halverange(miy,100,NaN),'k-')
+  %plot(2*pi*[th0(3) th0(3)]/1e3,halverange(miy,100,NaN),'k-')
   hold on
-  %plot(xlim,[th0(1) th0(1)],'k--')
+  % plot(xlim,[th0(1) th0(1)],'k--')
 
   switch ptype
    case 'poor'
@@ -581,42 +586,56 @@ elseif strcmp(th0,'demo4')
         miy=miy/th0(1)*tr;
       end
     end
-        
+
     % Percentiles of the estimators over all the realizations
+    % Everything offset by the truth relative to truth
     for index=1:length(rindj)
-      pb(index)=plot([xlox(index) xlox(index)],[lb(index) ub(index)]);
+      pb(index)=plot([xlox(index) xlox(index)],([lb(index) ub(index)]-tr)/tr);
     end
 
+   
     % Rather plot a scaled version of the spatial-domain covariance itself!
-    pp(4)=plot(xloy,maternosy(xloy*1e3,th0)/th0(1)*tr);
+    pp(4)=plot(xloy,(maternosy(xloy*1e3,th0)/th0(1)*tr-tr)/tr);
     % MLE-estimate for any ONE of the realizations (e.g. s, n or r)
-    pp(1)=plot(xlox,be,'k');
+    pp(1)=plot(xlox,(be-tr)/tr,'k');
     % Predicted mean of the estimators knowing theoretical bias to be zero
-    pp(3)=plot([1*dydx(1)/1e3 xlox],repmat(tr,1,length(xlox)+1));
+    % So with the offset that is now centered on zero
+    pp(3)=plot([1*dydx(1)/1e3 xlox],repmat(0,1,length(xlox)+1));
     
     % Plot the means when you have the expected untrimmed number of
     % samples, medians otherwise? Or would the trimming take care of it
     % and we just need to identify where this happens. Check "nn"
     % unique(nn)
-
     % Mean of the estimators over all the realizations... if you have the
     % full set. Nah, just mention in the legend that 2pi r was truncated
     % pp(2)=plot(xlox(nn==npr*NumWorkers),me(nn==npr*NumWorkers),'ko'); 
-    pp(2)=plot(xlox,me,'ko'); 
-      
+    pp(2)=plot(xlox,(me-tr)/tr,'ko');
+
+    % ADDITION STEIN
+    % Make make another plot of what sv is in relation to MN
+    %    ms=plot(xlox,scale((me-tr)/tr.*xlox',[-1/4 1/4]),'g-');
+    ms=plot(xlox,abs((me-tr)/tr).*xlox'/1e3-0.5,'g-');
+    hold on
     % Variance... fish out the colors in EGGERS7
-    plot(xlox,me+sqrt(ve),'y-');
-    plot(xlox,me-sqrt(ve),'y-');
-    
+    plot(xlox, sqrt(ve)/tr,'m-');
+    plot(xlox,-sqrt(ve)/tr,'m-');
+
     % Check out the variance decay! Yes, it more or less decays with the
     % data size, which is the SQUARE of the linear dimension
     %  semilogy(xlox,ve/max(ve),'+'); hold on; semilogy(xlox,xlox.^-2/max(xlox.^-2),'o')
-    
+    %  semilogy(xlox,ve/max(ve),'+'); hold on; semilogy(xlox,xlox.^-2/(xlox(2).^-2),'o')
+    %figure(2)
+    %semilogy(xlox,ve.*rindj.^2','+')
+    %figure(1)
+  
     % Median... fish out the colors in EGGERS7
-    plot(xlox,md,'Color','c')
-    if pix==3
+    plot(xlox,([md-tr])/tr,'Color','c')
+
+    if pix==3 & 1==3
       % The data size could be a limiting point for the correlation length
-      plot([0 xlox],[0 xlox]*1e3,'-','Color','r')
+      % plot([0 xlox],[0 xlox]*1e3,'-','Color','r')
+        plot([0 xlox],[0  xlox*1e3]/tr,'-','Color','r')
+        plot([0 xlox],[0 -xlox*1e3]/tr,'-','Color','r')
     end
 
     % Now, utilize the numerical covariance information, by plotting cv
@@ -634,13 +653,13 @@ elseif strcmp(th0,'demo4')
   hold off
 
   % Cosmetics
-  set(pp(2),'Color','k','Marker','o','MarkerFaceC','w','MarkerEdgeC','k','MarkerS',4)
-  set(pb,'Color',grey,'LineW',0.75)
+  set(pb,'Color',grey,'LineWidth',0.5)
+  set(pp(2),'Color','k','Marker','o','MarkerFaceColor','w','MarkerEdgeColor','k','MarkerSize',4)
   % Match the color in EGGERS1 with EGGERS4
-  set(pp(3),'Color','b','LineW',1)
-  set(pp(4),'Color','m','LineW',1)
-  xlim([0 [rindj(end)+1]*dydx(1)]/1e3); 
-  ylim(miy)
+  set(pp(3),'Color','b','LineWidth',1)
+  set(pp(4),'Color','m','LineWidth',1)
+  xlim([0 [rindj(end)+1]*dydx(1)]/1e3);
+  % ylim(miy)
   longticks; 
   if length(ah)==1; shrink(gca); end
   t=title(sprintf('SIMULOSL with blurs = %i, var(Hx) versus %s^2',...
@@ -655,18 +674,22 @@ elseif strcmp(th0,'demo4')
   yl=ylabel(sprintf('%s estimates relative to truth','\sigma^2'));
   % Scale the axis, it really doesn't matter
   % set(gca,'ytick',[0 th0(1) max(th0(1)+th0(1)/10,indeks(ylim,2))],'ytickl',{0, 1,' '})
-  tix=4; tox=1.5;
-  set(gca,'ytick',linspace(0,tox*th0(pix),tix),...
-          'yticklabel',{linspace(0,tox,tix)})
+  tix=5; tox=0.5;
+  % Override
+  ylim([-tox*tr*1.1 tox*tr*1.1]/tr)
+  set(gca,'ytick',linspace(-tox*tr,tox*tr,tix)/tr)
+  % set(gca,'ytick',linspace(0,tox*tr,tix),
+  %         'yticklabel',{linspace(0,tox,tix)})
 
   % % Last minute fixin's in case we hadn't properly ordered to begin with
   delete(t)
   % for index=1:length(pb)
-  %   bottom(pb(index),gca)
-  % end
-  % top(pp(2),gca)
+  % bottom(pb(index),gca)
+  %end
+  top(pp(2),gca)
   % bottom(pp(4),gca)
-  
+
+  % This ends up getting the... well... axe
   % ax=xtraxis(gca,[],[],[],th0(1),'s2',[]); set(ax,'FontName','symbol')
   ax=xtraxis(gca,[],[],[],th0(1),[],[]); xl=xlim(ax);
   axt=text(xl(2)+range(xl)/30,th0(1),texlabel('sigma^2'),...
@@ -684,6 +707,9 @@ elseif strcmp(th0,'demo4')
   % Figure out what all you will want to slap legends on, as in EGGERS1
   %legs=[pp(2) pp(3) pb(1) pp(1) pp(4)];
   legs=[pp(2) pp(3) pb(1) pp(4)];
+
+  % Mean estimates on top
+  top(pp(2),gca)
   
   % Print to file, unless it was called with output, e.g. by EGGERS4
   if nargout==0
@@ -692,7 +718,7 @@ elseif strcmp(th0,'demo4')
   end
 
   % Return the output if requested, e.g. by EGGERS4
-  varns={gane,miy,ax,legs};
+  varns={gane,miy,ax,legs,pp(2)};
   varargout=varns(1:nargout);
 elseif strcmp(th0,'demo5')
   % Shift the inputs so you can default them but also supply them
