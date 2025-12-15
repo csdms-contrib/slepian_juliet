@@ -727,6 +727,8 @@ elseif strcmp(Hk,'demo2')
     lat=dat.mlats;
     lon=dat.mlons;
     p=dat.p;
+    % WE SHOULD REASSIGN p.dydx
+    p.dydx=[median(diff(dat.mlats)) median(diff(dat.mlons))];
     % Crop the region?
     ndx=500:numel(lon)-1.2e3;
     tdx=300:1000;
@@ -739,6 +741,7 @@ elseif strcmp(Hk,'demo2')
         p.dydx=p.dydx.*dec;
     end
     p.NyNx=[numel(tdx) numel(ndx)];
+    % We should reassign this like we do in PLOTIT2... but watch Venus
     p.lon=lon;
     p.lat=lat;
     p.ndx=ndx;
@@ -775,9 +778,19 @@ elseif strcmp(Hk,'demo2')
     end
 
     % With deplaning dec 3
-    % Estimated theta :  46139        1.2558        2.4795
-    % FishJFish. std :      1.25e+03       0.00782      0.038236
-
+    % With the wrong dydx after dec 3 1.3899 1.3899 in longitude at 30 
+    % Estimated theta :  46139        1.2558       2.4795
+    % FishJFish. std :      1.25e+03  0.00782      0.038236
+    % With the fixed dydx after dec 3 0.0125 0.0125 in longitude at 30 
+    % ESTIMATE           46141        1.2558       0.022299228812750
+    % FishJFish. std :   1.28e+03     0.00813      0.00035786
+    % covFHhJ{4}./[diag(sqrt(covFHhJ{4}))*diag(sqrt(covFHhJ{4}))']
+    % (s2nu) -0.3738 (s2rho) 0.9040 (nurho) -0.71454
+    % Watch _notes in Preparations
+    % So with all the units in longitude (whatever dydx) 
+    % round(thhat(3)*scl(3)*fralmanac('DegDis')*cos(median(p.lat(tdx))*pi/180))/1000
+    % is the rho is 2175 m
+    
     % Simulate at the estimate, without the taper
     p.blurs=Inf;
     HxS=simulosl(thhat.*scl,p);
@@ -800,9 +813,9 @@ elseif strcmp(Hk,'demo2')
     clf
     [ah,ha,H]=krijetem(subnum(2,2));
     % Plot the data but keep the mean again
-    [tl(1),xl(1),yl(1),cb1(1)]=plotit2(flipud(v2s(Hx,p))+km,p,ah(1),tts{1},axs,cmap,cax,fw);
+    [tl(1),xl(1),yl(1),cb1(1)]=plotit2(flipud(v2s(Hx,p))+km,p,ah(1),tts{1},axs,cmap,cax,fw,0,0,demo);
     % Plot the synthetic
-    [tl(2),xl(2),yl(2),cb1(2)]=plotit2(       v2s(HxS,p)+km,p,ah(3),tts{2},axs,cmap,cax,fw);
+    [tl(2),xl(2),yl(2),cb1(2)]=plotit2(       v2s(HxS,p)+km,p,ah(3),tts{2},axs,cmap,cax,fw,0,0,demo);
 
     label(ah([1 3 2 4]),'ul',[],0,0)
 
@@ -810,8 +823,8 @@ elseif strcmp(Hk,'demo2')
     delete(ah([2 4]))
 
     % Labels etc
-    cb1(1).XLabel.String='8-bit grey scale';
-    cb1(2).XLabel.String='dd';
+    cb1(1).XLabel.String='Atlantic bathymetry';
+    cb1(2).XLabel.String='Atlantic bathymetry';
 
     delete(cb1(2))
     delete(tl([1 2]))
@@ -832,14 +845,11 @@ elseif strcmp(Hk,'demo2')
 
     [bh,th]=label([nah1(1) nah([3 2 4])],'ul',[],2,0);
 
-    keyboard
-    
     % Now prettify the contour labels
     % Theory axes
     axes(nah(2))
-    delete(cll{1}([1 2 3 4 7 8]))
     % Move the others, I checked the position is lower left corner of box
-    cls=[6 10 12];
+    cls=[2 4 6];
     for clsi=1:length(cls)
         R=sqrt(getpos(cll{1}(cls(clsi)),1)^2+getpos(cll{1}(cls(clsi)),2)^2);
         set(cll{1}(cls(clsi)),'Position',R*[cos(pi/4) sin(pi/4) 0])
@@ -849,9 +859,8 @@ elseif strcmp(Hk,'demo2')
     end
 
     axes(nah(4))
-    delete(cll{2}([1 2 3 4 7 8]))
     % Move the others, I checked the position is lower left corner of box
-    cls=[6 10 12];
+    cls=[2 4 6];
     for clsi=1:length(cls)
         R=sqrt(getpos(cll{2}(cls(clsi)),1)^2+getpos(cll{2}(cls(clsi)),2)^2);
         set(cll{2}(cls(clsi)),'Position',R*[cos(pi/4) sin(pi/4) 0])
@@ -860,6 +869,7 @@ elseif strcmp(Hk,'demo2')
         set(fb2(clsi),'FaceColor','w','EdgeColor','w')
     end
 
+keyboard
 
     figure(1)
     figna=figdisp([],sprintf('%s_%i',sprintf('%s_1',demo),imnum),[],1);
@@ -1070,8 +1080,6 @@ elseif strcmp(Hk,'demo3')
                          [],unts);
     [bh,th]=label([nah1(1) nah([3 2 4])],'ul',[],2,0);
 
-    keyboard
-    
     % Now prettify the contour labels
     % Theory axes
     axes(nah(2))
@@ -1097,6 +1105,7 @@ elseif strcmp(Hk,'demo3')
     end
 
     keyboard
+
     figure(1)
     figna=figdisp([],sprintf('%s_%i',sprintf('%s_1',demo),fnum),[],1);
     figure(2)
@@ -1435,7 +1444,7 @@ elseif strcmp(demo,'demo3')
     dvi=5;
 end
 % This shifts the colorbar
-goodpos=[getpos(ah,1)+[getpos(ah,3)*(1-par)]/2 getpos(ah,2)-getpos(ah,4)/5 getpos(ah,3)*par getpos(ah,4)/15];    
+goodpos=[getpos(ah,1)+[getpos(ah,3)*(1-par)]/2 getpos(ah,2)-getpos(ah,4)/dvi getpos(ah,3)*par getpos(ah,4)/15];    
 % cb=colorbarf('hor',10,'Helvetica',goodpos);
 % If it's funky FLOOR the first one, CEIL the last one, and ROUND the rest
 %cb=addcb(goodpos,cax,cax,cmap,round(km+linspace(min(cax),max(cax),6)));
@@ -1463,15 +1472,17 @@ yl=ylabel(axs{2});
 movev(tl,range(ylim)/20);
 % Put a colorbar
 if strcmp(demo,'demo4')
-   par=1;
+    par=1;
+    dvi=5;
 elseif strcmp(demo,'demo2')
-    par=0.8;
+    par=1;
+    dvi=4.5;
 end
-goodpos=[getpos(ah,1)+(getpos(ah,3)*(1-par))/2 getpos(ah,2)-getpos(ah,4)/5 getpos(ah,3)*par getpos(ah,4)/15];    
+goodpos=[getpos(ah,1)+(getpos(ah,3)*(1-par))/2 getpos(ah,2)-getpos(ah,4)/dvi getpos(ah,3)*par getpos(ah,4)/15];    
 % cb=colorbarf('hor',10,'Helvetica',goodpos);
 % If it's funky FLOOR the first one, CEIL the last one, and ROUND the rest
 %cb=addcb(goodpos,cax,cax,cmap,round(km+linspace(min(cax),max(cax),6)));
-bla=10^fax*(km+linspace(min(cax),max(cax),6))
+bla=10^fax*(km+linspace(min(cax),max(cax),6));
 cb=addcb(goodpos,cax,cax,cmap,[ceil(bla(1)) round(bla(2:end-1)) floor(bla(end))]/10^fax);
 xbt=cb.XTick;
 cb.XTick=[xbt(1:end-1) bla(end)];
