@@ -352,12 +352,12 @@ if ~isstr(Hk)
 
     % Make the textbox(es) with unbordered fillboxes around them
     for i=1:length(tbstr)
-        tb(i)=text(tbx(i),tby(i),tbstr{i},'HorizontalA','Right');
+        tb(i)=text(tbx(i),tby(i),tbstr{i},'HorizontalAlignment','Right');
         gg=ext2lrtb(tb(i),1.1,1.1); delete(tb(i)); hold on
         fb(i)=fillbox(gg+[-0.1 0.08 0 0]);
-        tb(i)=text(tbx(i),tby(i),tbstr{i},'HorizontalA','Right');
+        tb(i)=text(tbx(i),tby(i),tbstr{i},'HorizontalAlignment','Right');
         hold off
-        set(fb(i),'EdgeC','w','FaceC','w')
+        set(fb(i),'EdgeColor','w','FaceColor','w')
     end
 
     %%%%%%%%%%%%%%%%%%%%%%n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -638,7 +638,7 @@ elseif strcmp(Hk,'demo1')
     fw='normal';
     % Common color range
     cmap=gray;
-    cax=prctile([Hx ; HxS],[5 95])
+    cax=prctile([Hx ; HxS],[5 95]);
 
     clf
     [ah,ha,H]=krijetem(subnum(2,2));
@@ -676,15 +676,37 @@ elseif strcmp(Hk,'demo1')
     [bh,th]=label([nah1(1) nah([3 2 4])],'ul',[],2,0);
 
     % Now prettify the contour labels
-    % blablabl
-    % we'll grab 'xdata' and 'ydata'
-    % fillbox(ext2lrtb(ext2lrtb(cll{2}(4)))
-keyboard
-    
+    % Theory axes
+    axes(nah(2))
+    delete(cll{1}([1 2 3 4 7 8]))
+    % Move the others, I checked the position is lower left corner of box
+    cls=[6 10 12];
+    for clsi=1:length(cls)
+        R=sqrt(getpos(cll{1}(cls(clsi)),1)^2+getpos(cll{1}(cls(clsi)),2)^2);
+        set(cll{1}(cls(clsi)),'Position',R*[cos(pi/4) sin(pi/4) 0])
+        delete(cll{1}(cls(clsi)-1))
+        fb1(clsi)=fillbox(ext2lrtb(cll{1}(cls(clsi))));
+        set(fb1(clsi),'FaceColor','w','EdgeColor','w')
+    end
+
+    axes(nah(4))
+    delete(cll{2}([1 2 3 4 7 8]))
+    % Move the others, I checked the position is lower left corner of box
+    cls=[6 10 12];
+    for clsi=1:length(cls)
+        R=sqrt(getpos(cll{2}(cls(clsi)),1)^2+getpos(cll{2}(cls(clsi)),2)^2);
+        set(cll{2}(cls(clsi)),'Position',R*[cos(pi/4) sin(pi/4) 0])
+        delete(cll{2}(cls(clsi)-1))
+        fb2(clsi)=fillbox(ext2lrtb(cll{2}(cls(clsi))));
+        set(fb2(clsi),'FaceColor','w','EdgeColor','w')
+    end
+
+    keyboard
+    % opengl('save','software')
     figure(1)
     figna=figdisp([],sprintf('%s_%i',sprintf('%s_1',demo),imnum),[],1);
     figure(2)
-    figna=figdisp([],sprintf('%s_%i',sprintf('%s_2',demo),imnum),[],1);
+    figna=figdisp([],sprintf('%s_%i',sprintf('%s_2',demo),imnum),[],0);
 elseif strcmp(Hk,'demo2')
     % Save the string
     demo=Hk;
@@ -1026,16 +1048,37 @@ elseif strcmp(Hk,'demo3')
                          [],unts);
     [bh,th]=label([nah1(1) nah([3 2 4])],'ul',[],2,0);
 
+    keyboard
+    
     % Now prettify the contour labels
-    % blablabl
-    % we'll grab 'xdata' and 'ydata'
-    % fillbox(ext2lrtb(ext2lrtb(cll{2}(4)))
+    % Theory axes
+    axes(nah(2))
+    % Move the others, I checked the position is lower left corner of box
+    cls=[2 4 6];
+    for clsi=1:length(cls)
+        R=sqrt(getpos(cll{1}(cls(clsi)),1)^2+getpos(cll{1}(cls(clsi)),2)^2);
+        set(cll{1}(cls(clsi)),'Position',R*[cos(pi/4) sin(pi/4) 0])
+        delete(cll{1}(cls(clsi)-1))
+        fb1(clsi)=fillbox(ext2lrtb(cll{1}(cls(clsi))));
+        set(fb1(clsi),'FaceColor','w','EdgeColor','w')
+    end
+
+    axes(nah(4))
+    % Move the others, I checked the position is lower left corner of box
+    cls=[2 4 6];
+    for clsi=1:length(cls)
+        R=sqrt(getpos(cll{2}(cls(clsi)),1)^2+getpos(cll{2}(cls(clsi)),2)^2);
+        set(cll{2}(cls(clsi)),'Position',R*[cos(pi/4) sin(pi/4) 0])
+        delete(cll{2}(cls(clsi)-1))
+        fb2(clsi)=fillbox(ext2lrtb(cll{2}(cls(clsi))));
+        set(fb2(clsi),'FaceColor','w','EdgeColor','w')
+    end
 
     keyboard
     figure(1)
     figna=figdisp([],sprintf('%s_%i',sprintf('%s_1',demo),fnum),[],1);
     figure(2)
-    figna=figdisp([],sprintf('%s_%i',sprintf('%s_2',demo),fnum),[],1);
+    figna=figdisp([],sprintf('%s_%i',sprintf('%s_2',demo),fnum),[],0);
 
     % Before the experiment, for the rough block cropped to its center, no deplane:
     % fnum 1, th [0.000118        0.754      106.38],  FishJFish. std : [2.63e-06     0.01        2.446]
@@ -1195,12 +1238,31 @@ elseif strcmp(Hk,'demo4')
                          [],unts);
     [bh,th]=label([nah1(1) nah([3 2 4])],'ul',[],2,0);
 
-    % Now prettify the contour labels
-    % blablabl
-    % we'll grab 'xdata' and 'ydata'
-    % fillbox(ext2lrtb(ext2lrtb(cll{2}(4)))
-
     keyboard
+
+    % Now prettify the contour labels
+    % Theory axes
+    axes(nah(2))
+    % Move the others, I checked the position is lower left corner of box
+    cls=[2 4 6];
+    for clsi=1:length(cls)
+        R=sqrt(getpos(cll{1}(cls(clsi)),1)^2+getpos(cll{1}(cls(clsi)),2)^2);
+        set(cll{1}(cls(clsi)),'Position',R*[cos(pi/4) sin(pi/4) 0])
+        delete(cll{1}(cls(clsi)-1))
+        fb1(clsi)=fillbox(ext2lrtb(cll{1}(cls(clsi))));
+        set(fb1(clsi),'FaceColor','w','EdgeColor','w')
+    end
+
+    axes(nah(4))
+    % Move the others, I checked the position is lower left corner of box
+    cls=[2 4 6];
+    for clsi=1:length(cls)
+        R=sqrt(getpos(cll{2}(cls(clsi)),1)^2+getpos(cll{2}(cls(clsi)),2)^2);
+        set(cll{2}(cls(clsi)),'Position',R*[cos(pi/4) sin(pi/4) 0])
+        delete(cll{2}(cls(clsi)-1))
+        fb2(clsi)=fillbox(ext2lrtb(cll{2}(cls(clsi))));
+        set(fb2(clsi),'FaceColor','w','EdgeColor','w')
+    end
 
     figure(1)
     figna=figdisp([],sprintf('%s_%i',sprintf('%s_1',demo),imnum),[],1);
@@ -1326,6 +1388,7 @@ elseif strcmp(Hk,'demo5')
     figna=figdisp([],'demo5_kiso',[],1);
 end
 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Just the space plots
 function [tl,xl,yl,cb]=plotit(d,p,ah,tts,axs,cmap,cax,fw,km,fax,demo)
 defval('km',0)
@@ -1345,16 +1408,20 @@ yl=ylabel(axs{2});
 movev(tl,range(ylim)/20);
 % Put a colorbar
 if strcmp(demo,'demo1')
-   par=1;
+    par=1;
+    dvi=4.25;
 elseif strcmp(demo,'demo3')
     par=0.8;
+    dvi=5;
 end
-goodpos=[getpos(ah,1)+(getpos(ah,3)*(1-par))/2 getpos(ah,2)-getpos(ah,4)/5 getpos(ah,3)*par getpos(ah,4)/15];    
+% This shifts the colorbar
+goodpos=[getpos(ah,1)+[getpos(ah,3)*(1-par)]/2 getpos(ah,2)-getpos(ah,4)/5 getpos(ah,3)*par getpos(ah,4)/15];    
 % cb=colorbarf('hor',10,'Helvetica',goodpos);
 % If it's funky FLOOR the first one, CEIL the last one, and ROUND the rest
 %cb=addcb(goodpos,cax,cax,cmap,round(km+linspace(min(cax),max(cax),6)));
 cb=addcb(goodpos,cax,cax,cmap,round(10^fax*(km+linspace(min(cax),max(cax),6)))/10^fax);
 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Just the space plots in untethered space coordinates
 function [tl,xl,yl,cb]=plotit2(d,p,ah,tts,axs,cmap,cax,fw,km,fax,demo)
 defval('km',0)
