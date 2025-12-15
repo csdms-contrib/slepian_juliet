@@ -832,12 +832,34 @@ elseif strcmp(Hk,'demo2')
 
     [bh,th]=label([nah1(1) nah([3 2 4])],'ul',[],2,0);
 
-    % Now prettify the contour labels
-    % blablabl
-    % we'll grab 'xdata' and 'ydata'
-    % fillbox(ext2lrtb(ext2lrtb(cll{2}(4)))
-
     keyboard
+    
+    % Now prettify the contour labels
+    % Theory axes
+    axes(nah(2))
+    delete(cll{1}([1 2 3 4 7 8]))
+    % Move the others, I checked the position is lower left corner of box
+    cls=[6 10 12];
+    for clsi=1:length(cls)
+        R=sqrt(getpos(cll{1}(cls(clsi)),1)^2+getpos(cll{1}(cls(clsi)),2)^2);
+        set(cll{1}(cls(clsi)),'Position',R*[cos(pi/4) sin(pi/4) 0])
+        delete(cll{1}(cls(clsi)-1))
+        fb1(clsi)=fillbox(ext2lrtb(cll{1}(cls(clsi))));
+        set(fb1(clsi),'FaceColor','w','EdgeColor','w')
+    end
+
+    axes(nah(4))
+    delete(cll{2}([1 2 3 4 7 8]))
+    % Move the others, I checked the position is lower left corner of box
+    cls=[6 10 12];
+    for clsi=1:length(cls)
+        R=sqrt(getpos(cll{2}(cls(clsi)),1)^2+getpos(cll{2}(cls(clsi)),2)^2);
+        set(cll{2}(cls(clsi)),'Position',R*[cos(pi/4) sin(pi/4) 0])
+        delete(cll{2}(cls(clsi)-1))
+        fb2(clsi)=fillbox(ext2lrtb(cll{2}(cls(clsi))));
+        set(fb2(clsi),'FaceColor','w','EdgeColor','w')
+    end
+
 
     figure(1)
     figna=figdisp([],sprintf('%s_%i',sprintf('%s_1',demo),imnum),[],1);
@@ -1214,8 +1236,8 @@ elseif strcmp(Hk,'demo4')
     delete(ah([2 4]))
 
     % Labels etc
-    cb1(1).XLabel.String='Venus topography';
-    cb1(2).XLabel.String='dd';
+    cb1(1).XLabel.String='Venus topography (m)';
+    cb1(2).XLabel.String='Venus topography (m)';
 
     delete(cb1(2))
     delete(tl([1 2]))
@@ -1238,13 +1260,11 @@ elseif strcmp(Hk,'demo4')
                          [],unts);
     [bh,th]=label([nah1(1) nah([3 2 4])],'ul',[],2,0);
 
-    keyboard
-
     % Now prettify the contour labels
     % Theory axes
     axes(nah(2))
     % Move the others, I checked the position is lower left corner of box
-    cls=[2 4 6];
+    cls=[2 4];
     for clsi=1:length(cls)
         R=sqrt(getpos(cll{1}(cls(clsi)),1)^2+getpos(cll{1}(cls(clsi)),2)^2);
         set(cll{1}(cls(clsi)),'Position',R*[cos(pi/4) sin(pi/4) 0])
@@ -1255,7 +1275,7 @@ elseif strcmp(Hk,'demo4')
 
     axes(nah(4))
     % Move the others, I checked the position is lower left corner of box
-    cls=[2 4 6];
+    cls=[2 4];
     for clsi=1:length(cls)
         R=sqrt(getpos(cll{2}(cls(clsi)),1)^2+getpos(cll{2}(cls(clsi)),2)^2);
         set(cll{2}(cls(clsi)),'Position',R*[cos(pi/4) sin(pi/4) 0])
@@ -1267,7 +1287,7 @@ elseif strcmp(Hk,'demo4')
     figure(1)
     figna=figdisp([],sprintf('%s_%i',sprintf('%s_1',demo),imnum),[],1);
     figure(2)
-    figna=figdisp([],sprintf('%s_%i',sprintf('%s_2',demo),imnum),[],1);
+    figna=figdisp([],sprintf('%s_%i',sprintf('%s_2',demo),imnum),[],0);
 elseif strcmp(Hk,'demo5')
     % WILL REQUIRE CLEANUP WITH CLABELS ETC
     % Sea surface height anomaly, near real time
