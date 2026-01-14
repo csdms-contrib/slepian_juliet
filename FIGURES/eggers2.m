@@ -5,9 +5,10 @@ function eggers2
 % simulated fields from isotropic Matern processes. The main routines being
 % tested are MATERNOS, MATERNOSY, and SIMULOSL.
 %
-% Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
+% Tested on 8.3.0.532 (R2014a) and 8.5.0.197613 (R2015a)
+% and 9.0.0.341360 (R2016a) - mileage does vary
 % Last modified by fjsimons-at-alum.mit.edu, 06/23/2018
-% Last modified by olwalbert-at-princeton.edu, 11/14/2025
+% Last modified by olwalbert-at-princeton.edu, 12/09/2025
 
 % Option for loglog sdf
 llsdf=1;
@@ -41,9 +42,11 @@ k=unique([linspace(k(1),k(2),50)...
 x=linspace(0,(Nx-1)*dx,100);
 % New range for Ky
 if llsdf
-  newr=[1e-6 1.1];
+  newr1=[1e-5 1.75];
+  newr2=[-0.1 1.1];
 else
-  newr=[-0.1 1.1];
+  newr1=[-0.1 1.1];
+  newr2=[-0.1 1.1];
 end
 % New ticks for Ky
 newy=[0 1/3 2/3 1];
@@ -85,37 +88,47 @@ for ind=1:length(S2)
   hold on
   % Do this before the extra axis, the plus one is crucial
   if llsdf
-    set(ah(ind),'xlim',klims)
-    pgy{ind}=plot(newr,[exes(3:end) ; exes(3:end)],'k:');
+      set(ah(ind),'xlim',klims)
+      pgy{ind}=plot(newr1,repmat([exes(3:end) 1],2,1),'Color',grey(9));
   else
     set(ah(ind),'xlim',klims,'ygrid','on')
   end
-  % Remove the last one since it's so close to the axis
-  pg{ind}=plot([exes(1:end-1) ; exes(1:end-1)],newr,'k:');
+  % Omit the last one since it's so close to the axis
+  pg{ind}=plot([exes(1:end-1) ; exes(1:end-1)],newr1,'Color',grey(9));
+  % These are the percentages
+  pers=[25 50 75];
   % Remove the ones where the labels will be
   if llsdf
-    yremr=[0.03 0.3];
-    yreml=[0.5 1.5].*10.^(-3+0.5.*[1;2;3]);
+      yremr=[0.03 0.3];
+      try
+          yreml=[0.5 1.5].*10.^(-3+0.5.*[1:length(pers)]');
+      catch
+          yreml=repmat([0.5 1.5],3,1).*repmat(10.^(-2.9+0.5*[1:length(pers)]'),1,2);
+      end
   else
-    yremr=[0.41 0.99];
-    yreml=[0.01 0.19]+([1;2;3]-1)*0.2;
+      yremr=[0.41 0.99];
+      try 
+          yreml=[0.01 0.19]+([1;2;3]-1)*0.2;
+      catch
+          yreml=repmat([0.01 0.19],3,1)+repmat([1:length(pers)]'-1,1,2)*0.2;
+      end
   end
+  % White vertical for the parameter cover
   pgg{ind}=plot([exes(end-1) ; exes(end-1)],yremr,'w-');
   if llsdf
-    % White
-    pgyg(1)=plot([exes(1) exes(2)*3],[exes(end-1) ; exes(end-1)],'w-');
-    pgyg(2)=plot([exes(3)*0.8 exes(end)],[exes(end) ; exes(end)],'w-');
+    % White horizontal
+    pgyg(1)=plot([exes(1)*0.75 exes(2)*1.5],[exes(end-1) ; exes(end-1)],'w-');
+    pgyg(2)=plot([exes(3)*0.75 exes(end)],[exes(end) ; exes(end)],'w-');
   end
   % Plot some Matern percentages!
-  pers=[25 50 75];
   for ond=1:length(pers)
     Kprc(ond)=maternprc(th0,pers(ond));
     hold on
-    ppr{ind}(ond)=plot([Kprc(ond) Kprc(ond)]*mfromkm,newr,'k-');
-    % White
+    ppr{ind}(ond)=plot([Kprc(ond) Kprc(ond)]*mfromkm,newr1,'k-');
+    % White vertical
     pww{ind}(ond)=plot([exes(1) exes(1)],yreml(ond,:),'w-',...
                        'linew',2);
-    % White
+    % White vertical
     pwx{ind}(ond)=plot([exes(2) exes(2)],yreml(ond,:),'w-',...
                        'linew',1);
     % Annotate the percentiles
@@ -129,16 +142,16 @@ for ind=1:length(S2)
                              pers(ond),round(2*pi/Kprc(ond)/mfromkm)));
   end
   if llsdf
-    ylim([1e-3 1.1])
+    ylim([1e-3 newr1(2)])
   else
-    ylim(newr)
+    ylim(newr1)
   end
   hold off
 
   if ind==1
-    yl(1)=ylabel('normalized sdf S(k)/S(0)');
+    yl(1)=ylabel('normalized sdf S(k)/S(0)','FontSize',9);
   end
-  xl(ind)=xlabel('wavenumber (rad/km)');
+  xl(ind)=xlabel('wavenumber (rad/km)','FontSize',9);
   
   % Put on the wavelength axis
   set(ah(ind),'xtick',exes)
@@ -158,6 +171,12 @@ for ind=1:length(S2)
   aa(1,ind)=text(xa,ya(1),sprintf('%s = %3.1f km','\sigma',sqrt(S2(ind))/mfromkm));
   aa(2,ind)=text(xa,ya(2),sprintf('%s = %3.2f %s','\nu',NU(ind),'  '));
   aa(3,ind)=text(xa,ya(3),sprintf('%s = %i km','\rho',RH(ind) /mfromkm));
+
+  % Reorder
+  for ond=1:length(ppr)
+      top(ppr(ond),ah(ind))
+  end
+  top(pS,ah(ind))
   
   % The correlation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   axes(ah(ind+ncol))
@@ -170,7 +189,7 @@ for ind=1:length(S2)
   % Remove the ones where the labels will be
   pgw{ind}=plot([wout wout],[0.81 0.99],'w-','linew',2);
   % At this point the correlations should have died down by one third
-  pR(ind)=plot(pi*[1 1]*RH(ind)/mfromkm,newr);
+  pR(ind)=plot(pi*[1 1]*RH(ind)/mfromkm,newr2,'b');
   % At this point the limit of the simulation has been reached
   % pL(ind)=plot([1 1]*(Nx-1)*dx/mfromkm,newr,'k');
   hold off
@@ -178,8 +197,8 @@ for ind=1:length(S2)
                                 '\pi\rho',round(RH(ind)*pi/mfromkm)));
   
   if ind==1
-    yl(2)=ylabel('correlation C(r)/\sigma^2');
-    yl(2)=ylabel('normalized cov C(r)/\sigma^2');
+    yl(2)=ylabel('correlation C(r)/\sigma^2','FontSize',9);
+    yl(2)=ylabel('normalized cov C(r)/\sigma^2','FontSize',9);
   end
   xl(ind+ncol)=xlabel('distance (km)');
   
@@ -218,7 +237,7 @@ for ind=1:length(S2)
                         Hxm/mfromkm,std(Hx)/mfromkm));
   xl(ind+2*ncol)=xlabel('easting (km)');
   if ind==1
-    yl(3)=ylabel('northing (km)');
+    yl(3)=ylabel('northing (km)','FontSize',9);
   end
   % Reasonable color axis in terms of standard deviations
   gp=getpos(ah(ind+2*ncol));
@@ -244,17 +263,19 @@ longticks([ah(1:2*ncol) axx],1)
 longticks(ah([2*ncol+1:3*ncol]),0.75)
 set(aa,'HorizontalAlignment','l')
 set(al,'HorizontalAlignment','l','FontSize',9)
+set([tl xl yl],'FontSize',9)
 set(bb,'HorizontalAlignment','r','Color','b')
 set(hc(:,1),'color','b')
-set(ah([1:length(S2)]+3),'ylim',newr)
+set(ah([1:length(S2)]+3),'ylim',newr2)
 nolabels(ha(4:end),2)
 set(pS,'linew',2,'color','k')
 set(pK,'linew',2,'color','b')
 moveh([ah(2*ncol+1:3*ncol) cb(1:end)],-0.0175)
 moveh([ah(2*ncol+2:3*ncol) cb(2:end)],-0.0050)
-
-keyboard
+moveh(tl,250)
 
 % Printo
 figna=figdisp([],[],[],1);
+keyboard
+
 system(sprintf('epstopdf %s.eps',figna));
