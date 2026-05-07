@@ -7,10 +7,10 @@ which you may cite if you find any of these routines useful!
 
 See also
 DSWL package: a Python implementation of the debiased spatial Whittle likelihood
-as developed by:<br>
+by:<br>
 Guillaumin, Goodwin, Walbert, Sykulski, Olhede &amp; Simons<br>
 J. Open Source Softw., 11(119), 8323, <a href="http://dx.doi.org/10.21105/joss.08323">doi: 10.21105/joss.08323</a><br>
-where you will find much of what's here, in ``python``. 
+where you will find much of what's here, but						    in ``python``. 
 
 Supported by the National Aeronautics and Space Administration under grant NNX11AQ45G.\
 Supported by the National Science Foundation under grant <a href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=1550389">EAR-1550389</a>.
