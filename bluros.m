@@ -2,7 +2,7 @@ function varargout=bluros(S,params,xver)
 % [Sbar,k,c2,Fejk]=BLUROS(S,params,xver)
 %
 % Blurring of a spectral matrix with the periodogram of a spatial windowing
-% function (for now only the boxcar, hence the Fejer kernel), in the
+% function (for now only the BOXCAR, hence the Fejer kernel), in the
 % approximate, discretized, convolutional manner. The wavenumber-dependent input
 % is given on a grid that was specified to be an integer refinement from an
 % original that remains the target. The result is obtained by subsampling (or
@@ -325,7 +325,8 @@ function bluros_demo(pp,bb)
 % bluros_demo(pp,bb)
 %
 % This function compares the various ways of blurring, make sure you
-% run it in a variety of combinations in both even and odd numbers.
+% run it in a variety of combinations in both even and odd numbers, and test
+% growing sizes and growing refinement parameters.
 %
 % INPUT:
 %
@@ -423,7 +424,6 @@ p.blurs=-1; S41=blurosy(th,p,1,'efs'); S51=maternosp(th,p,1); diferm(S41,S51,-2)
 p.blurs=-1; S61=blurosy(th,p,1,'efd',[0 0]);
 S61=fftshift(v2s(realize(S61),p));S61=S61(:);
 
-
 axes(ah(5))
 imagesc(reshape(decibel(S21),p.NyNx)); 
 t2(1)=title(sprintf('[%i %i] BLUROS-%i [S21]',p.NyNx,bb),'FontSize',fs);
@@ -512,6 +512,7 @@ plot(S41./S61,'.');
 t3(6)=title(sprintf('[%i %i] S41/S61',[pp pp]+1));
 hold on; plot(i41,S41(i41)/S61(i61),'o'); hold off
 set(ah2(6),'xtick',[1 kz2 [pp+1]^2],'xgrid','on')
+
 % Align plots
 longticks(ah2); 
 
@@ -524,6 +525,7 @@ for index=1:length(ah2)
   set(ah2(index),'ylim',[min(0.75,min(yl)*0.9)-[min(yl)<range(yl)/20]*range(yl)/20 max(yl)*1.1])
   set(ah2(index),'ylim',[0 2])
 end
+
 % Print it baby
 figdisp([],sprintf('2_%3.3i_%2.2i',pp,bb),[],2)
 
