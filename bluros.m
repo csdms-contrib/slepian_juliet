@@ -248,7 +248,7 @@ if ~isstr(S)
     Sbar(:,in)=Hh(:);
     
     % Make sure the zero wavenumber gets the correct value, the zero-wavenumber
-    if xver==1 
+    if xver==1 || xver==2
       % We need the indicial zero-wavenumber location for the REFINED grid
       kzx2=floor(NyNx2(2)/2)+1; kzy2=floor(NyNx2(1)/2)+1;
       % We need the running zero-wavenumber location for the REFINED grid
@@ -262,7 +262,7 @@ if ~isstr(S)
     end
   end
 
-  if xver==1 
+  if xver==1 || xver==2
     % Check that no extrapolation was demanded, effectively
     % but know that griddedInterpolant would have EXTRApolated fine
     difer(sum(isnan(Sbar(:))),[],2,NaN)
