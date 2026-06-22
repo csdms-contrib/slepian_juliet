@@ -1,5 +1,5 @@
 function [fids,fmts,fmti]=osopen(np,datum)
-% [fids,fmts,fmti]=OSOPEN(np,npp)
+% [fids,fmts,fmti]=OSOPEN(np,datum)
 %
 % Opens ALL FOUR diagnostic files for writing by the suite of programs
 % following Simons & Olhede (2013), and returns identifiers and format
@@ -23,7 +23,7 @@ function [fids,fmts,fmti]=osopen(np,datum)
 % OSLOAD, OSRDIAG (with which it needs to match!)
 %
 % Last modified by olwalbert-at-princeton.edu, 09/03/2024
-% Last modified by fjsimons-at-alum.mit.edu, 09/03/2024
+% Last modified by fjsimons-at-alum.mit.edu, 06/22/2026
 
 % File name suffix
 defval('datum',date)
