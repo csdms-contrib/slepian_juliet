@@ -50,8 +50,8 @@ function varargout=bluros(S,params,xver)
 %
 % BLUROS('demo2',pp,bb) a very simple run test with graphical output
 % 
-% Last modified by fjsimons-at-alum.mit.edu, 12/19/2023
 % Last modified by olwalbert-at-princeton.edu, 02/25/2025
+% Last modified by fjsimons-at-alum.mit.edu, 06/23/2026
 
 if ~isstr(S)
   % disp('Ich bin so lang nicht bei dir g''west')
@@ -187,7 +187,7 @@ if ~isstr(S)
     % This works out how the blurred grid is a superset of the blurred grid!
     sx=1+mod(NyNx(2),2)*floor(blurs/2);
     sy=1+mod(NyNx(1),2)*floor(blurs/2);
-    disp(sprintf('for %ix%i with blurs %i, sx: %i, sy: %i',NyNx,blurs,sx,sy))
+    % disp(sprintf('for %ix%i with blurs %i, sx: %i, sy: %i',NyNx,blurs,sx,sy))
     
     if round(blurs)==blurs &&  ...
           [sum(abs(kx2(sx:blurs:end)-kx))+sum(abs(ky2(sy:blurs:end)-ky))]<eps
