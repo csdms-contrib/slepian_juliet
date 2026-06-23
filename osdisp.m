@@ -20,7 +20,7 @@ function varargout=osdisp(th0,thhats,nl,avhs,F0,covavhs)
 %
 % The strings used 
 %
-% Last modified by fjsimons-at-alum.mit.edu, 05/15/2025
+% Last modified by fjsimons-at-alum.mit.edu, 06/23/2026
 
 % The necessary strings for formatting
 str0='%18s';
@@ -36,23 +36,25 @@ str3s=repmat(str3,size(th0));
 % Don't use STRUC2ARRAY since we want them in our own order
 % But see the reordering solution in OSWZEROB
 if isstruct(thhats) && nargin==2
-  params=thhats;
-  if length(th0)>3
-    disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3,1,10)),...
-		 ' ','D1','D2','g','z2','dy','dx','Ny','Nx','blurs','quart'))
-    disp(sprintf(sprintf('%s : %s ',str0,repmat(str1,1,10)),...
-                 'Parameters',params.DEL,params.g,params.z2,...
-                 params.dydx,params.NyNx,params.blurs,params.quart))
-  else
-      % Quick reporting fix
-      if length(params.taper)>1
-          params.taper=3;
-      end
-    disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3,1,7)),...
-		 ' ','dy','dx','Ny','Nx','blurs','quart','taper'))
-    disp(sprintf(sprintf('%s : %s ',str0,repmat(str1,1,7)),...
-                 'Parameters',params.dydx,params.NyNx,params.blurs,params.quart,params.taper))
-  end
+    params=thhats;
+    if length(th0)>3
+        % It is the bivariate problem
+        disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3,1,10)),...
+		     ' ','D1','D2','g','z2','dy','dx','Ny','Nx','blurs','quart'))
+        disp(sprintf(sprintf('%s : %s ',str0,repmat(str1,1,10)),...
+                     'Parameters',params.DEL,params.g,params.z2,...
+                     params.dydx,params.NyNx,params.blurs,params.quart))
+    else
+        % It is the univariate problem
+        % Quick reporting fix
+        if length(params.taper)>1
+            params.taper=3;
+        end
+        disp(sprintf(sprintf('\n%s   %s ',str0,repmat(str3,1,7)),...
+		     ' ','dy','dx','Ny','Nx','blurs','quart','taper'))
+        disp(sprintf(sprintf('%s : %s ',str0,repmat(str1,1,7)),...
+                     'Parameters',params.dydx,params.NyNx,params.blurs,params.quart,params.taper))
+    end
 else
   if nl==1
     % Average numerical Hessian near the estimate and Fisher matrix at the truth
