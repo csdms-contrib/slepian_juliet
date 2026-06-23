@@ -267,9 +267,9 @@ if ~isstr(S)
     % but know that griddedInterpolant would have EXTRApolated fine
     difer(sum(isnan(Sbar(:))),[],2,NaN)
     % Check Hermiticity and positive-definiteness - later loop for multi-D
-    disp(sprintf('Checking Sbar for dimensions %ix%i',params.NyNx))
+    % disp(sprintf('Checking Sbar for dimensions %ix%i',params.NyNx))
     blurcheck(Sbar,params)
-    disp(sprintf('%s\n','No message if passed'))
+    % disp(sprintf('%s\n','No message if passed'))
     
     % Remember if it's even we disregard the Nyquist for symmetry
     A=Hh(1+~mod(size(Hh,1),2):end,1+~mod(size(Hh,2),2):end);
