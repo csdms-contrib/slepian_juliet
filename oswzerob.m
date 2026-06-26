@@ -38,7 +38,7 @@ jk=struct2cell(params);
 fprintf(fid,fmts{2},[jk{i(~~i)}]);
 
 % Commit the parameters of the INVERSION to file
-fprintf(fid,'%s\n','the fixed inversion parameters');
+%fprintf(fid,'%s\n','the fixed inversion parameters');
 
 % blurs nugget ifinv maskhash 
 
