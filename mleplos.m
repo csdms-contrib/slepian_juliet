@@ -38,8 +38,8 @@ function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpi
 %
 % Tested on 8.5.0.197613 (R2015a)
 %
-% Last modified by olwalbert-at-princeton.edu, 05/30/2025
-% Last modified by fjsimons-at-alum.mit.edu, 05/30/2025
+% Last modified by fjsimons-at-alum.mit.edu, 12/11/2025
+% Last modified by olwalbert-at-princeton.edu, 12/11/2025
 
 defval('xver',1)
 defval('ifinv',[1 1 1])
@@ -104,19 +104,22 @@ else
   params.taper=1;
 end
 
-% Calculate covariance of scores
+% Calculate covariance of scores at the TRUTH
 try
     % DFMTX -- may fail when the grid is too large
     cvg=covgammiosl(th0,params,2);
+    disp('Congratulations! You did a number 2')
 catch
     try 
+        % diagonals -- only the last resort because it is time consuming
+        cvg=covgammiosl(th0,params,3);
+        disp('Congratulations! You did a number 3')
+    catch
         % gradient sample -- may fail if positive definite embedding cannot be
         % found
         cvg=covgammiosl(th0,params,1);
-    catch
-        % diagonals -- only the last resort because it is time consuming
-        cvg=covgammiosl(th0,params,3);
-    end
+        disp('Congratulations! You did a number 1')
+   end
 end
 
 % Calculate true covariance of estimated parameters
@@ -448,7 +451,7 @@ if xver==1
 
         axis square;
         %grid on
-        % To only show lines at +/-2 std and the truth
+        % To only show lines at +/-x std and the truth
         hold on
         xlim(th0(p1)+tstats*sobss(p1))
         ylim(th0(p2)+tstats*sobss(p2))
