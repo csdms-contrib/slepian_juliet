@@ -33,8 +33,8 @@ function [th0,thhats,params,covX,covavhs,thpix,E,v,obscov,sclcovX,momx,covXpix,c
 %
 % OSOPEN, OSRDIAG, TRIMIT, MLEOS etc
 %
-% Last modified by fjsimons-at-alum.mit.edu, 04/15/2025
 % Last modified by olwalbert-at-princeton.edu, 04/15/2025
+% Last modified by fjsimons-at-alum.mit.edu, 06/29/2026
 
 % Who called? Work this into the filenames
 [~,nn]=star69;
@@ -127,8 +127,13 @@ covXpix=inv(trilosi(hes(pix,:))./matscl)/df;
 pp=trilosi(covX(pix,:));
 diferm(covXpix(:)./matscl(:),pp(:)./matscl(:),3)
 
-% The below should be the same as covF0 since it came out of OSWZEROE, not at zero-k
-[~,covth0]=fishiosl(k,th0,params,1);
+try
+    % The below should be the same as covF0 since it came out of OSWZEROE, not at zero-k
+    [~,covth0]=fishiosl(k,th0,params,1);
+catch
+    % Stealing these lines out of COVTHROS for now, until that changes to FISHIROS
+    covth0=covthros(th0./sclth0,params,k,sclth0);
+end
 
 % This needs to be identical except in a few digits compared to the size
 diferm(covth0(:)./matscl(:),covF0(:)./matscl(:),3)
