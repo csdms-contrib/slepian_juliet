@@ -38,8 +38,8 @@ function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpi
 %
 % Tested on 8.5.0.197613 (R2015a)
 %
-% Last modified by fjsimons-at-alum.mit.edu, 12/11/2025
 % Last modified by olwalbert-at-princeton.edu, 12/11/2025
+% Last modified by fjsimons-at-alum.mit.edu, 06/29/2026
 
 defval('xver',1)
 defval('ifinv',[1 1 1])
@@ -61,10 +61,12 @@ np=size(thhats,2);
 if np==6
   labs={'D','f^2','r','\sigma^2','\nu','\rho'};
   labs0={'D_0','f^2_0','r_0','\sigma^2_0','\nu_0','\rho_0',};
+  flabs={'flexural rigidity D','loading ratio f^2','correlation coefficient','variance \sigma^2','smoothness \nu','range \rho',};
   unts={'Nm' [] [] [] [] []};
 elseif np==5
   labs={'D','f^2','\sigma^2','\nu','\rho',};
   labs0={'D_0','f^2_0','\sigma^2_0','\nu_0','\rho_0'};
+  flabs={'flexural rigidity D','loading ratio f^2','correlation coefficient','variance \sigma^2','smoothness \nu','range \rho',};
   unts={'Nm' [] [] [] []};
 elseif np==3
   labs={'\sigma^2','\nu','\rho',};
@@ -83,7 +85,8 @@ for i=1:np
             flabs{i}=sprintf('%s %s',flabs{i},sprintf(' (x 10^{%d})',log10(sclth0(i))));
         end
     end
-end  
+end
+
 % Set the taper
 if isfield(params,'mask')
   if strcmp(params.mask,'random')
@@ -104,30 +107,37 @@ else
   params.taper=1;
 end
 
-% Calculate covariance of scores at the TRUTH
-try
-    % DFMTX -- may fail when the grid is too large
-    cvg=covgammiosl(th0,params,2);
-    disp('Congratulations! You did a number 2')
-catch
-    try 
-        % diagonals -- only the last resort because it is time consuming
-        cvg=covgammiosl(th0,params,3);
-        disp('Congratulations! You did a number 3')
+% Do not do this if called by MLEROS
+[~,b]=star69;
+if ~strcmp(b,'mleros')
+    % Calculate covariance of scores at the TRUTH
+    try
+        % DFMTX -- may fail when the grid is too large
+        cvg=covgammiosl(th0,params,2);
+        disp('Congratulations! You did a number 2')
     catch
-        % gradient sample -- may fail if positive definite embedding cannot be
-        % found
-        cvg=covgammiosl(th0,params,1);
-        disp('Congratulations! You did a number 1')
-   end
+        try 
+            % diagonals -- only the last resort because it is time consuming
+            cvg=covgammiosl(th0,params,3);
+            disp('Congratulations! You did a number 3')
+        catch
+            % gradient sample -- may fail if positive definite embedding cannot be
+            % found
+            cvg=covgammiosl(th0,params,1);
+            disp('Congratulations! You did a number 1')
+        end
+    end
+    
+    % Calculate true covariance of estimated parameters
+    % The mean estimate doesn't exist, especially given the tradeoffs
+    %cvth=covthosl(nanmean(thhats,1),params,cvg,[1 1 1]);
+    % Somewhat oddly variable, this appears
+    %cvth=covthosl(thhats(randi(size(thhats,1)),:),params,cvg,[1 1 1]);
+    cvth=covthosl(th0,params,cvg,[1 1 1]);
+else
+    % Need to do that better soon
+    cvth=nan(6,6);
 end
-
-% Calculate true covariance of estimated parameters
-% The mean estimate doesn't exist, especially given the tradeoffs
-%cvth=covthosl(nanmean(thhats,1),params,cvg,[1 1 1]);
-% Somewhat oddly variable, this appears
-%cvth=covthosl(thhats(randi(size(thhats,1)),:),params,cvg,[1 1 1]);
-cvth=covthosl(th0,params,cvg,[1 1 1]);
 
 figure(1)
 clf
