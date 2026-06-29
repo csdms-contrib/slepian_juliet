@@ -61,17 +61,17 @@ np=size(thhats,2);
 if np==6
   labs={'D','f^2','r','\sigma^2','\nu','\rho'};
   labs0={'D_0','f^2_0','r_0','\sigma^2_0','\nu_0','\rho_0',};
-  flabs={'flexural rigidity D','loading ratio f^2','correlation coefficient','variance \sigma^2','smoothness \nu','range \rho',};
+  flabs={'flexural rigidity D','loading ratio f^2','correlation coefficient','variance \sigma^2','smoothness \nu','range \rho'};
   unts={'Nm' [] [] [] [] []};
 elseif np==5
   labs={'D','f^2','\sigma^2','\nu','\rho',};
   labs0={'D_0','f^2_0','\sigma^2_0','\nu_0','\rho_0'};
-  flabs={'flexural rigidity D','loading ratio f^2','correlation coefficient','variance \sigma^2','smoothness \nu','range \rho',};
+  flabs={'flexural rigidity D','loading ratio f^2','correlation coefficient','variance \sigma^2','smoothness \nu','range \rho'};
   unts={'Nm' [] [] [] []};
 elseif np==3
   labs={'\sigma^2','\nu','\rho',};
   labs0={'\sigma^2_0','\nu_0','\rho_0'};
-  flabs={'variance \sigma^2','smoothness \nu','range \rho',};
+  flabs={'variance \sigma^2','smoothness \nu','range \rho'};
   unts={[] [] []};
 end
 
