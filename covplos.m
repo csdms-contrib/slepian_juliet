@@ -22,8 +22,8 @@ function varargout=covplos(oneortwo,sclcovX,obscov,params,thhats,E,v,cblox,ifinv
 %
 % ah,yl     Axis handles to what was just plotted
 %
-% Last modified by fjsimons-at-alum.mit.edu, 05/20/2025
-% Last modified by olwalbert-at-princeton.edu, 05/20/2025
+% Last modified by fjsimons-at-alum.mit.edu, 12/11/2025
+% Last modified by olwalbert-at-princeton.edu, 12/11/2025
 
 defval('oneortwo',2)
 defval('cblox','ver')
@@ -32,18 +32,27 @@ defval('ifinv',[1 1 1])
 % Number of paramters
 np=length(sclcovX);
 
-% Calculate proper covariance of scores, how about using the average estimate
-% maybe should bring that in line with MLEPLOS which uses the truth
-thhat=mean(thhats,1);
+% Calculate covariance of scores at the TRUTH
+% Later make sure to INPUT th0
+th0=mean(thhats);
 try
-    % DFMTX
-    cvg=covgammiosl(thhat,params,2);
+    % DFMTX -- may fail when the grid is too large
+    cvg=covgammiosl(th0,params,2);
+    disp('Congratulations! You did a number 2')
 catch
-    % gradient sample
-    cvg=covgammiosl(thhat,params,1);
+    try 
+        % diagonals -- only the last resort because it is time consuming
+        cvg=covgammiosl(th0,params,3);
+        disp('Congratulations! You did a number 3')
+    catch
+        % gradient sample -- may fail if positive definite embedding cannot be
+        % found
+        cvg=covgammiosl(th0,params,1);
+        disp('Congratulations! You did a number 1')
+   end
 end
 % Calculate true covariance of estimated parameters and replace what came in
-sclcovX=covthosl(thhat,params,cvg,[1 1 1]);
+sclcovX=covthosl(th0,params,cvg,[1 1 1]);
 sclcovX=sclcovX./[diag(sqrt(sclcovX))*diag(sqrt(sclcovX))'];
 
 % Print this out
@@ -90,14 +99,14 @@ switch oneortwo
   
   switch cblox
    case 'hor'
-    cb=colorbarf('hor',get(gca,'FontSize'),get(gca,'FontName'),...
+    cb=colorbarf('hor',10,get(gca,'FontName'),...
 		 [0.3 0.3 0.3 0.02]);
     axes(cb)
     xlabel('normalized variance/covariance matrix')
     moveh(cb,0.125)
     movev(cb,-0.02)
    case 'ver'
-    cb=colorbarf('ver',get(gca,'FontSize'),get(gca,'FontName'),...
+    cb=colorbarf('ver',10,get(gca,'FontName'),...
 		 [0.175 0.385 0.02 getpos(ah(1),4)]);
     axes(cb)
     yl=ylabel('normalized covariance matrix');
@@ -106,11 +115,15 @@ switch oneortwo
   longticks(cb,2)
 end
 
+% Bits and pieces
+movev(t,-.1)
+moveh(t,0.2)
+
 % Stick the params here somewhere so we can continue to judge
-t=ostitle(ah,params,[],length(thhats(:,1)));
-movev(t,.5);
-set(t,'FontSize',12);
-moveh(t,-0.1);
+t(3)=ostitle(ah,params,[],length(thhats(:,1)));
+movev(t(3),.5);
+set(t(3),'FontSize',12);
+moveh(t(3),-0.1);
 % We are quoting the TRUTHS and the 1xstandard deviation based on COVX
 % Here is the MEAN ESTIMATE and its OBSERVED-COVARIANCE-based standard deviation
 [answ,answs]=osansw(mean(thhats),cov(thhats),E,v);
@@ -162,4 +175,5 @@ set(ah,'xtick',1:np,'XTickLabel',labs,'FontSize',12)
 set(ah,'ytick',1:np,'YTickLabel',labs,'FontSize',12)
 longticks(ah)
 movev(ah,.05)
+
 
