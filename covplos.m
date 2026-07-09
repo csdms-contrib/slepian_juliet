@@ -22,8 +22,8 @@ function varargout=covplos(oneortwo,sclcovX,obscov,params,thhats,E,v,cblox,ifinv
 %
 % ah,yl     Axis handles to what was just plotted
 %
-% Last modified by fjsimons-at-alum.mit.edu, 12/11/2025
 % Last modified by olwalbert-at-princeton.edu, 12/11/2025
+% Last modified by fjsimons-at-alum.mit.edu, 07/08/2026
 
 defval('oneortwo',2)
 defval('cblox','ver')
@@ -35,29 +35,31 @@ np=length(sclcovX);
 % Calculate covariance of scores at the TRUTH
 % Later make sure to INPUT th0
 th0=mean(thhats);
-try
-    % DFMTX -- may fail when the grid is too large
-    cvg=covgammiosl(th0,params,2);
-    disp('Congratulations! You did a number 2')
-catch
-    try 
-        % diagonals -- only the last resort because it is time consuming
-        cvg=covgammiosl(th0,params,3);
-        disp('Congratulations! You did a number 3')
+% Do not do this if called by MLEROS
+[~,b]=star69;
+if ~strcmp(b,'mleros')
+    try
+        cvg=covgammiosl(th0,params,2);
+        disp('Congratulations! You did a number 2')
     catch
-        % gradient sample -- may fail if positive definite embedding cannot be
-        % found
-        cvg=covgammiosl(th0,params,1);
-        disp('Congratulations! You did a number 1')
-   end
+        try 
+            % diagonals -- only the last resort because it is time consuming
+            cvg=covgammiosl(th0,params,3);
+            disp('Congratulations! You did a number 3')
+        catch
+            % gradient sample -- may fail if positive definite embedding cannot be
+            % found
+            cvg=covgammiosl(th0,params,1);
+            disp('Congratulations! You did a number 1')
+        end
+    end
+    % Calculate true covariance of estimated parameters and replace what came in
+    sclcovX=covthosl(th0,params,cvg,[1 1 1]);
+    sclcovX=sclcovX./[diag(sqrt(sclcovX))*diag(sqrt(sclcovX))'];
+else
+    % Need to do that better soon using COVTHROS
+    %sclcovX=covthros(...
 end
-% Calculate true covariance of estimated parameters and replace what came in
-sclcovX=covthosl(th0,params,cvg,[1 1 1]);
-sclcovX=sclcovX./[diag(sqrt(sclcovX))*diag(sqrt(sclcovX))'];
-
-% Print this out
-obscov
-sclcovX
 
 switch oneortwo
  case 1
