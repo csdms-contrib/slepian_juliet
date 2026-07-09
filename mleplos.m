@@ -407,7 +407,11 @@ if xver==1
     fig2print(gcf,'landscape')
     clf
     pcomb=nchoosek(1:np,2);
-    [ah,ha]=krijetem(subnum(1,3));
+    try
+        [ah,ha]=krijetem(subnum(size(pcomb,1)/3,3));
+    catch
+        [ah,ha]=krijetem(subnum(size(pcomb,1)/2,3));
+    end        
 
     % Scale everything
     mobss=mobss./sclth0;
@@ -425,7 +429,7 @@ if xver==1
     
     t=linspace(0,2*pi);
 
-    for ind=1:np
+    for ind=1:size(pcomb,1)
         axes(ah(ind))
         % Find the pairwise combinations for the cross-plot convention:
         % s2-nu, s2-rho, nu-rho
