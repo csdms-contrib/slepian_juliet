@@ -39,6 +39,7 @@ th0=mean(thhats);
 [~,b]=star69;
 if ~strcmp(b,'mleros')
     try
+        % DFMTX -- may fail when the grid is too large
         cvg=covgammiosl(th0,params,2);
         disp('Congratulations! You did a number 2')
     catch
