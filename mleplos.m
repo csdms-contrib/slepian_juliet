@@ -39,7 +39,7 @@ function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpi
 % Tested on 8.5.0.197613 (R2015a)
 %
 % Last modified by olwalbert-at-princeton.edu, 12/11/2025
-% Last modified by fjsimons-at-alum.mit.edu, 06/29/2026
+% Last modified by fjsimons-at-alum.mit.edu, 07/08/2026
 
 defval('xver',1)
 defval('ifinv',[1 1 1])
@@ -53,7 +53,7 @@ sclth0=10.^round(log10(abs(th0)));
 movit=0.01;
 yls=[-0.0 0.6];
 % Determines the rounding on the y axis 
-rondo=1e2;
+rondo=1e3;
 % Sets the format for the estimated/true plot labels
 
 % The number of parameters
@@ -427,8 +427,8 @@ if xver==1
 
     for ind=1:np
         axes(ah(ind))
-        % Find the pairwise combinations for the cross-plot convention: s2-nu,
-        % s2-rho, nu-rho
+        % Find the pairwise combinations for the cross-plot convention:
+        % s2-nu, s2-rho, nu-rho
         p1=pcomb(ind,1); p2=pcomb(ind,2);
 
         % Observed means and AVERAGE NUMERICAL HESSIAN standard deviations
@@ -472,8 +472,9 @@ if xver==1
                     repmat(round(rondo*[th0(p2)+...
                     vstats([1 3 5]).*sobss(p2)])./rondo,2,1),...
                      '-','Color',grey);
+
         % Color mix
-        cmix=[0 0 0]; cmix([p1 p2])=1/2;
+        cmix=[0 0 0]; 
         set([p(ind) m(ind)],'MarkerFaceColor',cmix,'MarkerEdgeColor',cmix,'MarkerSize',2)
         % Dull colors
         set([p(ind) m(ind)],'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',2)
