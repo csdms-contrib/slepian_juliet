@@ -1,5 +1,5 @@
 function [th,p,scl,avhsz,F0,covF0,nh]=osrzero(fid,np)
-% [th,p,scl,scl,avhsz,F0,covF0,nh]=OSRZERO(fid,np)
+% [th,p,scl,avhsz,F0,covF0,nh]=OSRZERO(fid,np)
 %
 % Reads a THZRO file as produced by the olhede? suite of
 % programs following Simons & Olhede (2013).
