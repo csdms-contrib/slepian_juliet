@@ -432,6 +432,7 @@ if xver==1
     for ind=1:size(pcomb,1)
         axes(ah(ind))
         % Find the pairwise combinations for the cross-plot convention:
+        % which for the three-parameter univariate case is 
         % s2-nu, s2-rho, nu-rho
         p1=pcomb(ind,1); p2=pcomb(ind,2);
 
