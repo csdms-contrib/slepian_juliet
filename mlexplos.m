@@ -21,8 +21,14 @@ function varargout=mlexplos(thhats,covth,flabs)
 %
 % EXAMPLE:
 %
+%% Bivariate collective example
 % mlexplos; axis square; axis([-3 3 -3 3]); grid on
+%% Trivariate collective example
 % cv=[1 1 1 0.2 -0.6 0.6]; M=100; ah=mlexplos(randx(cv,M),cv,{'X','Y','Z'}); shrink(ah,1,2)
+%% Trivariate set example
+% thhats=[1 2 3 ; 4 5 6 ; 7 8 9 ; 10 11 12];
+% cv=[1 1 1 0.2 -0.6 0.6 ; 1 1 1 -0.2 0.6 0.3 ; 1 1 1 -0.2 -0.6 0.9 ; 1 1 1 0.8 -0.7 0.6];
+% mlexplos(thhats,cv,{'\sigma^2','\rho','\nu'})
 %
 % SEE ALSO:
 %
@@ -31,7 +37,7 @@ function varargout=mlexplos(thhats,covth,flabs)
 % Last modified by fjsimons-at-alum.mit.edu, 07/20/2026
 
 defval('covth',[1 1 0.5])
-defval('thhats',randx(covth,100))
+defval('thhats',randx(covth(1,:),100))
 defval('flabs',{'X' 'Y'})
 
 % The number of parameters
@@ -110,7 +116,7 @@ for ind=1:size(pcomb,1)
     xl2(ind)=xlabel(flabs{p1});
     ylabel(flabs{p2})
 
-    if length(covth)==size(thhats,2)*(size(thhats,2)+1)/2
+    if size(covth,2)==size(thhats,2)*(size(thhats,2)+1)/2
         % OBSERVED pairwise error ellipse for the collective
         % https://www.xarg.org/2018/04/how-to-plot-a-covariance-error-ellipse/
         hold on
@@ -131,6 +137,9 @@ for ind=1:size(pcomb,1)
         % Send these ellipses to the back so the dots show on top
         bottom(ec(ind),ah(ind))
         bottom(ep(ind),ah(ind))
+    else
+        % They are all different estimates with their uncertainty calculations
+        keyboard
     end        
 
     % These things often normalized so this would be appropriate
