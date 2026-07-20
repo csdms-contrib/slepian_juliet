@@ -114,25 +114,27 @@ for ind=1:size(pcomb,1)
     xl2(ind)=xlabel(flabs{p1});
     ylabel(flabs{p2})
 
-    % OBSERVED pairwise error ellipse
-    % https://www.xarg.org/2018/04/how-to-plot-a-covariance-error-ellipse/
-    hold on
-    disp('OBSERVED')
-    ep(ind)=covell(cl,cov(thhats(:,[p1 p2])),thhats(:,[p1 p2]));
-    
-    % CALCULATED pairwise error ellipse
-    znp=zeros(1,np); znp([p1 p2])=1;
-    disp('CALCULATED')
-    ec(ind)=covell(cl,matslice(covth,znp),thhats(:,[p1 p2]));
+    if length(covth)==size(thhats,2)*(size(thhats,2)+1)/2
+        % OBSERVED pairwise error ellipse for the collective
+        % https://www.xarg.org/2018/04/how-to-plot-a-covariance-error-ellipse/
+        hold on
+        disp('OBSERVED')
+        ep(ind)=covell(cl,cov(thhats(:,[p1 p2])),thhats(:,[p1 p2]));
+        
+        % SUPPLIED pairwise error ellipse for the collective
+        znp=zeros(1,np); znp([p1 p2])=1;
+        disp('CALCULATED')
+        ec(ind)=covell(cl,matslice(covth,znp),thhats(:,[p1 p2]));
 
-    % Observed covariance ellipse
-    set(ep(ind),'LineWidth',1.5,'Color',grey)
-    % Supplied covariance ellips
-    set(ec(ind),'LineWidth',0.5,'Color','k')
-    
-    % Send these ellipses to the back so the dots show on top
-    bottom(ec(ind),ah(ind))
-    bottom(ep(ind),ah(ind))
+        % Observed covariance ellipse
+        set(ep(ind),'LineWidth',1.5,'Color',grey)
+        % Supplied covariance ellips
+        set(ec(ind),'LineWidth',0.5,'Color','k')
+        
+        % Send these ellipses to the back so the dots show on top
+        bottom(ec(ind),ah(ind))
+        bottom(ep(ind),ah(ind))
+    end        
 
     % These things often normalized so this would be appropriate
     axis image; axis([-3 3 -3 3]); grid on
