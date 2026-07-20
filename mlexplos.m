@@ -1,10 +1,12 @@
 function varargout=mlexplos(thhats,covth,flabs)
 % ah=MLEXPLOS(thhats,covth,flabs)
 %
-% Makes cross-plots of variables with their error ellipses, centered on the
-% mean. If there are enough covariances given for every one of M sets of N
-% variables, plots the entire population with their individual error ellipses.
-% If no covariance is given, calculates one from the one set of M experiments of N variables.
+% Makes cross-plots of variables with their error ellipses, centered on the mean
+% of a set or on individual values. If there are enough covariances given for
+% every one of M sets of N variables, plots the entire population with their
+% individual error ellipses. If one covariance is given, plots that for the
+% population. In that case and in addition it calculates and plots one from the
+% one set of M experiments of N variables.
 %
 % INPUT:
 %
