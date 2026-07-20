@@ -65,7 +65,7 @@ catch
     end
 end
 
-% Single set with common covariance or collective with individual covariances
+% Single set with common covariance (1) or collective with individual covariances (0)
 ss=prod(size(covth))==size(thhats,2)*(size(thhats,2)+1)/2;
 
 % The below ripped off from MLEPLOS, which later should use MLEXPLOS
@@ -90,7 +90,7 @@ end
 
 % SCALING? 
 
-% Plot error ellipses without using ERROR_ELLIPSE
+% Plot error ellipses
 % https://www.xarg.org/2018/04/how-to-plot-a-covariance-error-ellipse/
 defval('cl',0.68)
 
@@ -103,8 +103,6 @@ for ind=1:size(pcomb,1)
     
     % APPLY SCALING?
 
-    % PLOT CROSSES WITH MEANS AND STANDARD DEVIATIONS?
-
     % The parameter estimates
     p(ind)=plot(thhats(:,p1),thhats(:,p2),'o');
 
@@ -112,8 +110,11 @@ for ind=1:size(pcomb,1)
     % OBSERVED MEANS/ESTIMATES AND OBSERVED/CALCULATED STANDARD DEVIATIONS
     if ss==1
         m(ind)=plot(mobss(p1),mobss(p2),'v');
+        jmax=1;
+    else
+        % That's how many different parameter vectors you hav
+        jmax=size(thhats,1);
     end
-    if ss==1; jmax=1; else jmax=size(thhats,1); end
     for jnd=1:jmax
         % Horizontal crosshair on the collective
         o1(jnd,ind)=plot(mobss(jnd,p1)+pstats*sobss(jnd,p1),[mobss(jnd,p2) mobss(jnd,p2)]);
@@ -121,21 +122,23 @@ for ind=1:size(pcomb,1)
         o2(jnd,ind)=plot([mobss(jnd,p1) mobss(jnd,p1)],mobss(jnd,p2)+pstats*sobss(jnd,p2));
     end
 
-    % FANCY TICKS AND LABELING
+    % FANCY TICKS AND LABELING?
 
     % Estimates
     set(p(ind),'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',2)
     if ss==1
         % Means
-        set(m(ind),'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',4)
+n        set(m(ind),'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',4)
     end
     % Crosshairs
-    set([o1(ind) o2(ind)],'LineWidth',1,'Color',grey)
+    for jnd=1:jmax
+        set([o1(jnd,ind) o2(jnd,ind)],'LineWidth',1,'Color',grey)
+    end
     % Ordering
     if ss==1
         top(m(ind),ah(ind))
     end
-    for jn=1:size(thhats,1)
+    for jnd=1:size(thhats,1)
         bottom(o1(jnd,ind),ah(ind))
         bottom(o2(jnd,ind),ah(ind))
     end
@@ -159,26 +162,23 @@ for ind=1:size(pcomb,1)
         set(ep(ind),'LineWidth',1.5,'Color',grey)
         % Supplied covariance ellips
         set(ec(ind),'LineWidth',0.5,'Color','k')
-        
-        % Send these ellipses to the back so the dots show on top
-        bottom(ec(ind),ah(ind))
-        bottom(ep(ind),ah(ind))
     else
-        % They are all different estimates with their uncertainty calculations
+        % They are ALL DIFFERENT estimates with their uncertainty calculations
         % SUPPLIED pairwise error ellipse for the individuals
         disp('CALCULATED')
-        if ss==1
-            ec(ind)=covell(cl,...
-                           matslice(trilosi(covth(jnd,:)),znp),thhats(:,[p1 p2]));
-        else
-            for jnd=1:size(thhats,1)
-                ec(jnd,ind)=covell(cl,...
-                                   matslice(trilosi(covth(jnd,:)),znp),thhats(jnd,[p1 p2]));
-            end
+        for jnd=1:size(thhats,1)
+            ec(jnd,ind)=covell(cl,...
+                               matslice(trilosi(covth(jnd,:)),znp),thhats(jnd,[p1 p2]));
         end
     end
 
+    % Send these ellipses to the back so the dots show on top
+    for jnd=1:size(thhats,1)
+        bottom(ec(jnd,ind),ah(ind))
+    end
+   
     if ss==1
+        bottom(ep(ind),ah(ind))
         % These things often normalized so this would be appropriate
         axis image; axis([-3 3 -3 3]); grid on
     end
