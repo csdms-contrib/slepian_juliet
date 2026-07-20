@@ -31,7 +31,7 @@ function varargout=mlexplos(thhats,covth,flabs)
 % % Trivariate set example
 % thhats=[1 2 3 ; 4 5 6 ; 7 8 9 ; 10 11 12];
 % cv=[1 1 1 0.2 -0.6 0.6 ; 1 1 1 -0.2 0.6 0.3 ; 1 1 1 -0.2 -0.6 0.9 ; 1 1 1 0.8 -0.7 0.6];
-% mlexplos(thhats,cv,{'\sigma^2','\rho','\nu'})
+% mlexplos(thhats,cv,{'\sigma^2','\nu','\rho'})
 %
 % SEE ALSO:
 %
