@@ -25,6 +25,7 @@ function varargout=mlexplos(thhats,covth,flabs)
 %
 % % Bivariate collective example
 % mlexplos; axis square; axis([-3 3 -3 3]); grid on
+% mlexplos(randx([1 1 0.5],128),[1 1 -0.5]); axis square; axis([-3 3 -3 3]); grid on
 % % Trivariate collective example
 % cv=[1 1 1 0.2 -0.6 0.6]; M=100; ah=mlexplos(randx(cv,M),cv,{'X','Y','Z'}); shrink(ah,1,2)
 % % Trivariate set example
@@ -176,9 +177,11 @@ for ind=1:size(pcomb,1)
             end
         end
     end
-    
-    % These things often normalized so this would be appropriate
-    axis image; axis([-3 3 -3 3]); grid on
+
+    if ss==1
+        % These things often normalized so this would be appropriate
+        axis image; axis([-3 3 -3 3]); grid on
+    end
         
     % Send the grid lines all the way to the back for FANCY TICKS AND LABELING
     hold off
