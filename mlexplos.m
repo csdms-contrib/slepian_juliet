@@ -21,11 +21,11 @@ function varargout=mlexplos(thhats,covth,flabs)
 %
 % EXAMPLE:
 %
-%% Bivariate collective example
+% % Bivariate collective example
 % mlexplos; axis square; axis([-3 3 -3 3]); grid on
-%% Trivariate collective example
+% % Trivariate collective example
 % cv=[1 1 1 0.2 -0.6 0.6]; M=100; ah=mlexplos(randx(cv,M),cv,{'X','Y','Z'}); shrink(ah,1,2)
-%% Trivariate set example
+% % Trivariate set example
 % thhats=[1 2 3 ; 4 5 6 ; 7 8 9 ; 10 11 12];
 % cv=[1 1 1 0.2 -0.6 0.6 ; 1 1 1 -0.2 0.6 0.3 ; 1 1 1 -0.2 -0.6 0.9 ; 1 1 1 0.8 -0.7 0.6];
 % mlexplos(thhats,cv,{'\sigma^2','\rho','\nu'})
@@ -62,15 +62,27 @@ catch
     end
 end
 
+% Single set with common covariance or collective with individual covariances
+ss=prod(size(covth))==size(thhats,2)*(size(thhats,2)+1)/2;
+
 % The below ripped off from MLEPLOS, which later should use MLEXPLOS
 % Number of times the standard deviation for scale truncation
 pstats=[-1 1];
 
 for ind=1:np
   % The empirical means and standard deviations of the estimates
-  % Collect them all
-  mobss(ind)=nanmean(thhats(:,ind));
-  sobss(ind)=nanstd(thhats(:,ind));
+  if ss==1
+      % Need to calculate the means and standard deviation of the collective
+      mobss(ind)=nanmean(thhats(:,ind));
+      sobss(ind)=nanstd(thhats(:,ind));
+  else
+      % You were given the center point as the single estimate each time
+      mobss=thhats;
+      for jnd=1:size(thhats,1)
+          % Use the supplied standard deviation for each of the estimates
+          sobss(jnd,ind)=sqrt(covth(jnd,ind));
+      end
+  end
 end
 
 % SCALING? 
@@ -81,9 +93,11 @@ defval('cl',0.68)
 
 for ind=1:size(pcomb,1)
     axes(ah(ind))
-    % Find the pairwise combinations for the cross-plot convention:
+    % Find the pairwise combination for the cross-plots
     p1=pcomb(ind,1); try p2=pcomb(ind,2); catch p2=2; end
-
+    % Find the covariance matrix slice for this variable pair
+    znp=zeros(1,np); znp([p1 p2])=1;
+    
     % APPLY SCALING?
 
     % PLOT CROSSES WITH MEANS AND STANDARD DEVIATIONS?
@@ -92,31 +106,42 @@ for ind=1:size(pcomb,1)
     p(ind)=plot(thhats(:,p1),thhats(:,p2),'o');
 
     hold on
-    % OBSERVED MEANS AND OBSERVED STANDARD DEVIATIONS
-    m(ind)=plot(mobss(p1),mobss(p2),'v');
-    % Horizontal crosshair
-    o1(ind)=plot(mobss(p1)+pstats*sobss(p1),[mobss(p2) mobss(p2)]);
-    % Vertical crosshair
-    o2(ind)=plot([mobss(p1) mobss(p1)],mobss(p2)+pstats*sobss(p2));
+    % OBSERVED MEANS/ESTIMATES AND OBSERVED/CALCULATED STANDARD DEVIATIONS
+    if ss==1
+        m(ind)=plot(mobss(p1),mobss(p2),'v');
+    end
+    if ss==1; jmax=1; else jmax=size(thhats,1); end
+    for jnd=1:jmax
+        % Horizontal crosshair on the collective
+        o1(jnd,ind)=plot(mobss(jnd,p1)+pstats*sobss(jnd,p1),[mobss(jnd,p2) mobss(jnd,p2)]);
+        % Vertical crosshair on the collective
+        o2(jnd,ind)=plot([mobss(jnd,p1) mobss(jnd,p1)],mobss(jnd,p2)+pstats*sobss(jnd,p2));
+    end
 
     % FANCY TICKS AND LABELING
 
     % Estimates
     set(p(ind),'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',2)
-    % Means
-    set(m(ind),'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',4)
+    if ss==1
+        % Means
+        set(m(ind),'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',4)
+    end
     % Crosshairs
     set([o1(ind) o2(ind)],'LineWidth',1,'Color',grey)
     % Ordering
-    top(m(ind),ah(ind))
-    bottom(o1(ind),ah(ind))
-    bottom(o2(ind),ah(ind))
+    if ss==1
+        top(m(ind),ah(ind))
+    end
+    for jn=1:size(thhats,1)
+        bottom(o1(jnd,ind),ah(ind))
+        bottom(o2(jnd,ind),ah(ind))
+    end
 
     % Labels
     xl2(ind)=xlabel(flabs{p1});
     ylabel(flabs{p2})
 
-    if size(covth,2)==size(thhats,2)*(size(thhats,2)+1)/2
+    if ss==1
         % OBSERVED pairwise error ellipse for the collective
         % https://www.xarg.org/2018/04/how-to-plot-a-covariance-error-ellipse/
         hold on
@@ -124,8 +149,6 @@ for ind=1:size(pcomb,1)
         ep(ind)=covell(cl,cov(thhats(:,[p1 p2])),thhats(:,[p1 p2]));
         
         % SUPPLIED pairwise error ellipse for the collective
-        % Rearrange into proper symmetric full form
-        znp=zeros(1,np); znp([p1 p2])=1;
         disp('CALCULATED')
         ec(ind)=covell(cl,matslice(trilosi(covth),znp),thhats(:,[p1 p2]));
 
@@ -139,9 +162,15 @@ for ind=1:size(pcomb,1)
         bottom(ep(ind),ah(ind))
     else
         % They are all different estimates with their uncertainty calculations
-        keyboard
-    end        
+        % SUPPLIED pairwise error ellipse for the individuals
+        disp('CALCULATED')
+        for jnd=1:size(thhats,1)
+            ec(jnd,ind)=covell(cl,...
+                                 matslice(trilosi(covth(jnd,:)),znp),thhats(:,[p1 p2]));
 
+        end
+    end
+    
     % These things often normalized so this would be appropriate
     axis image; axis([-3 3 -3 3]); grid on
         
