@@ -22,7 +22,7 @@ function varargout=mlexplos(thhats,covth,flabs)
 % EXAMPLE:
 %
 % mlexplos; axis square; axis([-3 3 -3 3]); grid on
-% mlexplos(randx([1 1 1 0.2 -0.6 0.6]),[1 1 1 0.2 -0.6 0.6],{'X','Y','Z'})
+% cv=[1 1 1 0.2 -0.6 0.6]; M=100; ah=mlexplos(randx(cv,M),cv,{'X','Y','Z'}); shrink(ah,1,2)
 %
 % SEE ALSO:
 %
@@ -49,7 +49,6 @@ covth=trilosi(covth);
 
 % Try to make some arrangement of windows
 clf
-keyboard
 try
     [ah,ha]=krijetem(subnum(size(pcomb,1)/3,3));
 catch
@@ -101,7 +100,7 @@ for ind=1:size(pcomb,1)
     % FANCY TICKS AND LABELING
 
     % Estimates
-    set(p(ind),'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',3)
+    set(p(ind),'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',2)
     % Means
     set(m(ind),'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',4)
     % Crosshairs
@@ -135,10 +134,15 @@ for ind=1:size(pcomb,1)
     bottom(ec(ind),ah(ind))
     bottom(ep(ind),ah(ind))
 
+    % These things often normalized so this would be appropriate
+    axis image; axis([-3 3 -3 3]); grid on
+        
     % Send the grid lines all the way to the back for FANCY TICKS AND LABELING
-
     hold off
 end
+
+% Cosmetix
+longticks(ah)
 
 % Optional outputs
 varns={ah};
