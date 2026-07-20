@@ -1,5 +1,5 @@
-function mlexplos(thhats,covth)
-% MLEXPLOS(thhats,covth)
+function varargout=mlexplos(thhats,covth,flabs)
+% ah=MLEXPLOS(thhats,covth,flabs)
 %
 % Makes cross-plots of variables with their error ellipses, centered on the
 % mean. If there are enough covariances given for every one of M sets of N
@@ -13,10 +13,16 @@ function mlexplos(thhats,covth)
 %               NP=N*(N+1)/2 unique entries in an NxN symmetric matrix, see TRILOS(I)
 %               Mp is 1 if it pertains to the entire set of thhats
 %               Mp is M if it pertains to the entries in the set of thhats individually
+% flabs     Cell with label strings for each of the variables
+%
+% OUTPUT:
+%
+% ah        Axis handles
 %
 % EXAMPLE:
 %
 % mlexplos; axis square; axis([-3 3 -3 3]); grid on
+% mlexplos(randx([1 1 1 0.2 -0.6 0.6]),[1 1 1 0.2 -0.6 0.6],{'X','Y','Z'})
 %
 % SEE ALSO:
 %
@@ -42,6 +48,8 @@ end
 covth=trilosi(covth);
 
 % Try to make some arrangement of windows
+clf
+keyboard
 try
     [ah,ha]=krijetem(subnum(size(pcomb,1)/3,3));
 catch
@@ -131,6 +139,11 @@ for ind=1:size(pcomb,1)
 
     hold off
 end
+
+% Optional outputs
+varns={ah};
+varargout=varns(1:nargout);
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function p=covell(cl,covx,thhats)
