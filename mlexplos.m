@@ -173,7 +173,7 @@ for ind=1:size(pcomb,1)
     end
 
     % Send these ellipses to the back so the dots show on top
-    for jnd=1:size(thhats,1)
+    for jnd=1:jmax
         bottom(ec(jnd,ind),ah(ind))
     end
    
