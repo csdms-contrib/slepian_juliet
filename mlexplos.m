@@ -164,10 +164,14 @@ for ind=1:size(pcomb,1)
         % They are all different estimates with their uncertainty calculations
         % SUPPLIED pairwise error ellipse for the individuals
         disp('CALCULATED')
-        for jnd=1:size(thhats,1)
-            ec(jnd,ind)=covell(cl,...
-                                 matslice(trilosi(covth(jnd,:)),znp),thhats(:,[p1 p2]));
-
+        if ss==1
+            ec(ind)=covell(cl,...
+                           matslice(trilosi(covth(jnd,:)),znp),thhats(:,[p1 p2]));
+        else
+            for jnd=1:size(thhats,1)
+                ec(jnd,ind)=covell(cl,...
+                                   matslice(trilosi(covth(jnd,:)),znp),thhats(jnd,[p1 p2]));
+            end
         end
     end
     
@@ -195,8 +199,13 @@ function p=covell(cl,covx,thhats)
 s=chi2inv(cl,2);
 % Make circular coordinates
 t=linspace(0,2*pi);
-% Calculate center
-mobs=nanmean(thhats,1);
+if size(thhats,1)>1
+    % Calculate the one center
+    mobs=nanmean(thhats,1);
+else
+    % The inputs are the individual centers
+    mobs=thhats;
+end
 
 % Compute the eigenvectors and eigenvalues of the covariance
 [V,D]=eig(covx);
