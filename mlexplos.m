@@ -128,7 +128,7 @@ for ind=1:size(pcomb,1)
     set(p(ind),'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',2)
     if ss==1
         % Means
-n        set(m(ind),'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',4)
+        set(m(ind),'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',4)
     end
     % Crosshairs
     for jnd=1:jmax
@@ -138,7 +138,7 @@ n        set(m(ind),'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',4
     if ss==1
         top(m(ind),ah(ind))
     end
-    for jnd=1:size(thhats,1)
+    for jnd=1:jmax
         bottom(o1(jnd,ind),ah(ind))
         bottom(o2(jnd,ind),ah(ind))
     end
@@ -166,7 +166,7 @@ n        set(m(ind),'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',4
         % They are ALL DIFFERENT estimates with their uncertainty calculations
         % SUPPLIED pairwise error ellipse for the individuals
         disp('CALCULATED')
-        for jnd=1:size(thhats,1)
+        for jnd=1:jmax
             ec(jnd,ind)=covell(cl,...
                                matslice(trilosi(covth(jnd,:)),znp),thhats(jnd,[p1 p2]));
         end
