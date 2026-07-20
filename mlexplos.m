@@ -1,5 +1,5 @@
 function varargout=mlexplos(thhats,covth,flabs)
-% ah=MLEXPLOS(thhats,covth,flabs)
+% [ah,o1,o2,ec,ep]=MLEXPLOS(thhats,covth,flabs)
 %
 % Makes cross-plots of variables with their error ellipses, centered on the mean
 % of a set or on individual values. If there are enough covariances given for
@@ -20,6 +20,8 @@ function varargout=mlexplos(thhats,covth,flabs)
 % OUTPUT:
 %
 % ah        Axis handles
+% o1,o2     Horizontal, vertical cross hairs
+% ec,ep     Supplied / observed error ellipses
 %
 % EXAMPLE:
 %
@@ -35,7 +37,7 @@ function varargout=mlexplos(thhats,covth,flabs)
 %
 % SEE ALSO:
 %
-% RANDX
+% RANDX, VENUSMLE
 %
 % Last modified by fjsimons-at-alum.mit.edu, 07/20/2026
 
@@ -151,29 +153,31 @@ for ind=1:size(pcomb,1)
         % OBSERVED pairwise error ellipse for the collective
         % https://www.xarg.org/2018/04/how-to-plot-a-covariance-error-ellipse/
         hold on
-        disp('OBSERVED')
-        ep(ind)=covell(cl,cov(thhats(:,[p1 p2])),thhats(:,[p1 p2]));
+        disp('OBSERVED FROM THE DATA GIVEN')
+        ep(ind)=covell(cl,cov(thhats(:,[p1 p2])),thhats(:,[p1 p2]),ss);
         
-        % SUPPLIED pairwise error ellipse for the collective
-        disp('CALCULATED')
-        ec(ind)=covell(cl,matslice(trilosi(covth),znp),thhats(:,[p1 p2]));
+        % SUPPLIED pairwise error ellipse for the collective, centered on the means
+        disp('SUPPLIED AS A COVARIANCE')
+        ec(ind)=covell(cl,matslice(trilosi(covth),znp),thhats(:,[p1 p2]),ss);
 
         % Observed covariance ellipse
         set(ep(ind),'LineWidth',1.5,'Color',grey)
-        % Supplied covariance ellips
-        set(ec(ind),'LineWidth',0.5,'Color','k')
     else
+        % Blank value if there was nothing to observe
+        ep=NaN;
         % They are ALL DIFFERENT estimates with their uncertainty calculations
-        % SUPPLIED pairwise error ellipse for the individuals
-        disp('CALCULATED')
+        % SUPPLIED pairwise error ellipse for the individuals, centered on the estimates
+        disp('SUPPLIED AS A COVARIANCE')
         for jnd=1:jmax
             ec(jnd,ind)=covell(cl,...
-                               matslice(trilosi(covth(jnd,:)),znp),thhats(jnd,[p1 p2]));
+                               matslice(trilosi(covth(jnd,:)),znp),thhats(jnd,[p1 p2]),ss);
         end
     end
 
     % Send these ellipses to the back so the dots show on top
     for jnd=1:jmax
+        % Supplied covariance ellipse
+        set(ec(jnd,ind),'LineWidth',0.5,'Color','k')
         bottom(ec(jnd,ind),ah(ind))
     end
    
@@ -191,12 +195,12 @@ end
 longticks(ah)
 
 % Optional outputs
-varns={ah};
+varns={ah,o1,o2,ec,ep};
 varargout=varns(1:nargout);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function p=covell(cl,covx,thhats)
+function p=covell(cl,covx,thhats,ss)
 % Plots bivariate covariance ellipse and reports on inside counts
 
 % Check this for three variables
@@ -219,10 +223,12 @@ a=sqrt(s)*V*sqrt(D)*[cos(t); sin(t)];
 % Actually do the plotting
 p=plot(a(1,:)+mobs(1),a(2,:)+mobs(2));
 
-% Count the number of estimates outside the OBSERVED confidence interval
-cli=round(sum(inpolygon(thhats(:,1),thhats(:,2),...
-                        a(1,:)+mobs(1),a(2,:)+mobs(2)))/size(thhats,1)*100);
-disp(sprintf('CL asked %g ; received %g ',cl*100,cli))
+if ss==1
+    % Count the number of estimates outside the OBSERVED confidence interval
+    cli=round(sum(inpolygon(thhats(:,1),thhats(:,2),...
+                            a(1,:)+mobs(1),a(2,:)+mobs(2)))/size(thhats,1)*100);
+    disp(sprintf('CL asked %g ; received %g ',cl*100,cli))
+end
 
 
 
