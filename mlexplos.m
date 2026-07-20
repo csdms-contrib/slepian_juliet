@@ -1,10 +1,10 @@
 function mlexplos(thhats,covth)
 % MLEXPLOS(thhats,covth)
 %
-% Makes cross-plots of variables with their error ellipses. If there are enough
-% covariances given for every one of M sets of N variables, plots the entire
-% population with their individual error ellipses. If no covariance is given,
-% calculates one from the one set of M experiments of N variables.
+% Makes cross-plots of variables with their error ellipses, centered on the
+% mean. If there are enough covariances given for every one of M sets of N
+% variables, plots the entire population with their individual error ellipses.
+% If no covariance is given, calculates one from the one set of M experiments of N variables.
 %
 % INPUT:
 %
@@ -24,8 +24,8 @@ function mlexplos(thhats,covth)
 %
 % Last modified by fjsimons-at-alum.mit.edu, 07/20/2026
 
-defval('thhats',randx)
 defval('covth',[1 1 0.5])
+defval('thhats',randx(covth,100))
 defval('flabs',{'X' 'Y'})
 
 % The number of parameters
@@ -54,7 +54,6 @@ end
 
 % The below ripped off from MLEPLOS, which later should use MLEXPLOS
 % Number of times the standard deviation for scale truncation
-nstats=[-3:3]; fax=3;
 pstats=[-1 1];
 
 for ind=1:np
@@ -69,11 +68,6 @@ end
 % Plot error ellipses without using ERROR_ELLIPSE
 % https://www.xarg.org/2018/04/how-to-plot-a-covariance-error-ellipse/
 defval('cl',0.68)
-% Check this for three variables
-% s=-2*log(1-cl);
-s=chi2inv(cl,2);
-
-t=linspace(0,2*pi);
 
 for ind=1:size(pcomb,1)
     axes(ah(ind))
@@ -91,23 +85,20 @@ for ind=1:size(pcomb,1)
     hold on
     % OBSERVED MEANS AND OBSERVED STANDARD DEVIATIONS
     m(ind)=plot(mobss(p1),mobss(p2),'v');
-    o1(ind)=plot(mobss(p1)+pstats*sobss(p1),...
-		 [mobss(p2) mobss(p2)],'LineWidth',1);
-    o2(ind)=plot([mobss(p1) mobss(p1)],...
-		 mobss(p2)+pstats*sobss(p2),'LineWidth',1);
+    % Horizontal crosshair
+    o1(ind)=plot(mobss(p1)+pstats*sobss(p1),[mobss(p2) mobss(p2)]);
+    % Vertical crosshair
+    o2(ind)=plot([mobss(p1) mobss(p1)],mobss(p2)+pstats*sobss(p2));
 
     % FANCY TICKS AND LABELING
 
-    % Color mix
-    cmix=[0 0 0]; 
-    set([p(ind) m(ind)],'MarkerFaceColor',cmix,'MarkerEdgeColor',cmix,'MarkerSize',2)
-    % Dull colors
-    set([p(ind) m(ind)],'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',2)
-
-    % Cosmetix
-    % Emphasize the OBSERVED means and standard deviations
-    set([o1(ind) o2(ind)],'LineWidth',1,'Color',grey(3.5))
-    set( m(ind)           ,'MarkerFaceColor',grey(3.5),'MarkerEdgeColor',grey(3.5),'MarkerSize',4)
+    % Estimates
+    set(p(ind),'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',3)
+    % Means
+    set(m(ind),'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',4)
+    % Crosshairs
+    set([o1(ind) o2(ind)],'LineWidth',1,'Color',grey)
+    % Ordering
     top(m(ind),ah(ind))
     bottom(o1(ind),ah(ind))
     bottom(o2(ind),ah(ind))
@@ -116,45 +107,54 @@ for ind=1:size(pcomb,1)
     xl2(ind)=xlabel(flabs{p1});
     ylabel(flabs{p2})
 
-    % OBSERVED
-    % Plot pairwise error ellipses
+    % OBSERVED pairwise error ellipse
     % https://www.xarg.org/2018/04/how-to-plot-a-covariance-error-ellipse/
     hold on
-    % Compute the eigenvectors and eigenvalues of the covariance
-    % Think of the Schur complement? How does that relate?
-    [V,D]=eig(cov(thhats(:,[p1 p2])));
-    a=sqrt(s)*V*sqrt(D)*[cos(t); sin(t)];
-    ep(ind)=plot(a(1,:)+mobss(p1),a(2,:)+mobss(p2));
-
-    % Count the number of estimates outside the confidence interval
-    cli=round(sum(inpolygon(thhats(:,p1),thhats(:,p2),...
-                            a(1,:)+mobss(p1),a(2,:)+mobss(p2)))/size(thhats,1)*100);
-    disp(sprintf('CL asked %g ; received %g ',cl*100,cli))
-
+    disp('OBSERVED')
+    ep(ind)=covell(cl,cov(thhats(:,[p1 p2])),thhats(:,[p1 p2]));
     
-    % And for the calculated covariance, too
-    znp=zeros(1,np);
-    znp([p1 p2])=1;
-    [V,D]=eig(matslice(covth,znp));
-    % Get rid of the a11 line in MLEPLOS
-    a=sqrt(s)*V*sqrt(D)*[cos(t); sin(t)];
-    ec(ind)=plot(a(1,:)+mobss(p1),a(2,:)+mobss(p2));
+    % CALCULATED pairwise error ellipse
+    znp=zeros(1,np); znp([p1 p2])=1;
+    disp('CALCULATED')
+    ec(ind)=covell(cl,matslice(covth,znp),thhats(:,[p1 p2]));
 
-    % Dull colors
-    set(ep(ind),'LineWidth',1.5,'Color',grey(3.5))
-    set(ec(ind),'LineWidth',1,'Color','k')
+    % Observed covariance ellipse
+    set(ep(ind),'LineWidth',1.5,'Color',grey)
+    % Supplied covariance ellips
+    set(ec(ind),'LineWidth',0.5,'Color','k')
+    
     % Send these ellipses to the back so the dots show on top
     bottom(ec(ind),ah(ind))
     bottom(ep(ind),ah(ind))
 
     % Send the grid lines all the way to the back for FANCY TICKS AND LABELING
 
-    keyboard
-
     hold off
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function p=covell(cl,covx,thhats)
+% Plots bivariate covariance ellipse and reports on inside counts
 
+% Check this for three variables
+% s=-2*log(1-cl);
+s=chi2inv(cl,2);
+% Make circular coordinates
+t=linspace(0,2*pi);
+% Calculate center
+mobs=nanmean(thhats,1);
+
+% Compute the eigenvectors and eigenvalues of the covariance
+[V,D]=eig(covx);
+% Compute coordinates of the ellipse
+a=sqrt(s)*V*sqrt(D)*[cos(t); sin(t)];
+% Actually do the plotting
+p=plot(a(1,:)+mobs(1),a(2,:)+mobs(2));
+
+% Count the number of estimates outside the OBSERVED confidence interval
+cli=round(sum(inpolygon(thhats(:,1),thhats(:,2),...
+                        a(1,:)+mobs(1),a(2,:)+mobs(2)))/size(thhats,1)*100);
+disp(sprintf('CL asked %g ; received %g ',cl*100,cli))
 
 
 
