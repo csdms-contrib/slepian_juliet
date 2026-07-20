@@ -44,9 +44,6 @@ else
     pcomb=1;
 end
 
-% Rearrange into proper symmetric full form
-covth=trilosi(covth);
-
 % Try to make some arrangement of windows
 clf
 try
@@ -79,7 +76,6 @@ defval('cl',0.68)
 for ind=1:size(pcomb,1)
     axes(ah(ind))
     % Find the pairwise combinations for the cross-plot convention:
-
     p1=pcomb(ind,1); try p2=pcomb(ind,2); catch p2=2; end
 
     % APPLY SCALING?
@@ -122,9 +118,10 @@ for ind=1:size(pcomb,1)
         ep(ind)=covell(cl,cov(thhats(:,[p1 p2])),thhats(:,[p1 p2]));
         
         % SUPPLIED pairwise error ellipse for the collective
+        % Rearrange into proper symmetric full form
         znp=zeros(1,np); znp([p1 p2])=1;
         disp('CALCULATED')
-        ec(ind)=covell(cl,matslice(covth,znp),thhats(:,[p1 p2]));
+        ec(ind)=covell(cl,matslice(trilosi(covth),znp),thhats(:,[p1 p2]));
 
         % Observed covariance ellipse
         set(ep(ind),'LineWidth',1.5,'Color',grey)
