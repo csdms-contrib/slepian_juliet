@@ -1,5 +1,5 @@
 function varargout=mlexplos(thhats,covth,flabs)
-% [ah,o1,o2,ec,ep]=MLEXPLOS(thhats,covth,flabs)
+% [ah,o1,o2,ec,ep,p]=MLEXPLOS(thhats,covth,flabs)
 %
 % Makes cross-plots of variables with their error ellipses, centered on the mean
 % of a set or on individual values. If there are enough covariances given for
@@ -20,8 +20,9 @@ function varargout=mlexplos(thhats,covth,flabs)
 % OUTPUT:
 %
 % ah        Axis handles
-% o1,o2     Horizontal, vertical cross hairs
-% ec,ep     Supplied / observed error ellipses
+% o1,o2     Handles to Horizontal, vertical cross hairs
+% ec,ep     Handles to supplied / observed error ellipses
+% p         Handles to parameter estimates / supplied ellipse centers
 %
 % EXAMPLE:
 %
@@ -39,7 +40,7 @@ function varargout=mlexplos(thhats,covth,flabs)
 %
 % RANDX, VENUSMLE
 %
-% Last modified by fjsimons-at-alum.mit.edu, 07/20/2026
+% Last modified by fjsimons-at-alum.mit.edu, 07/21/2026
 
 defval('covth',[1 1 0.5])
 defval('thhats',randx(covth(1,:),100))
@@ -195,7 +196,7 @@ end
 longticks(ah)
 
 % Optional outputs
-varns={ah,o1,o2,ec,ep};
+varns={ah,o1,o2,ec,ep,p};
 varargout=varns(1:nargout);
 
 
