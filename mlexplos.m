@@ -106,9 +106,6 @@ for ind=1:size(pcomb,1)
     
     % APPLY SCALING?
 
-    % The parameter estimates
-    p(ind)=plot(thhats(:,p1),thhats(:,p2),'o');
-
     hold on
     % OBSERVED MEANS/ESTIMATES AND OBSERVED/CALCULATED STANDARD DEVIATIONS
     if ss==1
@@ -119,6 +116,8 @@ for ind=1:size(pcomb,1)
         jmax=size(thhats,1);
     end
     for jnd=1:jmax
+        % The parameter estimates
+        p(jnd,ind)=plot(thhats(jnd,p1),thhats(jnd,p2),'o');
         % Horizontal crosshair on the collective
         o1(jnd,ind)=plot(mobss(jnd,p1)+pstats*sobss(jnd,p1),[mobss(jnd,p2) mobss(jnd,p2)]);
         % Vertical crosshair on the collective
