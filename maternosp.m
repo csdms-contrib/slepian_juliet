@@ -80,7 +80,7 @@ switch blurs
         % all as you can see quickly. So by "suitably discretizing" the
         % convolutional operator we mean: performing it on a highly densified
         % grid of which the target grid may be a subset. Doing this on the
-        % same grid would be the "inverse crime" of NOT changing the grid
+        % same grid would be the "inverse crime" of NOT changing the grid at
         % all. Run Fk for this case to see it then would be a delta function.
         
         % Blurs IS the refinement parameter; make new wavenumber grid. Make the
