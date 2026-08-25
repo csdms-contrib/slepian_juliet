@@ -28,7 +28,8 @@ function [Sk,k]=maternosp(th,params,xver,tsto)
 %
 % OUTPUT:
 %
-% Sk       A column vector with all the wavenumbers unwrapped
+% Sk       A column vector with all the wavenumbers unwrapped, OR
+%          a matrix if it is the multivariable lithospheric case
 % k        The wavenumber matrix (the norm of the wave vectors), unwrapped
 % 
 % SEE ALSO:
@@ -36,7 +37,7 @@ function [Sk,k]=maternosp(th,params,xver,tsto)
 % MATERNOS, MATERNOSY, MATERNPRC, KNUMS, BLUROS, BLUROSY, BLURCHECK
 %
 % Last modified by owalbert-at-princeton.edu, 03/18/2025
-% Last modified by fjsimons-at-alum.mit.edu, 03/18/2025
+% Last modified by fjsimons-at-alum.mit.edu, 06/25/2026
 
 % Default is to oververify it all
 defval('xver','1')
@@ -49,6 +50,10 @@ d=2;
 
 % Extract the needed parameters of the simulation variables
 blurs=params.blurs;
+try
+    % Make sure the lithospheric case is testable
+    DEL=params.DEL;
+end
 
 %  Calculate the Matern spectrum for the spectral parameters
 switch blurs
@@ -57,6 +62,13 @@ switch blurs
     k=knums(params); k=k(:);
     % disp(sprintf('%s without blurring',upper(mfilename)))
     Sk=maternos(k,th,[],d);
+    % If it's the lithospheric case
+    if exist('DEL','var')
+        % The Cholesky decomposition of the lithospheric-spectral matrix
+        [~,~,~,T]=Tros(k,th,params); 
+        % The spectral matrix in case you might want it
+        Sk=[Sk.*T(:,1) Sk.*T(:,2) Sk.*T(:,3)];
+    end
   otherwise
     if isinf(blurs)
         error('You should be calling MATERNOSY, not MATERNOSP!')
@@ -74,9 +86,25 @@ switch blurs
         % Blurs IS the refinement parameter; make new wavenumber grid. Make the
         % spectral-spectral portion of the spectral matrix, convolve in two
         % dimensions, and then subsample onto the original target grid
+       
+        % If it's the lithospheric case
+        if exist('DEL','var')
+            % Something else is going to need to happen to make a "new way"
+            % incorporate the "oldway" of SIMULROS
+            
+            % The lithospheric-spectral matrix on this second grid
+            [~,~,~,T]=Tros(knums(params,1),th,params); 
 
-        % Only for the BOXCAR at this point
-        [Sk,k]=bluros(maternos(knums(params,1),th,[],d),params,xver);
+            % FJS should make the gravity BEFORE blurring says SCO
+            % SG2=[2*pi*G*DEL(2)*exp(-k(:).*z2)]   .*S(:,2);
+            % SG3=[2*pi*G*DEL(2)*exp(-k(:).*z2)].^2.*S(:,3);
+
+            % Note this gets explicitly expanded
+            [Sk,k]=bluros(maternos(knums(params,1),th,[],d).*T,params,xver);
+        else
+            % Only for the BOXCAR at this point
+            [Sk,k]=bluros(maternos(knums(params,1),th,[],d),params,xver);
+        end
     else
         % Here is the alternative EXACT way of doing it, which does away
         % with the approximate convolutional refinement procedure
