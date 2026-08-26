@@ -26,6 +26,7 @@ function varargout=maternos(k,th,dth,d,meth)
 %             calculated using a simplification of nu, OR returns the DERIVATIVE in
 %             the dth element of th; simplifications and derivatives are included 
 %             to mirror MATERNOSY, however, these do not feed into another program
+% k           Return the wavenumber grid, which was an input, so it works like BLUROS
 %
 % SEE ALSO:
 %
@@ -51,8 +52,8 @@ function varargout=maternos(k,th,dth,d,meth)
 % dth=randi(3,1); dSkdth=maternos(k,th,[],2,dth); 
 % figure(); imagesc(log10(v2s(dSkdth,p))); axis image
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/03/2024
 % Last modified by olwalbert-at-princeton.edu, 06/03/2024
+% Last modified by fjsimons-at-alum.mit.edu, 08/25/2026
 
 % Defaults
 defval('d',2)
@@ -181,5 +182,5 @@ else
    end
 end
 % Serve output
-varns={Sk};
+varns={Sk,k};
 varargout=varns(1:nargout);
