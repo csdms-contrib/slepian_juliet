@@ -1,5 +1,5 @@
 function varargout=maternos(k,th,dth,d,meth)
-% SkordSkdth=MATERNOS(k,th,dth,d,meth)
+% [SkordSkdth,k]=MATERNOS(k,th,dth,d,meth)
 %
 % Calculates the three-parameter isotropic d-dimensional Matern
 % spectral density, which is dependent on d, also the counterpart to the
