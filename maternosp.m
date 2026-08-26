@@ -66,10 +66,10 @@ switch blurs
     % disp(sprintf('%s without blurring',upper(mfilename)))
     if exist('DEL','var')
         % If it's the lithospheric case there is the need for the coupling matrix
-        [~,~,~,T]=Tros(knums(params),th,params);
+        [~,~,~,T]=Tros(knums(params,1),th,params);
     end
     % Note this gets explicitly expanded to the column size of T
-    [Sk,k]=maternos(knums(params),th,[],d).*T;
+    [Sk,k]=maternos(knums(params,1),th,[],d).*T;
   otherwise
     if isinf(blurs)
         error('You should be calling MATERNOSY, not MATERNOSP!')
@@ -87,16 +87,15 @@ switch blurs
         
         % Note this gets explicitly expanded to the column size of T
         [Sk,k]=bluros(maternos(knums(params,1),th,[],d).*T,params,xver);
+    else
+        % Will need to decide what to do in the multivariable case... 
+        
+        % Here is the alternative EXACT way of doing it, which does away
+        % with the approximate convolutional refinement procedure
+        % disp(sprintf('%s with exact blurring',upper(mfilename)))
+        [Sk,k]=blurosy(th,params,xver,[],tsto);
     end
-else
-    % Will need to decide what to do in the multivariable case... 
-    
-    % Here is the alternative EXACT way of doing it, which does away
-    % with the approximate convolutional refinement procedure
-    % disp(sprintf('%s with exact blurring',upper(mfilename)))
-    [Sk,k]=blurosy(th,params,xver,[],tsto);
 end
-
 % Notes from the coding days
         
 % If I stay on the same k-grid, I'm really not doing any convolution at
