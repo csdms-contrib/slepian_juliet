@@ -53,22 +53,24 @@ blurs=params.blurs;
 try
     % Make sure the lithospheric case is testable
     DEL=params.DEL;
+catch
+    % Provide "nothing" for the T matrix as it won't be needed
+    T=1;
 end
 
 %  Calculate the Matern spectrum for the spectral parameters
 switch blurs
   case {0,1}
-    % The unblurred-property wavenumber grid
-    k=knums(params); k=k(:);
     % disp(sprintf('%s without blurring',upper(mfilename)))
-    Sk=maternos(k,th,[],d);
-    % If it's the lithospheric case
+    % The spectrum on the unblurred-property wavenumber grid
+    Sk=maternos(knums(params),th,[],d);
+    % If it's the lithospheric case there is the need for the coupling matrix
     if exist('DEL','var')
         % The Cholesky decomposition of the lithospheric-spectral matrix
-        [~,~,~,T]=Tros(k,th,params); 
-        % The spectral matrix in case you might want it
-        Sk=[Sk.*T(:,1) Sk.*T(:,2) Sk.*T(:,3)];
+        [~,~,~,T]=Tros(knums(params),th,params);
     end
+    % Note this gets explicitly expanded
+    Sk=Sk.*T;
   otherwise
     if isinf(blurs)
         error('You should be calling MATERNOSY, not MATERNOSP!')
@@ -89,9 +91,6 @@ switch blurs
        
         % If it's the lithospheric case
         if exist('DEL','var')
-            % Something else is going to need to happen to make a "new way"
-            % incorporate the "oldway" of SIMULROS
-            
             % The lithospheric-spectral matrix on this second grid
             [~,~,~,T]=Tros(knums(params,1),th,params); 
 
@@ -99,13 +98,15 @@ switch blurs
             % SG2=[2*pi*G*DEL(2)*exp(-k(:).*z2)]   .*S(:,2);
             % SG3=[2*pi*G*DEL(2)*exp(-k(:).*z2)].^2.*S(:,3);
 
-            % Note this gets explicitly expanded
+            % Note this gets explicitly expanded to the column size of T
             [Sk,k]=bluros(maternos(knums(params,1),th,[],d).*T,params,xver);
         else
             % Only for the BOXCAR at this point
             [Sk,k]=bluros(maternos(knums(params,1),th,[],d),params,xver);
         end
     else
+        % Will need to decide what to do in the multivariable case... 
+        
         % Here is the alternative EXACT way of doing it, which does away
         % with the approximate convolutional refinement procedure
         % disp(sprintf('%s with exact blurring',upper(mfilename)))
