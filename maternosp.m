@@ -76,26 +76,14 @@ switch blurs
     end
     if blurs>1 & ~isinf(blurs)
         % disp(sprintf('%s with blurring factor %i',upper(mfilename),blurs))
-        
-        % If I stay on the same k-grid, I'm really not doing any convolution at
-        % all as you can see quickly. So by "suitably discretizing" the
-        % convolutional operator we mean: performing it on a highly densified
-        % grid of which the target grid may be a subset. Doing this on the
-        % same grid would be the "inverse crime" of NOT changing the grid at
-        % all. Run Fk for this case to see it then would be a delta function.
-        
-        % Blurs IS the refinement parameter; make new wavenumber grid. Make the
-        % spectral-spectral portion of the spectral matrix, convolve in two
-        % dimensions, and then subsample onto the original target grid
-        
         % If it's the lithospheric case
         if exist('DEL','var')
             % The lithospheric-spectral matrix on this second grid
             [~,~,~,T]=Tros(knums(params,1),th,params); 
+            % FJS should make the gravity BEFORE blurring says SCO
+            % SG2=[2*pi*G*DEL(2)*exp(-k(:).*z2)]   .*S(:,2);
+            % SG3=[2*pi*G*DEL(2)*exp(-k(:).*z2)].^2.*S(:,3);
         end
-        % FJS should make the gravity BEFORE blurring says SCO
-        % SG2=[2*pi*G*DEL(2)*exp(-k(:).*z2)]   .*S(:,2);
-        % SG3=[2*pi*G*DEL(2)*exp(-k(:).*z2)].^2.*S(:,3);
         
         % Note this gets explicitly expanded to the column size of T
         [Sk,k]=bluros(maternos(knums(params,1),th,[],d).*T,params,xver);
@@ -108,3 +96,18 @@ else
     % disp(sprintf('%s with exact blurring',upper(mfilename)))
     [Sk,k]=blurosy(th,params,xver,[],tsto);
 end
+
+% Notes from the coding days
+        
+% If I stay on the same k-grid, I'm really not doing any convolution at
+% all as you can see quickly. So by "suitably discretizing" the
+% convolutional operator we mean: performing it on a highly densified
+% grid of which the target grid may be a subset. Doing this on the
+% same grid would be the "inverse crime" of NOT changing the grid at
+% all. Run Fk for this case to see it then would be a delta function.
+
+% Blurs IS the refinement parameter; make new wavenumber grid. Make the
+% spectral-spectral portion of the spectral matrix, convolve in two
+% dimensions, and then subsample onto the original target grid
+
+
