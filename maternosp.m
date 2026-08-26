@@ -58,26 +58,25 @@ catch
     T=1;
 end
 
+% Note could use knums(params,1) everywhere even with 0,1 then all the below would be identical
+
 %  Calculate the Matern spectrum for the spectral parameters
 switch blurs
   case {0,1}
     % disp(sprintf('%s without blurring',upper(mfilename)))
-    % The spectrum on the unblurred-property wavenumber grid
-    Sk=maternos(knums(params),th,[],d);
-    % If it's the lithospheric case there is the need for the coupling matrix
     if exist('DEL','var')
-        % The Cholesky decomposition of the lithospheric-spectral matrix
+        % If it's the lithospheric case there is the need for the coupling matrix
         [~,~,~,T]=Tros(knums(params),th,params);
     end
-    % Note this gets explicitly expanded
-    Sk=Sk.*T;
+    % Note this gets explicitly expanded to the column size of T
+    [Sk,k]=maternos(knums(params),th,[],d).*T;
   otherwise
     if isinf(blurs)
         error('You should be calling MATERNOSY, not MATERNOSP!')
     end
     if blurs>1 & ~isinf(blurs)
         % disp(sprintf('%s with blurring factor %i',upper(mfilename),blurs))
-
+        
         % If I stay on the same k-grid, I'm really not doing any convolution at
         % all as you can see quickly. So by "suitably discretizing" the
         % convolutional operator we mean: performing it on a highly densified
@@ -88,28 +87,24 @@ switch blurs
         % Blurs IS the refinement parameter; make new wavenumber grid. Make the
         % spectral-spectral portion of the spectral matrix, convolve in two
         % dimensions, and then subsample onto the original target grid
-       
+        
         % If it's the lithospheric case
         if exist('DEL','var')
             % The lithospheric-spectral matrix on this second grid
             [~,~,~,T]=Tros(knums(params,1),th,params); 
-
-            % FJS should make the gravity BEFORE blurring says SCO
-            % SG2=[2*pi*G*DEL(2)*exp(-k(:).*z2)]   .*S(:,2);
-            % SG3=[2*pi*G*DEL(2)*exp(-k(:).*z2)].^2.*S(:,3);
-
-            % Note this gets explicitly expanded to the column size of T
-            [Sk,k]=bluros(maternos(knums(params,1),th,[],d).*T,params,xver);
-        else
-            % Only for the BOXCAR at this point
-            [Sk,k]=bluros(maternos(knums(params,1),th,[],d),params,xver);
         end
-    else
-        % Will need to decide what to do in the multivariable case... 
+        % FJS should make the gravity BEFORE blurring says SCO
+        % SG2=[2*pi*G*DEL(2)*exp(-k(:).*z2)]   .*S(:,2);
+        % SG3=[2*pi*G*DEL(2)*exp(-k(:).*z2)].^2.*S(:,3);
         
-        % Here is the alternative EXACT way of doing it, which does away
-        % with the approximate convolutional refinement procedure
-        % disp(sprintf('%s with exact blurring',upper(mfilename)))
-        [Sk,k]=blurosy(th,params,xver,[],tsto);
+        % Note this gets explicitly expanded to the column size of T
+        [Sk,k]=bluros(maternos(knums(params,1),th,[],d).*T,params,xver);
     end
+else
+    % Will need to decide what to do in the multivariable case... 
+    
+    % Here is the alternative EXACT way of doing it, which does away
+    % with the approximate convolutional refinement procedure
+    % disp(sprintf('%s with exact blurring',upper(mfilename)))
+    [Sk,k]=blurosy(th,params,xver,[],tsto);
 end
