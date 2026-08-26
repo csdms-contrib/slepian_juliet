@@ -108,7 +108,7 @@ if ~isstr(th0)
   % Here is the extra verification parameter
   defval('xver',1)
   if xver==1
-      % Dump to screen
+    % Dump to screen
     osdisp(th0,params)
   end
 
@@ -162,10 +162,10 @@ if ~isstr(th0)
     % Watch the 2pi in MLEOSL
     Hx=(2*pi)*tospace(Hk,params);
     if xver==1
-      % Check Hermiticity before transformation, absolute tolerance
+        % Check Hermiticity before transformation, absolute tolerance
         hermcheck(reshape(Hk,NyNx))
         % Check unitarity of the transform; relative tolerance
-      diferm(Hk-tospec(Hx,params)/(2*pi),[],9-round(log10(mean(abs(Hk)))));
+        diferm(Hk-tospec(Hx,params)/(2*pi),[],9-round(log10(mean(abs(Hk)))));
     end
     
     % Big it down
