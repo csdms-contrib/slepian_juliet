@@ -1,5 +1,5 @@
-function [Sk,k]=maternosp(th,params,xver,tsto)
-% [Sk,k]=maternosp(th,params,xver,tsto)
+function varargout=maternosp(th,params,xver,tsto)
+% [Sk,k,L]=maternosp(th,params,xver,tsto)
 %
 % Calculates the three-parameter isotropic d-dimensional Matern spectral
 % density used by Olhede & Simons (2013), with or without blurring, exact or
@@ -31,12 +31,14 @@ function [Sk,k]=maternosp(th,params,xver,tsto)
 % Sk       A column vector with all the wavenumbers unwrapped, OR
 %          a matrix if it is the multivariable lithospheric case
 % k        The wavenumber matrix (the norm of the wave vectors), unwrapped
+% L        The Cholesky decomposition of the unblurred lithospheric-spectral matrix
+%          it is the multivariable lithospheric case
 % 
 % SEE ALSO:
 %
 % MATERNOS, MATERNOSY, MATERNPRC, KNUMS, BLUROS, BLUROSY, BLURCHECK
 %
-% Last modified by owalbert-at-princeton.edu, 03/18/2025
+% Last modified by olwalbert-at-princeton.edu, 03/18/2025
 % Last modified by fjsimons-at-alum.mit.edu, 06/25/2026
 
 % Default is to oververify it all
@@ -66,10 +68,10 @@ switch blurs
     % disp(sprintf('%s without blurring',upper(mfilename)))
     if exist('DEL','var')
         % If it's the lithospheric case there is the need for the coupling matrix
-        [~,~,~,T]=Tros(knums(params,1),th,params);
+        [~,~,L,T]=Tros(knums(params,1),th,params);
     end
     % Note this gets explicitly expanded to the column size of T
-    [Sk,k]=maternos(knums(params,1),th,[],d).*T;
+    [Sk,k]=deal(maternos(knums(params,1),th,[],d).*T,knums(params,1));
   otherwise
     if isinf(blurs)
         error('You should be calling MATERNOSY, not MATERNOSP!')
@@ -79,7 +81,7 @@ switch blurs
         % If it's the lithospheric case
         if exist('DEL','var')
             % The lithospheric-spectral matrix on this second grid
-            [~,~,~,T]=Tros(knums(params,1),th,params); 
+            [~,~,L,T]=Tros(knums(params,1),th,params); 
             % FJS should make the gravity BEFORE blurring says SCO
             % SG2=[2*pi*G*DEL(2)*exp(-k(:).*z2)]   .*S(:,2);
             % SG3=[2*pi*G*DEL(2)*exp(-k(:).*z2)].^2.*S(:,3);
@@ -96,6 +98,11 @@ switch blurs
         [Sk,k]=blurosy(th,params,xver,[],tsto);
     end
 end
+
+% Optional output
+varns={Sk,k,L};
+varargout=varns(1:nargout);
+
 % Notes from the coding days
         
 % If I stay on the same k-grid, I'm really not doing any convolution at
