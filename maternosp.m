@@ -1,5 +1,5 @@
-function varargout=maternosp(th,params,xver,tsto)
-% [Sk,k,L]=maternosp(th,params,xver,tsto)
+function varargout=maternosp(th,params,xver,tsto,T)
+% [Sk,k,L]=maternosp(th,params,xver,tsto,T)
 %
 % Calculates the three-parameter isotropic d-dimensional Matern spectral
 % density used by Olhede & Simons (2013), with or without blurring, exact or
@@ -25,6 +25,8 @@ function varargout=maternosp(th,params,xver,tsto)
 %                    (1 is yes and 0 is no and everything in between)
 % xver     Perform excessive verification [0, 1 or 2]
 % tsto     Offset in Fourier indices to be passed on to BLUROSY
+% T        A matrix, if it exists, that allows for the creation of multi-dimensional fields
+%          such as e.g., provided by SIMULROS
 %
 % OUTPUT:
 %
@@ -38,8 +40,8 @@ function varargout=maternosp(th,params,xver,tsto)
 %
 % MATERNOS, MATERNOSY, MATERNPRC, KNUMS, BLUROS, BLUROSY, BLURCHECK
 %
-% Last modified by olwalbert-at-princeton.edu, 03/18/2025
-% Last modified by fjsimons-at-alum.mit.edu, 06/25/2026
+% Last modified by olwalbert-at-princeton.edu, 08/31/2026
+% Last modified by fjsimons-at-alum.mit.edu, 08/31/2026
 
 % Default is to oververify it all
 defval('xver','1')
@@ -52,13 +54,9 @@ d=2;
 
 % Extract the needed parameters of the simulation variables
 blurs=params.blurs;
-try
-    % Make sure the lithospheric case is testable
-    DEL=params.DEL;
-catch
-    % Provide "nothing" for the T matrix as it won't be needed
-    T=1;
-end
+
+% Default is the univariate field
+defval('T',1);
 
 % Note could use knums(params,1) everywhere even with 0,1 then all the below would be identical
 
@@ -66,29 +64,14 @@ end
 switch blurs
   case {0,1}
     % disp(sprintf('%s without blurring',upper(mfilename)))
-    if exist('DEL','var')
-        % If it's the lithospheric case there is the need for the coupling matrix
-        [~,~,L,T]=Tros(knums(params,1),th,params);
-    end
-    % Note this gets explicitly expanded to the column size of T
-    [Sk,k]=deal(maternos(knums(params,1),th,[],d).*T,knums(params,1));
+    [Sk,k]=deal(repmat(maternos(knums(params,1),th,[],d),1,size(T,2)).*T,knums(params,1));
   otherwise
     if isinf(blurs)
         error('You should be calling MATERNOSY, not MATERNOSP!')
     end
     if blurs>1 & ~isinf(blurs)
         % disp(sprintf('%s with blurring factor %i',upper(mfilename),blurs))
-        % If it's the lithospheric case
-        if exist('DEL','var')
-            % The lithospheric-spectral matrix on this second grid
-            [~,~,L,T]=Tros(knums(params,1),th,params); 
-            % FJS should make the gravity BEFORE blurring says SCO
-            % SG2=[2*pi*G*DEL(2)*exp(-k(:).*z2)]   .*S(:,2);
-            % SG3=[2*pi*G*DEL(2)*exp(-k(:).*z2)].^2.*S(:,3);
-        end
-        
-        % Note this gets explicitly expanded to the column size of T
-        [Sk,k]=bluros(maternos(knums(params,1),th,[],d).*T,params,xver);
+        [Sk,k]=bluros(repmat(maternos(knums(params,1),th,[],d),1,size(T,2)).*T,params,xver);
     else
         % Will need to decide what to do in the multivariable case... 
         
