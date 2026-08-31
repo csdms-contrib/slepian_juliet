@@ -1,5 +1,5 @@
 function varargout=maternosp(th,params,xver,tsto,T)
-% [Sk,k,L]=maternosp(th,params,xver,tsto,T)
+% [Sk,k]=maternosp(th,params,xver,tsto,T)
 %
 % Calculates the three-parameter isotropic d-dimensional Matern spectral
 % density used by Olhede & Simons (2013), with or without blurring, exact or
@@ -33,8 +33,6 @@ function varargout=maternosp(th,params,xver,tsto,T)
 % Sk       A column vector with all the wavenumbers unwrapped, OR
 %          a matrix if it is the multivariable lithospheric case
 % k        The wavenumber matrix (the norm of the wave vectors), unwrapped
-% L        The Cholesky decomposition of the unblurred lithospheric-spectral matrix
-%          it is the multivariable lithospheric case
 % 
 % SEE ALSO:
 %
@@ -83,7 +81,7 @@ switch blurs
 end
 
 % Optional output
-varns={Sk,k,L};
+varns={Sk,k};
 varargout=varns(1:nargout);
 
 % Notes from the coding days
