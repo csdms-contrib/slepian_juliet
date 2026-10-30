@@ -73,4 +73,3 @@ df=length(k(:))/2;
 F=matslice(F,ifinv);
 covF=inv(F);
 covth=covF*covm*covF;
-
