@@ -3,8 +3,8 @@ function varargout=simulosl(th0,params,xver,varargin)
 % [gane,miy,ax,legs,ppme]=SIMULOSL('demo4',th0,params,ptype,N,rindj,npr,ah,gane,miy,pix)
 %
 % Changed in Dec 2025 to accommodate plotting bias from EGGERS7 as opposed to
-% EGGERS4 by subtracting the truth as opposed to just relabeling the y axis relative. 
-% This means we would need to redo EGGERS4 also if ever
+% EGGERS4 by subtracting the truth as opposed to just relabeling the y axis
+% relative.  This means we would need to redo EGGERS4 also if ever.
 % 
 % Simulates a univariate two-dimensional Matern covariance field,
 % either (blurs=-1,0,1,N>1) in the spectral domain via MATERNOSP,
