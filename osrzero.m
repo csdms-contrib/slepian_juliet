@@ -1,5 +1,5 @@
 function [th,p,scl,avhsz,F0,covF0,nh]=osrzero(fid,np)
-% [th,p,scl,scl,avhsz,F0,covF0,nh]=OSRZERO(fid,np)
+% [th,p,scl,avhsz,F0,covF0,nh]=OSRZERO(fid,np)
 %
 % Reads a THZRO file as produced by the olhede? suite of
 % programs following Simons & Olhede (2013).
@@ -23,7 +23,7 @@ function [th,p,scl,avhsz,F0,covF0,nh]=osrzero(fid,np)
 %
 % OSWZEROE, OSWZEROB, OSLOAD
 %
-% Last modified by fjsimons-at-alum.mit.edu, 06/20/2018
+% Last modified by fjsimons-at-alum.mit.edu, 07/08/2026
 
 % The number of unique entries in an np*np symmetric matrix
 npp=np*(np+1)/2;

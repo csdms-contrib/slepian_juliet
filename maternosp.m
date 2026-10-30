@@ -1,5 +1,5 @@
-function [Sk,k]=maternosp(th,params,xver,tsto)
-% [Sk,k]=maternosp(th,params,xver,tsto)
+function varargout=maternosp(th,params,xver,tsto,T)
+% [Sk,k]=maternosp(th,params,xver,tsto,T)
 %
 % Calculates the three-parameter isotropic d-dimensional Matern spectral
 % density used by Olhede & Simons (2013), with or without blurring, exact or
@@ -25,18 +25,21 @@ function [Sk,k]=maternosp(th,params,xver,tsto)
 %                    (1 is yes and 0 is no and everything in between)
 % xver     Perform excessive verification [0, 1 or 2]
 % tsto     Offset in Fourier indices to be passed on to BLUROSY
+% T        A matrix, if it exists, that allows for the creation of multi-dimensional fields
+%          such as e.g., provided by SIMULROS
 %
 % OUTPUT:
 %
-% Sk       A column vector with all the wavenumbers unwrapped
+% Sk       A column vector with all the wavenumbers unwrapped, OR
+%          a matrix if it is the multivariable lithospheric case
 % k        The wavenumber matrix (the norm of the wave vectors), unwrapped
 % 
 % SEE ALSO:
 %
 % MATERNOS, MATERNOSY, MATERNPRC, KNUMS, BLUROS, BLUROSY, BLURCHECK
 %
-% Last modified by owalbert-at-princeton.edu, 03/18/2025
-% Last modified by fjsimons-at-alum.mit.edu, 03/18/2025
+% Last modified by olwalbert-at-princeton.edu, 08/31/2026
+% Last modified by fjsimons-at-alum.mit.edu, 08/31/2026
 
 % Default is to oververify it all
 defval('xver','1')
@@ -50,37 +53,48 @@ d=2;
 % Extract the needed parameters of the simulation variables
 blurs=params.blurs;
 
+% Default is the univariate field
+defval('T',1);
+
+% Note could use knums(params,1) everywhere even with 0,1 then all the below would be identical
+
 %  Calculate the Matern spectrum for the spectral parameters
 switch blurs
   case {0,1}
-    % The unblurred-property wavenumber grid
-    k=knums(params); k=k(:);
     % disp(sprintf('%s without blurring',upper(mfilename)))
-    Sk=maternos(k,th,[],d);
+    [Sk,k]=deal(repmat(maternos(knums(params,1),th,[],d),1,size(T,2)).*T,knums(params,1));
   otherwise
     if isinf(blurs)
         error('You should be calling MATERNOSY, not MATERNOSP!')
     end
     if blurs>1 & ~isinf(blurs)
         % disp(sprintf('%s with blurring factor %i',upper(mfilename),blurs))
-
-        % If I stay on the same k-grid, I'm really not doing any convolution at
-        % all as you can see quickly. So by "suitably discretizing" the
-        % convolutional operator we mean: performing it on a highly densified
-        % grid of which the target grid may be a subset. Doing this on the
-        % same grid would be the "inverse crime" of NOT changing the grid
-        % all. Run Fk for this case to see it then would be a delta function.
-        
-        % Blurs IS the refinement parameter; make new wavenumber grid. Make the
-        % spectral-spectral portion of the spectral matrix, convolve in two
-        % dimensions, and then subsample onto the original target grid
-
-        % Only for the BOXCAR at this point
-        [Sk,k]=bluros(maternos(knums(params,1),th,[],d),params,xver);
+        [Sk,k]=bluros(repmat(maternos(knums(params,1),th,[],d),1,size(T,2)).*T,params,xver);
     else
+        % Will need to decide what to do in the multivariable case... 
+        
         % Here is the alternative EXACT way of doing it, which does away
         % with the approximate convolutional refinement procedure
         % disp(sprintf('%s with exact blurring',upper(mfilename)))
         [Sk,k]=blurosy(th,params,xver,[],tsto);
     end
 end
+
+% Optional output
+varns={Sk,k};
+varargout=varns(1:nargout);
+
+% Notes from the coding days
+        
+% If I stay on the same k-grid, I'm really not doing any convolution at
+% all as you can see quickly. So by "suitably discretizing" the
+% convolutional operator we mean: performing it on a highly densified
+% grid of which the target grid may be a subset. Doing this on the
+% same grid would be the "inverse crime" of NOT changing the grid at
+% all. Run Fk for this case to see it then would be a delta function.
+
+% Blurs IS the refinement parameter; make new wavenumber grid. Make the
+% spectral-spectral portion of the spectral matrix, convolve in two
+% dimensions, and then subsample onto the original target grid
+
+

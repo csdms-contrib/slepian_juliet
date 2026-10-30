@@ -28,7 +28,7 @@ function varargout=simulosl(th0,params,xver,varargin)
 %                 1 No wavenumber blurring, effectively
 %                 N Fejer convolutional  BLUROS  on an N-times refined grid
 %                -1 Fejer multiplicative BLUROSY using exact procedure
-%               Inf Simulate using SGP invariant embedding
+%               Inf Simulate using SGP circulant embedding
 %          kiso   wavenumber beyond which we are not considering the spectrum
 %          quart  1 quadruple, then QUARTER
 %                 0 size as is, watch for periodic correlation behavior!
@@ -92,7 +92,7 @@ function varargout=simulosl(th0,params,xver,varargin)
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 % Last modified by olwalbert-at-princeton.edu, 04/01/2025
-% Last modified by fjsimons-at-alum.mit.edu, 12/13/2025
+% Last modified by fjsimons-at-alum.mit.edu, 07/30/2026
 
 % Here is the true parameter vector and the only variable that gets used 
 defval('th0',[1e6 2.5 2e4]);
@@ -108,7 +108,7 @@ if ~isstr(th0)
   % Here is the extra verification parameter
   defval('xver',1)
   if xver==1
-      % Dump to screen
+    % Dump to screen
     osdisp(th0,params)
   end
 
@@ -162,10 +162,10 @@ if ~isstr(th0)
     % Watch the 2pi in MLEOSL
     Hx=(2*pi)*tospace(Hk,params);
     if xver==1
-      % Check Hermiticity before transformation, absolute tolerance
+        % Check Hermiticity before transformation, absolute tolerance
         hermcheck(reshape(Hk,NyNx))
         % Check unitarity of the transform; relative tolerance
-      diferm(Hk-tospec(Hx,params)/(2*pi),[],9-round(log10(mean(abs(Hk)))));
+        diferm(Hk-tospec(Hx,params)/(2*pi),[],9-round(log10(mean(abs(Hk)))));
     end
     
     % Big it down

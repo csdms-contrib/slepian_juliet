@@ -38,8 +38,8 @@ function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpi
 %
 % Tested on 8.5.0.197613 (R2015a)
 %
-% Last modified by olwalbert-at-princeton.edu, 05/30/2025
-% Last modified by fjsimons-at-alum.mit.edu, 05/30/2025
+% Last modified by olwalbert-at-princeton.edu, 12/11/2025
+% Last modified by fjsimons-at-alum.mit.edu, 07/08/2026
 
 defval('xver',1)
 defval('ifinv',[1 1 1])
@@ -53,7 +53,7 @@ sclth0=10.^round(log10(abs(th0)));
 movit=0.01;
 yls=[-0.0 0.6];
 % Determines the rounding on the y axis 
-rondo=1e2;
+rondo=1e3;
 % Sets the format for the estimated/true plot labels
 
 % The number of parameters
@@ -61,15 +61,17 @@ np=size(thhats,2);
 if np==6
   labs={'D','f^2','r','\sigma^2','\nu','\rho'};
   labs0={'D_0','f^2_0','r_0','\sigma^2_0','\nu_0','\rho_0',};
+  flabs={'flexural rigidity D','loading ratio f^2','correlation coefficient','variance \sigma^2','smoothness \nu','range \rho'};
   unts={'Nm' [] [] [] [] []};
 elseif np==5
   labs={'D','f^2','\sigma^2','\nu','\rho',};
   labs0={'D_0','f^2_0','\sigma^2_0','\nu_0','\rho_0'};
+  flabs={'flexural rigidity D','loading ratio f^2','correlation coefficient','variance \sigma^2','smoothness \nu','range \rho'};
   unts={'Nm' [] [] [] []};
 elseif np==3
   labs={'\sigma^2','\nu','\rho',};
   labs0={'\sigma^2_0','\nu_0','\rho_0'};
-  flabs={'variance \sigma^2','smoothness \nu','range \rho',};
+  flabs={'variance \sigma^2','smoothness \nu','range \rho'};
   unts={[] [] []};
 end
 
@@ -83,7 +85,8 @@ for i=1:np
             flabs{i}=sprintf('%s %s',flabs{i},sprintf(' (x 10^{%d})',log10(sclth0(i))));
         end
     end
-end  
+end
+
 % Set the taper
 if isfield(params,'mask')
   if strcmp(params.mask,'random')
@@ -104,27 +107,37 @@ else
   params.taper=1;
 end
 
-% Calculate covariance of scores
-try
-    % DFMTX -- may fail when the grid is too large
-    cvg=covgammiosl(th0,params,2);
-catch
-    try 
-        % gradient sample -- may fail if positive definite embedding cannot be
-        % found
-        cvg=covgammiosl(th0,params,1);
+% Do not do this if called by MLEROS
+[~,b]=star69;
+if ~strcmp(b,'mleros')
+    % Calculate covariance of scores at the TRUTH
+    try
+        % DFMTX -- may fail when the grid is too large
+        cvg=covgammiosl(th0,params,2);
+        disp('Congratulations! You did a number 2')
     catch
-        % diagonals -- only the last resort because it is time consuming
-        cvg=covgammiosl(th0,params,3);
+        try 
+            % diagonals -- only the last resort because it is time consuming
+            cvg=covgammiosl(th0,params,3);
+            disp('Congratulations! You did a number 3')
+        catch
+            % gradient sample -- may fail if positive definite embedding cannot be
+            % found
+            cvg=covgammiosl(th0,params,1);
+            disp('Congratulations! You did a number 1')
+        end
     end
+    
+    % Calculate true covariance of estimated parameters
+    % The mean estimate doesn't exist, especially given the tradeoffs
+    %cvth=covthosl(nanmean(thhats,1),params,cvg,[1 1 1]);
+    % Somewhat oddly variable, this appears
+    %cvth=covthosl(thhats(randi(size(thhats,1)),:),params,cvg,[1 1 1]);
+    cvth=covthosl(th0,params,cvg,[1 1 1]);
+else
+    % Need to do that better soon
+    cvth=nan(6,6);
 end
-
-% Calculate true covariance of estimated parameters
-% The mean estimate doesn't exist, especially given the tradeoffs
-%cvth=covthosl(nanmean(thhats,1),params,cvg,[1 1 1]);
-% Somewhat oddly variable, this appears
-%cvth=covthosl(thhats(randi(size(thhats,1)),:),params,cvg,[1 1 1]);
-cvth=covthosl(th0,params,cvg,[1 1 1]);
 
 figure(1)
 clf
@@ -394,7 +407,11 @@ if xver==1
     fig2print(gcf,'landscape')
     clf
     pcomb=nchoosek(1:np,2);
-    [ah,ha]=krijetem(subnum(1,3));
+    try
+        [ah,ha]=krijetem(subnum(size(pcomb,1)/3,3));
+    catch
+        [ah,ha]=krijetem(subnum(size(pcomb,1)/2,3));
+    end        
 
     % Scale everything
     mobss=mobss./sclth0;
@@ -412,10 +429,11 @@ if xver==1
     
     t=linspace(0,2*pi);
 
-    for ind=1:np
+    for ind=1:size(pcomb,1)
         axes(ah(ind))
-        % Find the pairwise combinations for the cross-plot convention: s2-nu,
-        % s2-rho, nu-rho
+        % Find the pairwise combinations for the cross-plot convention:
+        % which for the three-parameter univariate case is 
+        % s2-nu, s2-rho, nu-rho
         p1=pcomb(ind,1); p2=pcomb(ind,2);
 
         % Observed means and AVERAGE NUMERICAL HESSIAN standard deviations
@@ -448,7 +466,7 @@ if xver==1
 
         axis square;
         %grid on
-        % To only show lines at +/-2 std and the truth
+        % To only show lines at +/-x std and the truth
         hold on
         xlim(th0(p1)+tstats*sobss(p1))
         ylim(th0(p2)+tstats*sobss(p2))
@@ -459,8 +477,9 @@ if xver==1
                     repmat(round(rondo*[th0(p2)+...
                     vstats([1 3 5]).*sobss(p2)])./rondo,2,1),...
                      '-','Color',grey);
+
         % Color mix
-        cmix=[0 0 0]; cmix([p1 p2])=1/2;
+        cmix=[0 0 0]; 
         set([p(ind) m(ind)],'MarkerFaceColor',cmix,'MarkerEdgeColor',cmix,'MarkerSize',2)
         % Dull colors
         set([p(ind) m(ind)],'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',2)
