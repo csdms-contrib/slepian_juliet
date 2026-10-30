@@ -1,5 +1,5 @@
 function varargout=simulosl(th0,params,xver,varargin)
-% [Hx,th0,params,k,Hk,Sb,Lb,gane,miy]=SIMULOSL(th0,params,xver)
+% [Hx,th0,params,k,Hk,Sb,Lb,gane,miy,Z1]=SIMULOSL(th0,params,xver)
 % [gane,miy,ax,legs,ppme]=SIMULOSL('demo4',th0,params,ptype,N,rindj,npr,ah,gane,miy,pix)
 %
 % Changed in Dec 2025 to accommodate plotting bias from EGGERS7 as opposed to
@@ -66,6 +66,7 @@ function varargout=simulosl(th0,params,xver,varargin)
 % Lb       The Cholesky decomposition of the spectral matrix which you
 %          might use to evaluate the fit later on, in which case you
 %          don't need any of the previous output
+% Z1       The random "seed"
 % ... Only for 'demo4' which is used by EGGERS4
 % gane     Numbers for the axis equalization procedure
 % miy      Numbers for the axis equalization procedure
@@ -91,7 +92,7 @@ function varargout=simulosl(th0,params,xver,varargin)
 % MLEOSL, LOADING, SIMULOS, EGGERS1, EGGERS2, EGGERS4, etc
 %
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
-% Last modified by olwalbert-at-princeton.edu, 04/01/2025
+% Last modified by olwalbert-at-princeton.edu, 10/30/2026
 % Last modified by fjsimons-at-alum.mit.edu, 07/30/2026
 
 % Here is the true parameter vector and the only variable that gets used 
@@ -132,8 +133,11 @@ if ~isstr(th0)
 
   % Bypass this procedure altogether to go for circulant embedding
   if ~isinf(params.blurs)
+    try
+      Z1=varargin{1}:
+    end
     % Now construct the whole-spectral matrix
-    Z1=randgpn(k,dci,dcn);
+    defval('Z1',randgpn(k,dci,dcn))
     % This cramps the style. But still. Should I put in a zero at dci? 
     % disp(sprintf('Z1: mean %+6.3f ; stdev %6.3f',...
     %    mean(Z1(:)),std(Z1(:))))
@@ -186,6 +190,7 @@ if ~isstr(th0)
         Hx=Hx.*params.taper(:);
     end
   else
+    defval('Z1',[])
     % Make the Matern covariance OBJECT as required - vectorized
     %  Cmn=@(h) maternosy(sqrt([h(:,1)*params.dydx(2)].^2+[h(:,2)*params.dydx(1)].^2),th0);
 
@@ -209,21 +214,83 @@ if ~isstr(th0)
         Hx=Hx.*params.taper(:);
     end
 
-    % Spectral-domain result, don't really need it except for BLUROSY('demo2') and MASKIT('demo2')
-    if nargout>4
-        Hk=tospec(Hx,params)/(2*pi);
-        if length(params.taper)>1
-            % Adjust for the taper size - same call as in MLEOSL
-            Hk=Hk/sqrt(sum(params.taper(:).^2))*sqrt(prod(params.NyNx));
-        end
-        
-        % I suppose we could get an instance from Hk, if not an average
-        % Let's make Sb the periodogram to look at later? And forget about Lb.
-        Lb=deal(NaN);
-        
-        % Make the PERIODOGRAM
-        Sb=Hk.*conj(Hk);
-        hermcheck(reshape(Sb,params.NyNx));
+    % July 2025 modifications -- something is not working as expected here when
+    % symmetrize is enabled: blurosy('demo2') will complain about the ratio
+    % being poor about 5% of the time.
+    symmetrize=0;
+    if ~symmetrize
+      % Spectral-domain result, don't really need it except for BLUROSY('demo2') and MASKIT('demo2')
+      if nargout>4
+          Hk=tospec(Hx,params)/(2*pi);
+          if length(params.taper)>1
+              % Adjust for the taper size - same call as in MLEOSL
+              Hk=Hk/sqrt(sum(params.taper(:).^2))*sqrt(prod(params.NyNx));
+          end
+          
+          % I suppose we could get an instance from Hk, if not an average
+          % Let's make Sb the periodogram to look at later? And forget about Lb.
+          Lb=deal(NaN);
+          
+          % Make the PERIODOGRAM
+          Sb=Hk.*conj(Hk);
+          hermcheck(reshape(Sb,params.NyNx));
+      end
+    else
+     % Match the treatments applied in RANDGPN by doubling the variance at the
+     % Nyquist, the intersection of Nyquist containing row & column, and the
+     % zero wavenumber, and by enforcing Hermitian symmetry at rows and columns
+     % containing a Nyquist or the zero
+     Hk=tospec(Hx,params)/(2*pi);
+     if length(params.taper)>1
+          % Adjust for the taper size - same call as in MLEOSL
+          Hk=Hk/sqrt(sum(params.taper(:).^2))*sqrt(prod(params.NyNx));
+     end
+
+     % Determine the parity; Nyquist is only exactly reached for even dimension
+     modd=mod(NyNx(1),2);
+     nodd=mod(NyNx(2),2);
+     Hk=v2s(Hk,params);
+
+     % Now overwrite and symmetrize the column containing zero
+     Hk(dci(1)+1:end,dci(2))=conj(flipud(Hk(2-modd:dci(1)-1,dci(2))));
+
+     % Ensure the center is real (this should already be the case), and double
+     % the variance to match the unit-variance versus half-variance
+     % distributional setting in RANDGPN for special points versus non-special
+     % points, respectively
+     Hk(dci(1),dci(2))=real(Hk(dci(1),dci(2)))*2;
+
+     % Apply the same treatment for the Nyquist, if we have observed any
+     for ind=1:size(dcn,1)
+       Hk(dcn(ind,1),dcn(ind,2))=real(Hk(dcn(ind,1),dcn(ind,2)))*2;
+     end
+
+     % Same if there is an intersection of row and column containing these
+     % points
+     Hk(~modd,~nodd)=real(Hk(~modd,~nodd))*2;
+
+     % Skipping the symmetrizing of the right half plane that is performed in
+     % RANDGPN
+
+     % Symmetrize the top row that may contain the Nyquist, if it does
+     Hk(~modd,dci(2)+1:end)=conj(fliplr(Hk(~modd,2-nodd:dci(2)-1)));
+
+     % Symmetrize the leftmost column that may contain the Nyquist, if it does
+     Hk(dci(1)+1:end,~nodd)=conj(flipud(Hk(2-modd:dci(1)-1,~nodd)));
+
+     hermcheck(Hk)
+     Hk=Hk(:);
+    % figure();
+    % subplot(131);imagesc(v2s(Hx,params));colorbar
+    % subplot(132);imagesc(v2s((2*pi)*tospace(Hk,params),params));colorbar
+    % subplot(133);imagesc(v2s(Hx-(2*pi)*tospace(Hk,params),params));colorbar
+    % Send back to space
+     Hx=(2*pi)*tospace(Hk,params);
+
+     Lb=deal(NaN);
+     % Make the PERIODOGRAM
+     Sb=Hk.*conj(Hk);
+     hermcheck(reshape(Sb,params.NyNx));
     end
   end
 
@@ -233,7 +300,7 @@ if ~isstr(th0)
   defval('Lb',[])
   defval('gane',[])
   defval('miy',[])
-  varns={Hx,   th0,params,k,Hk,   Sb,Lb,gane,miy};
+  varns={Hx,   th0,params,k,Hk,   Sb,Lb,gane,miy,Z1};
   varargout=varns(1:nargout);
 elseif strcmp(th0,'demo1')
   % Pulls out the demo name
@@ -440,7 +507,7 @@ elseif strcmp(th0,'demo4')
 	    Hx=simulosl(th0,p);
 	    try
 	        % Make reasonable guesses from the data themselves, then invert
-	        [th,covh,~,scl]=mleosl(Hx,[var(Hx) 2.0 sqrt(prod(p.dydx.*p.NyNx))/5],p,[],[],[],[],[],0);
+	        [th,covh,~,scl]=mleosl(Hx,[var(Hx) 2.0 sqrt(prod(p.dydx.*p.NyNx))/5],p);
 	        % It it was a single NaN, fix the dimensions so it's NaN for all
 	      if isnan(th); [th,scl]=deal(nan(1,length(th0))); disp('NaN set'); end
 	      % Output was scaled, so apply the scaling
@@ -550,18 +617,19 @@ elseif strcmp(th0,'demo4')
   end
 
   % Vertical and horizontal guides to where brute-force bias is about a third
-  %plot(2*pi*[th0(3) th0(3)]/1e3,halverange(miy,100,NaN),'k-')
+  % plot(2*pi*[th0(3) th0(3)]/1e3,halverange(miy,100,NaN),'k-')
   hold on
   % plot(xlim,[th0(1) th0(1)],'k--')
 
   switch ptype
    case 'poor'
     % Percentiles of the variances over all the realizations
+    % Everything offset by the truth relative to truth
     for index=1:length(rindj)
-      pb(index)=plot([xlox(index) xlox(index)],[h05(index) h95(index)]);
+      pb(index)=plot([xlox(index) xlox(index)],([lb(index) ub(index)]-tr)/tr);
     end
     % Rather plot a scaled version of the spatial-domain covariance itself!
-    pp(4)=plot(xloy,maternosy(xloy*1e3,th0));
+    pp(4)=plot(xloy,(maternosy(xloy*1e3,th0)/th0(1)*tr-tr)/tr);
     % Variance of any ONE of the realizations
     pp(1)=plot(xlox,h,'k');
     % Predicted mean of the variances knowing theoretical bias 
