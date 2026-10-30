@@ -22,7 +22,7 @@ function varargout=covplos(oneortwo,sclcovX,obscov,params,thhats,E,v,cblox,ifinv
 %
 % ah,yl     Axis handles to what was just plotted
 %
-% Last modified by olwalbert-at-princeton.edu, 12/11/2025
+% Last modified by olwalbert-at-princeton.edu, 10/30/2026
 % Last modified by fjsimons-at-alum.mit.edu, 07/08/2026
 
 defval('oneortwo',2)
@@ -96,20 +96,24 @@ switch oneortwo
   covannotate(ah(2),np,ifinv)
   t(2)=title('observed');
 
+  % Diverging colormap
+  clrs=mycolors(4);
+  colormap(clrs)
+
   set(ah(2),'yaxisl','r')
   movev(ah,-.25)
   serre(ah,1,'across')
   
   switch cblox
    case 'hor'
-    cb=colorbarf('hor',10,get(gca,'FontName'),...
+    cb=colorbarf('hor',get(gca,'FontSize'),get(gca,'FontName'),...
 		 [0.3 0.3 0.3 0.02]);
     axes(cb)
     xlabel('normalized variance/covariance matrix')
     moveh(cb,0.125)
     movev(cb,-0.02)
    case 'ver'
-    cb=colorbarf('ver',10,get(gca,'FontName'),...
+    cb=colorbarf('ver',get(gca,'FontSize'),get(gca,'FontName'),...
 		 [0.175 0.385 0.02 getpos(ah(1),4)]);
     axes(cb)
     yl=ylabel('normalized covariance matrix');
@@ -178,5 +182,3 @@ set(ah,'xtick',1:np,'XTickLabel',labs,'FontSize',12)
 set(ah,'ytick',1:np,'YTickLabel',labs,'FontSize',12)
 longticks(ah)
 movev(ah,.05)
-
-
