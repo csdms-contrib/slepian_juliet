@@ -1,7 +1,8 @@
 function NuInfExperiment(numvals,numreals,algo)
 % For several realizations with increasing values of nu, how well can we recover
 % nu? At what point can we effectively treat nu as infinite?
-%INPUT
+%
+% INPUTS
 %
 % numvals     how many (logarithmically spaced) values of nu between 0 and 100 
 % numreals    how many realizations
