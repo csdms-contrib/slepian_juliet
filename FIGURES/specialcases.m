@@ -3,7 +3,7 @@ function specialcases(th,params,est,xver,fixflag)
 %
 % Calculates and renders paper figures for demonstrating special smoothness cases
 %
-% Input:
+% INPUT
 %
 % th        Matern parameters
 % params    Grid parameters
@@ -12,21 +12,21 @@ function specialcases(th,params,est,xver,fixflag)
 % fixflag   Flag to set the fixed case to the WRONG nu, 5/2; otherwise, fix to
 %           correct nu; only relevant when est==2
 %
-% Output:
+% OUTPUT
 %
 % <>        Generates and saves a figure (and possibly runs and stores many estimate
 %           calculations)
 % 
-% Examples:
+% EXAMPLES
 %
-% Figure 1: Illustration of the special cases
+% For illustration of the special cases
 %
 % specialcases([],[],0)
 %
-% For estimation with nu fixed to the wrong value:
+% For estimation with nu fixed to the wrong value
 % specialcases([],[],2,[],1)
 %
-% For estimation with nu fixed to the correct value (NEED TO RUN THIS):
+% For estimation with nu fixed to the correct value
 % specialcases([],[],2,[],0)
 %
 % Last modified by olwalbert-at-princeton.edu on 02/09/2026
