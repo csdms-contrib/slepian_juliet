@@ -1,7 +1,7 @@
 function samplingcases(th,params,est,xver,fixflag)
 % SAMPLINGCASES(TH,P,EST,XVER,FIXFLAG)
 %
-% Create figures shown in the sampling and special case estimation paper
+% How does sampling pattern impact Matern parameter estimation?
 %
 % Input:
 %
