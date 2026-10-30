@@ -1364,7 +1364,7 @@ elseif strcmp(th,'demo4')
     % We will have two versions of this plot: the first (pltver==1) preserves
     % the original display of the terms involved in the Isserlis calculation,
     % the second (pltver==2) is for publication
-    pltver=2;
+    pltver=1;
 
     % While the first and second terms below sum to similar quantities, we can
     % quickly see wave-number dependent distinctions:
@@ -1534,7 +1534,7 @@ elseif strcmp(th,'demo4')
 
     % The diagonal of the sum of the two predicted terms is the diagonal of A
     pSbar2=abs(pSbar).^2;
-
+keyboard
     diagpgmsum=v2s(Sbar2+pSbar2);
     difer(diag(A)-diagpgmsum(:))
     % Bottom line: Hk2cov is the sum of a covariance of Fourier coefficients and
