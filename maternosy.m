@@ -77,7 +77,7 @@ function varargout=maternosy(y,th,dth,meth)
 % maternosy('demo3')
 %
 % Last modified by fjsimons-at-alum.mit.edu, 03/19/2025
-% Last modified by olwalbert-at-princeton.edu, 04/26/2025
+% Last modified by olwalbert-at-princeton.edu, 07/14/2026
 
 if ~isstr(y)
   % Defaults (avoiding DEFVAL to speed up)
@@ -91,6 +91,12 @@ if ~isstr(y)
   % The argument, make sure it is a distance
   argu=2*sqrt(nu)/pi/rh*abs(y);
 
+ % % If we requested dth==2 and th(2) is a special case, default the calculation
+ % % method to the special case derivative
+ % if dth==2 & ismember(th(2),[1/3 1/2 1 3/2 5/2 mod(nu+0.5,1) Inf])
+ %   meth=2;
+ % end
+
   % Check whether we are asking for the case that nu approaches
   % infinity; if so, by the straight-up method Cy would have Inf/NaN entries
   if isinf(nu)
@@ -101,7 +107,7 @@ if ~isstr(y)
     % for details) with use of Eq. 3.323.2 of Gradshteyn & Ryzhik (1980).
     if isempty(dth)
         % Calculate the spatial covariance
-        Cy=s2/(pi*rh)*exp(-abs(y).^2/(pi^2*rh^2));
+        Cy=s2*exp(-abs(y).^2/(pi^2*rh^2));
     elseif dth==1
         % Calculate the partial derivative with respect to s2 
         Cy=exp(-abs(y).^2/(pi^2*rh^2));
@@ -110,7 +116,7 @@ if ~isstr(y)
         Cy=zeros(size(y));
     elseif dth==3
         % Calculate the partial derivative with respect to rho
-        Cy=s2/rh*exp(-y.^2/(pi^2*rh^2))*(1/(pi*rh)).*(2*y.^2/(pi^2*rh^2)-1);
+        Cy=s2*exp(-abs(y).^2/(pi^2*rh^2)).*2*abs(y).^2/(pi^2*rh^3);
     else
         error('Not a valid partial derivative index. Ask for dth=1,2,or 3.')
     end
@@ -139,59 +145,65 @@ if ~isstr(y)
             % dCydnu; the derivative of the gamma function is provided by Eq.
             % 6.3.1 of Abramowitz & Stegun (1965); 
 
-            % We are still experiencing numerical issues. Turn off the
-            % analytical solution for now and calculate via finite difference.
+            % Still experiencing numerical issues: large k or large Matern
+            % parameters lead to blow-up in hypergeometric function. Turn off
+            % the analytical solution for now and calculate via finite
+            % difference.
             anlytcl=0;
             if anlytcl
               if nu==0
                   % The partial derivative of the modified Bessel function of the
                   % second kind with respect to order evaluated for order==0
                   % is given by Eq. 9.6.46 of A&S; (we do not consider this case) 
-                  dKdnuo=0;
+                  Cy=0.*argu;
               elseif (mod(nu,1)~=1)&((ceil(nu)-nu)>=0.05)
-                  % We calculate the derivative of the Bessel function term 
+                  % I calculate the derivative of the Bessel function term 
                   % following in the steps of Brychkov (2016) using Mathematica,
                   % with the added complication of nu appearing in the Matern 
                   % argument; this derivative is valid for positive, non-integer
-                  % values of nu. We are trying alternatives to MATLAB's
-                  % HYPERGEOM, which relies on conversion to symbolic values
-                  % (very, very slow)
+                  % values of nu. 
+                  % I tried alternatives to MATLAB's HYPERGEOM, which relies 
+                  % on conversion to symbolic values (very, very slow)
                   
                   % Pre-compute common terms to save time
                   BKNZ=besselk(nu,argu);
                   % BINPZ may be the source of the numerical problems for large
                   % ARGU
                   BINPZ=besseli(nu,argu); % positive order
+                  BINNZ=besseli(-nu,argu); % positive order
                   CSCNUPI=csc(nu*pi);
                   ARGUSQ=argu.^2;
                   HFARGUSQ=(argu/2).^2;
 
-                  % Most recent attempt using genHyper from file exchange;
-                  % GENHYPER does not take vector arguments
-                  NumWorkers=feature('numcores')-1;
-                  if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
-                  parfor ind=1:numel(argu)
-                   GENHYPER1(ind)=genHyper([nu,nu+1/2],[nu+1,nu+1,2*nu+1],ARGUSQ(ind));
-                   GENHYPER2(ind)=genHyper([1/2-nu,-nu],[1-2*nu,1-nu,1-nu],ARGUSQ(ind));
-                   GENHYPER3(ind)=genHyper([1,1,3/2],[2,2,2-nu,2+nu],ARGUSQ(ind));
-                  end
-                  t1=(pi/2.*CSCNUPI).^2*(HFARGUSQ.^(nu)./(gamma(1+nu).^2).*...
-                     besseli(-nu,argu).*GENHYPER1-HFARGUSQ.^(-nu)/(gamma(1-nu).^2).*BINPZ.*...
-                     GENHYPER2);
-                  t2=1/(2*nu).*(argu.*besselk(nu-1,argu)+(nu-1).*BKNZ-...
-                     (pi+pi^2.*nu.*cot(pi*nu)).*CSCNUPI.*BINPZ);
-                  t3=(BKNZ+pi*CSCNUPI.*BINPZ).*(HFARGUSQ./(nu.^2-1).*...
-                     GENHYPER3-log(argu)+psi(nu));
-                  % Original, using MATLAB's hypergeom
+                  % % Most recent attempt using genHyper from file exchange;
+                  % % GENHYPER does not take vector arguments
+                  % NumWorkers=feature('numcores')-1;
+                  % if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
+                  % parfor ind=1:numel(argu)
+                  %  GENHYPER1(ind)=genHyper([nu,nu+1/2],[nu+1,nu+1,2*nu+1],ARGUSQ(ind));
+                  %  GENHYPER2(ind)=genHyper([1/2-nu,-nu],[1-2*nu,1-nu,1-nu],ARGUSQ(ind));
+                  %  GENHYPER3(ind)=genHyper([1,1,3/2],[2,2,2-nu,2+nu],ARGUSQ(ind));
+                  % end
                   % t1=(pi/2.*CSCNUPI).^2*(HFARGUSQ.^(nu)./(gamma(1+nu).^2).*...
-                  %    besseli(-nu,argu).*hypergeom([nu,nu+1/2],[nu+1,nu+1,2*nu+1],ARGUSQ)-...
-                  %    HFARGUSQ.^(-nu)/(gamma(1-nu).^2).*BINPZ.*...
-                  %    hypergeom([1/2-nu,-nu],[1-2*nu,1-nu,1-nu],ARGUSQ));
+                  %    besseli(-nu,argu).*GENHYPER1-HFARGUSQ.^(-nu)/(gamma(1-nu).^2).*BINPZ.*...
+                  %    GENHYPER2);
                   % t2=1/(2*nu).*(argu.*besselk(nu-1,argu)+(nu-1).*BKNZ-...
                   %    (pi+pi^2.*nu.*cot(pi*nu)).*CSCNUPI.*BINPZ);
                   % t3=(BKNZ+pi*CSCNUPI.*BINPZ).*(HFARGUSQ./(nu.^2-1).*...
-                  %    hypergeom([1,1,3/2],[2,2,2-nu,2+nu],ARGUSQ)-log(argu)+psi(nu));
-                  dKdnuo=t1-t2+t3;
+                  %    GENHYPER3-log(argu)+psi(nu));
+                  % dKdnuo=t1-t2+t3;
+
+                  % Original, using MATLAB's hypergeom
+                  Cy=s2.*2.^(1-nu)./gamma(nu).*argu.^nu.*...
+                      (BKNZ.*(0.5+log(argu./2)-psi(nu))+...
+                      (pi/2.*CSCNUPI).^2*(HFARGUSQ.^(2*nu)./(gamma(1+nu).^2).*...
+                      BINNZ.*hypergeom([nu,nu+1/2],[nu+1,nu+1,2*nu+1],ARGUSQ)-...
+                      HFARGUSQ.^(-2*nu)/(gamma(1-nu).^2).*BINPZ.*...
+                      hypergeom([1/2-nu,-nu],[1-2*nu,1-nu,1-nu],ARGUSQ))-...
+                      1/(2*nu).*(argu.*besselk(nu-1,argu)+(nu-1).*BKNZ-...
+                      (pi+pi^2.*nu.*cot(pi*nu)).*CSCNUPI.*BINPZ)+...
+                      (BKNZ+pi*CSCNUPI.*BINPZ).*(nu.*y.^2./(pi.^2.*rh.^2.*(nu.^2-1)).*...
+                      hypergeom([1,1,3/2],[2,2,2-nu,2+nu],ARGUSQ)-log(argu)+psi(nu)));
               else %mod(nu,1)==0
                   % For integer order, we must calculate the limit from the
                   % non-integer order form of the modified Bessel function of the 
@@ -206,12 +218,8 @@ if ~isstr(y)
                   thright=th;thright(2)=nu+pert;  
                   dCydnuright=maternosy(y,thright,2);
 
-                  dKdnuo=0.5*(dKdnuoleft+dKdnuoright);
+                  Cy=0.5*(dCynuleft+dCynuright);
               end
-              % Now put things together
-              Cy=s2*2^(1-nu)/gamma(nu)*argu.^nu.*...
-                  (besselk(nu,argu).*(0.5+log(argu/2)-psi(nu))+...
-                  double(dKdnuo));
               % Supply the smallest arguments from the partial derivative for the 
               % small argument limit of the Bessel function, see Eq. 9.6.9 of A&S
               Cy(y==0)=0;
@@ -222,7 +230,7 @@ if ~isstr(y)
               h=eps*5e5/2;
               % Press+2007 5.7.8 list the optimal step-size
               h=eps^(1/3)*th(2); 
-              % We know there are discontinuities at integer values, so if th(2)
+              % Since there are discontinuities at integer values, e.g., if th(2)
               % +/- h is close to an integer, double h
               while abs(mod(th(2)+h,1))<1e-10 | abs(mod(th(2)-h,1))<1e-10
                  h=2*h;
@@ -238,13 +246,13 @@ if ~isstr(y)
 
              % Another alternative is chebyshev polynomial approximation for Cy
              % as a function of nu that can be differentiated
-             % k=20; t=augknt(minmax(y),k); x=chbpnt(t,k);
+             % k=20;t=augknt(minmax(y),k);x=chbpnt(t,k);
              % %sp=spapi(t,x,maternosy(x,th0,2,1));
-             % % plot(y,fnval(sp,y)); hold on; plot(y,maternosy(y,th0,2,1),'--')
+             % % plot(y,fnval(sp,y));hold on;plot(y,maternosy(y,th0,2,1),'--')
              % sp=spapi(t,x,maternosy(x,th0,[],1));
              % Cy=fnval(sp,y);
-             % % evaluate:
-             % plot(y,Cy); hold on; plot(y,maternosy(y,th0,[],1),'--')
+             % evaluate:
+             % plot(y,Cy);hold on;plot(y,maternosy(y,th0,[],1),'--')
             end
           elseif dth==3
               % The partial derivative of Cy with respect to the range, dCydrho;
@@ -503,7 +511,7 @@ elseif strcmp(y,'demo1')
     ylabel('MATERNOS 2s FFT(MATERNOSY)')
 elseif strcmp(y,'demo2')
     clf
-    th0 = [1 4 20]; p = []; p.NyNx = [256 256]; p.dydx = [1 1];
+    th0 = [1 3.9 20]; p = []; p.NyNx = [256 256]; p.dydx = [1 1];
 
     y = linspace(0,sqrt(prod(p.dydx)*prod(p.NyNx)),1000);
     xels=[0 min(6*pi*th0(3),max(y))];
@@ -534,6 +542,7 @@ elseif strcmp(y,'demo2')
                 
         ah2(index)=subplot(2,3,index+3);
         % Calculate derivative
+        if index==2; keyboard; end
         zdiff=maternosy(y,th0,index);
         pd(index)=plot(y,zdiff,'k');
         ylim(halverange(zdiff,105,NaN))
@@ -549,6 +558,142 @@ elseif strcmp(y,'demo2')
         xlim(xels)
     end
     longticks([ah1 ah2],2)
+elseif strcmp(y,'demo2b')
+    clf;set(gcf,'InnerPosition',[1 1000 1100 650])
+    ths = [[1 0.5 4];...
+           [2 0.5 4];...
+           [1 2.5 4];...
+           [1 0.5 8]];
+    p = []; p.NyNx = [256 256]; p.dydx = [1 1];
+    y = linspace(0,sqrt(prod(p.dydx)*prod(p.NyNx)),1000);
+    xels=[0 min(6*pi*max(ths(:,3)),max(y))];
+    xels=xels+[-1 1]*range(xels)/20;
+    
+    % Calculate Matern Covariance
+    labs={'\sigma^2','\nu','\rho'};
+    % Calculate Matern Covariance derivatives
+    clrs=[mycolors(1);mycolors(2)];
+    clrs=[mycolors(2);[0 0 0]];
+    lnsts={'-','--','-.',':'};
+    [ah1,~,H]=krijetem(subnum(2,5));
+    for ind=1:5
+      axes(ah1(ind))
+      hold on
+      for jnd=1:size(ths,1)
+        if ind==1
+          pc(ind,jnd)=plot(y,maternosy(y,ths(jnd,:),[]),'Color',clrs(jnd,:),...
+                           'LineWidth',1,'LineStyle',lnsts{jnd},'DisplayName',...
+                           sprintf('$%s$ = [ %g %g %g]','\theta',ths(jnd,:))); 
+          if jnd==size(ths,1)
+            lg=legend();
+            lg.Interpreter='latex';
+            lg.IconColumnWidth=10;
+            ylabel('$\mathcal{C}_{\mathbf{\theta}}(r)$')
+            ylim([-0.05 2.05])
+          end
+        elseif ind==2
+          % derivative wrt lag distance
+          s2=ths(jnd,1);
+          nu=ths(jnd,2);
+          rh=ths(jnd,3);
+          argu=2.*nu.^(1./2)./(pi.*rh).*y;
+          zdiff=s2.*2^(1-nu)./gamma(nu).*(argu.*besselk(nu,argu) - argu.^2.*(...
+                besselk(nu-1,argu) + nu./argu.*besselk(nu,argu)));
+          pc(ind,jnd)=plot(y,zdiff,'Color',clrs(jnd,:),...
+                           'LineWidth',1,'LineStyle',lnsts{jnd});
+          if jnd==size(ths,1)
+            ylabel('$\partial \mathcal{C}_{\mathbf{\theta}}(r)/{ }\partial r$')
+            ylim([-0.6 0.3])
+          end
+        elseif ind>2
+          % derivative wrt the Matern parameters
+          zdiff=maternosy(y,ths(jnd,:),ind-2);
+          pc(ind,jnd)=plot(y,zdiff,'Color',clrs(jnd,:),...
+                           'LineWidth',1,'LineStyle',lnsts{jnd});
+          if jnd==size(ths,1)
+            ylabel(sprintf('$%s %s$',...
+                   '\partial \mathcal{C}_{\mathbf{\theta}}(r)/{ }\partial',...
+                   labs{ind-2}))
+            if ind-2==1
+              ylim([-0.05 1.05])
+            elseif ind-2==2
+              ylim([-0.1 0.9])
+            elseif ind-2==3
+              ylim([-0.05 0.2])
+            end
+          end
+        end
+      end
+      set(ah1(ind).YLabel,'Interpreter','latex')
+      set(ah1(ind),'FontSize',10)
+      grid on
+      xlabel('lag distance r [m]')
+      xlim(xels)
+      grid on
+      longticks
+      box on
+    end
+    % Spectral Density
+    p.blurs=1;
+    [~,kzero,~,~,k]=knums(p,1);
+    k=k(kzero:end);
+    for ind=6:10
+      axes(ah1(ind))
+      hold on
+      for jnd=1:size(ths,1)
+        if ind==6
+          pc(ind,jnd)=plot(k,maternos(k,ths(jnd,:),[],2),'Color',clrs(jnd,:),...
+                           'LineWidth',1,'LineStyle',lnsts{jnd},'DisplayName',...
+                           sprintf('$%s$ = [ %g %g %g]','\theta',ths(jnd,:))); 
+          if jnd==size(ths,1)
+            ylabel('$\mathcal{S}_{\mathbf{\theta}}(k)$')
+            ylim([-0.5 20])
+          end
+        elseif ind==7
+          % derivative wrt lag distance
+          s2=ths(jnd,1);
+          nu=ths(jnd,2);
+          rh=ths(jnd,3);
+          argu=4*nu/(pi^2*rh^2);
+          zdiff=-2.*s2./pi.*k.*nu.*(nu+1).*argu.^nu.*(argu+k.^2).^(-nu-2);
+          pc(ind,jnd)=plot(k,zdiff,'Color',clrs(jnd,:),...
+                           'LineWidth',1,'LineStyle',lnsts{jnd});
+          if jnd==size(ths,1)
+            ylabel('$\partial \mathcal{S}_{\mathbf{\theta}}(k)/{ }\partial k$')
+            ylim([-200 3])
+          end
+        elseif ind>7
+          % derivative wrt the Matern parameters
+          zdiff=maternos(k,ths(jnd,:),ind-7,2);
+          pc(ind,jnd)=plot(k,zdiff,'Color',clrs(jnd,:),...
+                           'LineWidth',1,'LineStyle',lnsts{jnd});
+          if jnd==size(ths,1)
+            ylabel(sprintf('$%s %s$',...
+                   '\partial \mathcal{S}_{\mathbf{\theta}}(k)/{ }\partial',...
+                   labs{ind-7}))
+            if ind-7==1
+              ylim([-0.5 20])
+            elseif ind-7==2
+              ylim([-0.5 16])
+            elseif ind-7==3
+              ylim([-1 14])
+            end
+          end
+        end
+      end
+      set(ah1(ind).YLabel,'Interpreter','latex')
+      set(ah1(ind),'FontSize',10)
+      grid on
+      xlabel('wavenumber k [rad]')
+      xlim([0 pi/4])
+      grid on
+      longticks
+      box on
+    end
+    moveh(H(:,1),-0.05)
+    moveh(H(:,2),-0.025)
+    moveh(H(:,4),0.025)
+    moveh(H(:,5),0.05)
 elseif strcmp(y,'demo3')
     s2=rand*100;
     nus=[1/3 1/2 1 3/2 5/2 3.5 4.5];
