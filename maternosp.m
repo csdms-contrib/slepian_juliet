@@ -1,4 +1,4 @@
-function varargout=maternosp(th,params,xver,tsto,T)
+function [Sk,k]=maternosp(th,params,xver,tsto,T)
 % [Sk,k]=maternosp(th,params,xver,tsto,T)
 %
 % Calculates the three-parameter isotropic d-dimensional Matern spectral
@@ -17,7 +17,7 @@ function varargout=maternosp(th,params,xver,tsto,T)
 %          blurs 0 No wavenumber blurring
 %                1 No wavenumber blurring, effectively
 %                N Fejer convolutional  BLUROS  on an N-times refined grid
-%               -1 Space multiplicative BLUROSY using the exact procedure
+%               -1 Fejer multiplicative BLUROSY using the exact procedure
 %              Inf Rather simulate using SGP invariant embedding, error
 %           taper  0 there is no taper near of far
 %                  1 it's a unit taper, implicitly
@@ -25,8 +25,8 @@ function varargout=maternosp(th,params,xver,tsto,T)
 %                    (1 is yes and 0 is no and everything in between)
 % xver     Perform excessive verification [0, 1 or 2]
 % tsto     Offset in Fourier indices to be passed on to BLUROSY
-% T        A matrix, if it exists, that allows for the creation of multi-dimensional fields
-%          such as e.g., provided by SIMULROS
+% T        A matrix, if it exists, that allows for the creation of
+%          multi-dimensional fields such as e.g., provided by SIMULROS
 %
 % OUTPUT:
 %
@@ -38,14 +38,14 @@ function varargout=maternosp(th,params,xver,tsto,T)
 %
 % MATERNOS, MATERNOSY, MATERNPRC, KNUMS, BLUROS, BLUROSY, BLURCHECK
 %
-% Last modified by olwalbert-at-princeton.edu, 08/31/2026
+% Last modified by olwalbert-at-princeton.edu, 11/01/2026
 % Last modified by fjsimons-at-alum.mit.edu, 08/31/2026
 
 % Default is to oververify it all
 defval('xver','1')
 
 % We only need to specify tsto for some variance calculations methods
-defval('tsto',[]);
+defval('tsto',[])
 
 % The dimensionality of the problem (not being actively used)
 d=2;
@@ -54,25 +54,28 @@ d=2;
 blurs=params.blurs;
 
 % Default is the univariate field
-defval('T',1);
+defval('T',1)
 
-% Note could use knums(params,1) everywhere even with 0,1 then all the below would be identical
+% Note could use knums(params,1) everywhere even with 0,1 then all the below
+% would be identical
 
 %  Calculate the Matern spectrum for the spectral parameters
 switch blurs
   case {0,1}
     % disp(sprintf('%s without blurring',upper(mfilename)))
-    [Sk,k]=deal(repmat(maternos(knums(params,1),th,[],d),1,size(T,2)).*T,knums(params,1));
+    [Sk,k]=deal(repmat(maternos(knums(params,1),th,[],d),1,size(T,2)).*T,...
+                knums(params,1));
   otherwise
     if isinf(blurs)
         error('You should be calling MATERNOSY, not MATERNOSP!')
     end
     if blurs>1 & ~isinf(blurs)
         % disp(sprintf('%s with blurring factor %i',upper(mfilename),blurs))
-        [Sk,k]=bluros(repmat(maternos(knums(params,1),th,[],d),1,size(T,2)).*T,params,xver);
+        [Sk,k]=bluros(repmat(maternos(knums(params,1),th,[],d),1,size(T,2)).*T,...
+                      params,xver);
     else
-        % Will need to decide what to do in the multivariable case... 
-        
+        % Will need to decide what to do in the multivariable case...
+
         % Here is the alternative EXACT way of doing it, which does away
         % with the approximate convolutional refinement procedure
         % disp(sprintf('%s with exact blurring',upper(mfilename)))
@@ -85,16 +88,14 @@ varns={Sk,k};
 varargout=varns(1:nargout);
 
 % Notes from the coding days
-        
+
 % If I stay on the same k-grid, I'm really not doing any convolution at
 % all as you can see quickly. So by "suitably discretizing" the
 % convolutional operator we mean: performing it on a highly densified
 % grid of which the target grid may be a subset. Doing this on the
 % same grid would be the "inverse crime" of NOT changing the grid at
 % all. Run Fk for this case to see it then would be a delta function.
-
+        
 % Blurs IS the refinement parameter; make new wavenumber grid. Make the
 % spectral-spectral portion of the spectral matrix, convolve in two
 % dimensions, and then subsample onto the original target grid
-
-
