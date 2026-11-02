@@ -102,6 +102,11 @@ end
 % with a common scaling. Note that the average is very strongly
 % affected by outliers; hence we pick the median.
 avhs=median(hes,1);
+% Would we prefer to look at the Hessian associated with the median
+% thhat as an approximation of the covariance of the MLE? Note that
+% median(X,1) retrieves the median value down each column, so output is not
+% necessarily an observation from the dataset
+
 k=knums(params);
 df=length(k(~~k))/2; 
 covavhs=inv(trilosi(avhs)./matscl)/df;
@@ -134,6 +139,13 @@ catch
     % Stealing these lines out of COVTHROS for now, until that changes to FISHIROS
     covth0=covthros(th0./sclth0,params,k,sclth0);
 end
+% When ifinv==[1 0 1], we can by-pass the diferm checks with the following
+ if any(size(F0)~=size(avhs))
+     F0=zeros(size(avhs));
+ end
+ if any(size(covF0)~=size(covth0))
+     covF0=zeros(size(covth0));
+ end
 
 % This needs to be identical except in a few digits compared to the size
 diferm(covth0(:)./matscl(:),covF0(:)./matscl(:),3)
