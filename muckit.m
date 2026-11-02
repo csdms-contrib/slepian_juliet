@@ -124,13 +124,13 @@ elseif strcmp(v,'demo2')
     p.taper=0; p.nugget=0;
     
     % Number of processors, must agree with your machine
-    NumWorkers=8;
+    NumWorkers=23;%8;
     % Number of identical experiments to run experiments
-    N=1*NumWorkers;
+    N=250;%1*NumWorkers;
 
     % Save some output for later? Make new filename hash from all relevant input
     fname=hash([struct2array(orderfields(p)) struct2array(orderfields(opt)) th     N],'SHA-1');
-    
+    keyboard 
     % You need to have an environmental variable file structure set up
     fnams=fullfile(getenv('IFILES'),'HASHES',sprintf('%s_%s.mat','MUCKIT',fname));
 
@@ -148,7 +148,8 @@ elseif strcmp(v,'demo2')
 
             % How much should the surviving area occupy?
             % Don't SET this here or PARFOR won't work
-            scl=[];
+            % scl=[];
+            scl=0.75;
 
             % Now do the masking and the merging
             [Hm,I,Ham,scl,cr]=muckit(Hx,p,scl);
@@ -181,10 +182,10 @@ elseif strcmp(v,'demo2')
             if xver==1
                 % Explicitly check the likelihood?
 	        disp(sprintf('\n Likelihood at the initial guess %g\n',...
-	                     logliosl(knums(p1),thini(index,:)./scl3(index,:),scl3(index,:),p1,...
+	                     logliosl(knums(p1),thini(index,:),p1,...
                                       tospec(Hx(:),p1)/(2*pi))));
 	        disp(sprintf('\n Likelihood at the truth    %g\n',...
-	                     logliosl(knums(p1),th./scl3(index,:),scl3(index,:),p1,...
+	                     logliosl(knums(p1),th,p1,...
                                       tospec(Hx(:),p1)/(2*pi))));
 	         % --> inside protect by looking at momx?? That's where it goes wrong
             end
@@ -198,10 +199,10 @@ elseif strcmp(v,'demo2')
             if xver==1
 	        % Explicitly check the likelihood?
 	        disp(sprintf('\n Likelihood at the initial guess %g\n',...
-	                     logliosl(knums(p2),thini(index,:)./scl1(index,:),scl1(index,:),p2,...
+	                     logliosl(knums(p2),thini(index,:),p2,...
 	                              tospec(p2.taper(:).*Hx(:),p2)/(2*pi)/sqrt(sum(p2.taper(:).^2))*sqrt(prod(p2.NyNx)),1)));
 	        disp(sprintf('\n Likelihood at the truth    %g\n',...
-	                     logliosl(knums(p2),th./scl1(index,:),scl1(index,:),p2,...
+	                     logliosl(knums(p2),th,p2,...
 	                              tospec(p2.taper(:).*Hx(:),p2)/(2*pi)/sqrt(sum(p2.taper(:).^2))*sqrt(prod(p2.NyNx)),1)));
             end
 
@@ -221,10 +222,10 @@ elseif strcmp(v,'demo2')
         % Save all the output that you'll need later, may add more later
         save(fnams,'th',      'p','thhat1','thhat2','scl1','scl2',...
              'thhat3','scl3',                                'thini'         ,'N')
-             
     else
         % Load all the saved output
         load(fnams)
+        %expdat{jndex}=l ad(fnams);
     end
 
     % And now look at the statistics of the recovery
@@ -271,6 +272,32 @@ elseif strcmp(v,'demo2')
     figure(2)
     figdisp(sprintf('%s_3b',pref(sprintf('%s_%s.mat','MUCKIT',fname))),[],[],2)
 
+    incptcld=0;
+    if incptcld
+      % examine estimates in a 3D scatter plot
+      figure(4)
+      clf
+      tss={thhat1.*scl1;thhat2.*scl2;thhat3.*scl3};
+      css={'#0072BD','#77AC30','#EDB120'};
+      mss={'^','o','s'};
+      hold on
+      scatter3(th(:,1),th(:,2),th(:,3),1000,'kx')
+      for tnd=1:3
+        ts=tss{tnd};
+        scatter3(ts(:,1),ts(:,2),ts(:,3),...
+                 mss{tnd},'MarkerFaceColor',css{tnd},'MarkerEdgeColor',css{tnd},...
+                 'MarkerFaceAlpha',0.6)                                   
+      end
+      grid on
+      xlabel('\sigma^2')                                                              
+      ylabel('\nu')                                                                   
+      zlabel('\rho')     
+      legend({'th','speckle','anti-speckle','whole'})
+      title(sprintf('%i MLE Simulations; %ix%i grid; %ix%i km; blur %s',...
+            size(thhat1,1),p.NyNx,p.NyNx.*p.dydx./1000,p.blurs))
+      figdisp(sprintf('%s_4',pref(sprintf('%s_%s.mat','MUCKIT',fname))),[],[],2)
+    end
+    
     % With PARFOR none of the once-used are available out of the loop but in
     % this demo2 you don't want any output anyway, so put in empties
     [v,I,w,scl,cr]=deal(NaN);
