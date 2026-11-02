@@ -14,6 +14,7 @@ function A=realize(A,tolp)
 % A      The matrix in question
 %
 % Last modified by fjsimons-at-alum.mit.edu, 10/10/2016
+% Last modified by olwalbert-at-princeton.edu, 01/27/2025
 
 defval('tolp',0.001);
 
@@ -24,7 +25,7 @@ ds=dbstack;
 
 % Report on small imaginary parts if any
 cpxity=100*nanmean(abs(imag(A(:))))./nanmean(abs(real(A(:))));
-if cpxity<tolp
+if cpxity<tolp | nanmean(abs(imag(A(:))))==0 
   A=real(A);
 else
   % Still do it, but report on it!
