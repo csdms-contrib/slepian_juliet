@@ -59,13 +59,13 @@ elseif strcmp(S,'demo1')
   % interaction. Equations are in the subplot titles (roughly).
   % Set the grid parameters (less that 120 by 120) and the Matern model
   % parameters
-  p=[]; p.NyNx=[48 48]; p.dydx=[1 1]; p.blurs=-1; p.taper=1;
+  p=[]; p.NyNx=[64 64]; p.dydx=[1 1]; p.blurs=-1; p.taper=1;
   sp=p; sp.blurs=Inf;
   % Note that the behavior of the distribution of the residuals for the
   % uncorrelated and correlated case depends on theta, particularly nu (best
   % when nu==1)
   %th=[1 0.5 1];
-  th=[2 1.0 3.5];
+  th=[2 5.5 2.5];
 
   % We will be making comparisons between the uncorrelated X(k) and a 
   % correlated version through the terms involved in their calculation: H(k),
@@ -248,7 +248,9 @@ elseif strcmp(S,'demo1')
   % Bounds of 2X residuals to how (functions as axis bounds in panel 1)
   bounds2X=2.*boundsX0;
   % The degrees of freedom that we will make reference plots for and some colors
-  dfs=1:1:3;
+  % For looking at the chi2 reference plots specifically: dfs=1:1:3;
+  % Gamma with fractional dof for the shape parameter, scale paramater==2
+  dfs=1.5:0.25:2.5;
   cs=parula(numel(dfs)+2);
 
   figure(3)
@@ -271,10 +273,13 @@ elseif strcmp(S,'demo1')
   refs=linspace(0,max(bounds2X),100);
   % refs=linspace(0,max(2*Xk),1000);
   for ind=1:numel(dfs)
-    p1(ind)=plot(refs,chi2pdf(refs,dfs(ind)),'Linew',1,'Color',cs(ind,:),...
-         'DisplayName',sprintf('dof=%i',dfs(ind)));
+    % chi-sq is special case of gamma where 2a=dof, b=2
+    p1(ind)=plot(refs,gampdf(refs,dfs(ind)/2,2),'Linew',1,'Color',cs(ind,:),...
+         'DisplayName',sprintf('dof=%0.2f',dfs(ind)));
+   % p1(ind)=plot(refs,chi2pdf(refs,dfs(ind)),'Linew',1,'Color',cs(ind,:),...
+   %      'DisplayName',sprintf('dof=%i',dfs(ind)));
   end
-  set(p1(2),'Color','k','LineWidth',2)
+  set(p1(find(dfs==2)),'Color','k','LineWidth',2)
   lg(1)=legend();set(lg(1),'Location','north')
   hold off
   % Labeling and cosmetic adjustments
@@ -304,15 +309,16 @@ elseif strcmp(S,'demo1')
   set(bb,'FaceC',grey)
   hold on
   % Plot some reference chi-squared distributions with different dof
-  refs=linspace(0,max(bounds2X),100);
   % refs=linspace(0,max(2*dXkkp),1000);
-  dfs=1:1:3;
   cs=parula(numel(dfs)+2);
   for ind=1:numel(dfs)
-    p2(ind)=plot(refs,chi2pdf(refs,dfs(ind)),'Linew',1,'Color',cs(ind,:),...
-         'DisplayName',sprintf('dof=%i',dfs(ind)));
+    % chi-sq is special case of gamma where 2a=dof, b=2
+    p2(ind)=plot(refs,gampdf(refs,dfs(ind)/2,2.5),'Linew',1,'Color',cs(ind,:),...
+         'DisplayName',sprintf('dof=%0.2f',dfs(ind)));
+  %  p2(ind)=plot(refs,chi2pdf(refs,dfs(ind)),'Linew',1,'Color',cs(ind,:),...
+  %       'DisplayName',sprintf('dof=%i',dfs(ind)));
   end
-  set(p2(2),'Color','k','LineWidth',2)
+  set(p2(find(dfs==2)),'Color','k','LineWidth',2)
   lg(2)=legend();set(lg(2),'Location','north')
   hold off
   % Labeling and cosmetic adjustments
@@ -342,16 +348,15 @@ elseif strcmp(S,'demo1')
   set(bb,'FaceC',grey)
   hold on
   % Plot some reference chi-squared distributions with different dof
-  refs=linspace(0,max(bounds2X),100);
   % refs=linspace(0,max(2*aXkkp),1000);
-  dfs=1:1:3;
-  cs=parula(numel(dfs)+2);
   for ind=1:numel(dfs)
-    p3(ind)=plot(refs,chi2pdf(refs,dfs(ind)),'Linew',1,'Color',cs(ind,:),...
-         'Linew',1,'Color',cs(ind,:),...
-         'DisplayName',sprintf('dof=%i',dfs(ind)));
+    % chi-sq is special case of gamma where 2a=dof, b=2
+    p3(ind)=plot(refs,gampdf(refs,dfs(ind)/2,2.5),'Linew',1,'Color',cs(ind,:),...
+         'DisplayName',sprintf('dof=%0.2f',dfs(ind)));
+   % p3(ind)=plot(refs,chi2pdf(refs,dfs(ind)),'Linew',1,'Color',cs(ind,:),...
+   %      'DisplayName',sprintf('dof=%i',dfs(ind)));
   end
-  set(p3(2),'Color','k','LineWidth',2)
+  set(p3(find(dfs==2)),'Color','k','LineWidth',2)
   lg(3)=legend();set(lg(3),'Location','east')
   hold off
   % Labeling and cosmetic adjustments
@@ -535,7 +540,9 @@ elseif strcmp(S,'demo2')
    varibal='X(k)'; xstr2v=sprintf('quadratic residual 2%s',varibal);
    allg=~isinf(Xk);
    % The degrees of freedom that we will make reference plots for and some colors
-   dfs=1:1:3;
+   % For looking at the chi2 reference plots specifically: dfs=1:1:3;
+   % Gamma with fractional dof for the shape parameter, scale paramater==2
+   dfs=1.5:0.25:2.5;
    cs=parula(numel(dfs)+2);
    % Bins to hit the grid lines
    binWidth=df/4;
@@ -549,10 +556,12 @@ elseif strcmp(S,'demo2')
    % Plot some reference chi-squared distributions with different dof
    refs=linspace(0,max(bounds2X),100);
    for ind=1:numel(dfs)
-     p1(ind)=plot(refs,chi2pdf(refs,dfs(ind)),'Linew',1,'Color',cs(ind,:),...
-          'DisplayName',sprintf('dof=%i',dfs(ind)));
+     p1(ind)=plot(refs,gampdf(refs,dfs(ind)/2,2.5),'Linew',1,'Color',cs(ind,:),...
+          'DisplayName',sprintf('dof=%0.2f',dfs(ind))); 
+    % p1(ind)=plot(refs,chi2pdf(refs,dfs(ind)),'Linew',1,'Color',cs(ind,:),...
+    %      'DisplayName',sprintf('dof=%i',dfs(ind)));
    end
-   set(p1(2),'Color','k','LineWidth',2)
+   set(p1(find(dfs==2)),'Color','k','LineWidth',2)
    lg(1)=legend();set(lg(1),'Location','north')
    hold off
    % Labeling and cosmetic adjustments
