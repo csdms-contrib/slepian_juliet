@@ -1,14 +1,15 @@
 function [L,g,H,momx,vr,Lk]=logliosl(k,th,params,Hk,xver)
 % [L,g,H,momx,vr,Lk]=LOGLIOSL(k,th,params,Hk,xver)
 %
-% Calculates the full negative logarithmic likelihood and its derivatives as
-% averaged over wavenumber space. This is the function that we MINIMIZE! No
-% consideration is given to the zero wavenumbers or to those beyond params.kiso
+% Calculates the full negative logarithmic likelihood of Olhede & Simons (2013,
+% eq. A. 51) and its derivatives as averaged over wavenumber space. This is the
+% function that we MINIMIZE! Zero-wavenumber and wavenumbers beyond params.kiso
+% excluded.
 %
 % INPUT:
 %
 % k        The wavenumbers at which these are being evaluated [rad/m]
-% th       The three-parameter vector argument [not scaled]
+% th       The three-parameter vector argument [scaled]
 %          th(1)=s2   The first Matern parameter [variance in unit^2]
 %          th(2)=nu   The second Matern parameter [differentiability]
 %          th(3)=rho  The third Matern parameter [range in m]
@@ -25,7 +26,7 @@ function [L,g,H,momx,vr,Lk]=logliosl(k,th,params,Hk,xver)
 %                 1 it's a unit taper, implicitly
 %                 OR an appropriately sized taper with proper values 
 %                 (1 is yes and 0 is no and everything in between)
-% Hk       A [prod(params.NyNx)*1]-column of complex Fourier-domain observations
+% Hk       A complex [prod(params.NyNx)*1]-column of Fourier-domain observations
 % xver     Excessive verification [0 or 1, which also computes L(k)]
 %
 % OUTPUT:
@@ -50,7 +51,7 @@ function [L,g,H,momx,vr,Lk]=logliosl(k,th,params,Hk,xver)
 % [L,Lg,LH]=logliosl(k,th0,p,Hk);
 % difer(Lg-g); difer(LH-H); % should be passing the test
 %
-% Last modified by olwalbert-princeton.edu, 12/17/2024
+% Last modified by olwalbert-princeton.edu, 05/27/2025
 % Last modified by fjsimons-at-alum.mit.edu, 12/17/2024
 
 % Make sure that this does render LKOSL obsolete
@@ -81,10 +82,22 @@ if xver==1
     %imagesc(sa); axis image
 end
 
-% Exclude the zero wavenumbers
-Hk=Hk(~~k);
-S = S(~~kk); 
-k = k(~~k);
+% Switch to remove the zero vectors along kx and ky, following OLW & SCO
+% conversation on 05/27/2025; built in as option for now
+nozerovectors=0;
+if nozerovectors
+  [kor,dci,dcn,kx,ky]=knums(params);
+  Hk0=v2s(Hk,params);
+  S0 =v2s(S,params);
+  Hk =Hk0([1:dci(1)-1 dci(1)+1:end],[1:dci(2)-1 dci(2)+1:end]);
+  S  = S0([1:dci(1)-1 dci(1)+1:end],[1:dci(2)-1 dci(2)+1:end]);
+  k  =  k([1:dci(1)-1 dci(1)+1:end],[1:dci(2)-1 dci(2)+1:end]);
+else
+  % Exclude the zero wavenumbers
+  Hk=Hk(~~k);
+  S = S(~~kk); 
+  k = k(~~k);
+end
 
 % The statistics of Xk will be computed as momx, below, and tested in MLEOSL
 Xk=hformos(S,Hk,[],xver);
