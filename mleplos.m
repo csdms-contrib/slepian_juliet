@@ -38,7 +38,7 @@ function varargout=mleplos(thhats,th0,covF0,covavhs,covXpix,E,v,params,name,thpi
 %
 % Tested on 8.5.0.197613 (R2015a)
 %
-% Last modified by olwalbert-at-princeton.edu, 12/11/2025
+% Last modified by olwalbert-at-princeton.edu, 11/02/2026
 % Last modified by fjsimons-at-alum.mit.edu, 07/08/2026
 
 defval('xver',1)
@@ -53,7 +53,7 @@ sclth0=10.^round(log10(abs(th0)));
 movit=0.01;
 yls=[-0.0 0.6];
 % Determines the rounding on the y axis 
-rondo=1e3;
+rondo=1e2;
 % Sets the format for the estimated/true plot labels
 
 % The number of parameters
@@ -93,6 +93,12 @@ if isfield(params,'mask')
     mcl=str2double(name(1:2))*0.01;
     [~,I]=muckit(randn(params.NyNx),params,mcl);
     params.taper=I;
+  elseif strcmp(params.mask,'cosine')
+    % assume this is requesting a 10% cosine taper; 
+    % TODO following update for reading/writing tapers through MLEOSL OS{R,W}*,
+    % this can be removed
+    Tx=gettaper(params,'cosine',0.1);
+    params.taper=Tx;
   else
     % Calculate the analytical covariance for the Matern parameter, grid, and taper
     [~,I]=maskit(randn(params.NyNx),params);
@@ -104,7 +110,9 @@ if isfield(params,'mask')
     end
   end
 else
-  params.taper=1;
+ if ~isfield(params,'taper')
+    params.taper=1;
+ end
 end
 
 % Do not do this if called by MLEROS
@@ -388,7 +396,7 @@ try
     disp(sprintf(answs,answ{:}))
 
     % By the way, use THAT as a subtitle (i.e., the last one in this list!)
-    tt=supertit(ah(np+1:2*np),sprintf('%s\n%s%s',sprintf(answs,answ{:}),pm,...
+    ttt=supertit(ah(np+1:2*np),sprintf('%s\n%s%s',sprintf(answs,answ{:}),pm,...
                                       'one sigma uncertainty based on the ensemble'));
 end
 
@@ -466,7 +474,7 @@ if xver==1
 
         axis square;
         %grid on
-        % To only show lines at +/-x std and the truth
+        % To only show lines at +/-2 std and the truth
         hold on
         xlim(th0(p1)+tstats*sobss(p1))
         ylim(th0(p2)+tstats*sobss(p2))
@@ -479,7 +487,7 @@ if xver==1
                      '-','Color',grey);
 
         % Color mix
-        cmix=[0 0 0]; 
+        cmix=[0 0 0]; cmix([p1 p2])=1/2;
         set([p(ind) m(ind)],'MarkerFaceColor',cmix,'MarkerEdgeColor',cmix,'MarkerSize',2)
         % Dull colors
         set([p(ind) m(ind)],'MarkerFaceColor',grey,'MarkerEdgeColor',grey,'MarkerSize',2)
@@ -545,7 +553,7 @@ if xver==1
         end
         axis square
         xel=xlim; yel=ylim;
-        ttt(ind)=text(xel(1)+range(xel)/nrx/2,yel(1)+range(yel)/nry,sprintf('%i%%',cli));
+        tt(ind)=text(xel(1)+range(xel)/nrx/2,yel(1)+range(yel)/nry,sprintf('%i%%',cli));
         
         hold off
         longticks(ah)
@@ -555,9 +563,9 @@ if xver==1
             set(titi,'FontSize',12);
         end
         try
-            tt=supertit(ah(1:np),sprintf('%s\n%s%s',sprintf(answs,answ{:}),pm,...
+            ttt=supertit(ah(1:np),sprintf('%s\n%s%s',sprintf(answs,answ{:}),pm,...
                                          'one sigma uncertainty based on the ensemble'));
-            movev(tt,-7)
+            movev(ttt,-7)
         end
     end
     % Align the x-axis labels
@@ -579,5 +587,5 @@ if xver==1
 end 
 
 % Output
-varns={ah,ha,yl,xl,tl,p,m,o1,o2,ep,ec,axlm,cvth,ttt};
+varns={ah,ha,yl,xl,tl,p,m,o1,o2,ep,ec,axlm,cvth,tt};
 varargout=varns(1:nargout);
