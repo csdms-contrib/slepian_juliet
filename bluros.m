@@ -50,7 +50,7 @@ function varargout=bluros(S,params,xver)
 %
 % BLUROS('demo2',pp,bb) a very simple run test with graphical output
 % 
-% Last modified by olwalbert-at-princeton.edu, 02/25/2025
+% Last modified by olwalbert-at-princeton.edu, 11/02/2026
 % Last modified by fjsimons-at-alum.mit.edu, 06/23/2026
 
 if ~isstr(S)
@@ -365,7 +365,7 @@ p.blurs=-1; S3=blurosy(th,p,1,'ef');
 p.blurs=-1; S4=blurosy(th,p,1,'efs'); S5=maternosp(th,p,1); diferm(S4,S5,-2)
 % Exactly blurred, using the method written for calculating off-diagonal
 % covariance with no offset, shifted for centered zero-wavenumber
-p.blurs=-1; S6=blurosy(th,p,1,'efd',[0 0]);
+p.blurs=-1; S6=blurosy(th,p,0,'efd',[0 0]);
 S6=fftshift(v2s(realize(S6),p));S6=S6(:);
 
 % Make the plots for visual inspection! 
