@@ -58,21 +58,21 @@ function varargout=mlelcontosl(Hk,thhat,scl,params,covth,thRange,runinpar,stit,a
 % Last modified by fjsimons-at-alum.mit.edu, 06/23/2025
 % Last modified by olwalbert-at-princeton.edu, 06/23/2025
 
-% Default values for function inputs
-defval('stit','Loglihood contours')
-% Launch a figure that will not interfere with MLEOSL demo2 which calls this
-% routine
-figure(3); clf
-defval('ah',krijetem(subnum(2,2)))
-% Run in parallel?
-defval('runinpar',1)
-if runinpar
-  NumWorkers=feature('numcores')-1;
-  if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
-end
-
 % Normal use of the function, i.e. not a demo
 if ~ischar(Hk)
+    % Default values for function inputs
+    defval('stit','Loglihood contours')
+    % Launch a figure that will not interfere with MLEOSL demo2 which calls this
+    % routine
+    figure(3); clf
+    defval('ah',krijetem(subnum(2,2)))
+    % Run in parallel?
+    defval('runinpar',1)
+    if runinpar
+      NumWorkers=feature('numcores')-1;
+      if isempty(gcp('nocreate')); pnw=parpool(NumWorkers); end
+    end
+
     % Default values for the loglihood grid and contours
     % Number of standard deviations the grid extends
     defval('stdOut',2);
