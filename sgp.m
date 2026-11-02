@@ -1,14 +1,14 @@
 function varargout=sgp(params,Cnm)
 % [f1,f2,x,y]=SGP(params,Cnm)
 %
-% Simulating stationary Gaussian field over a two-dimensional grid
-% using invariant embedding.
+% Simulating stationary Gaussian field over a two-dimensional grid using
+% circulant embedding.
 %
 % INPUT:
 %
 % params  parameters to the data grid, i.e. at least
-%      params.dydx with the grid spacings
-%      params.NyNx with the grid dimensions
+%         params.dydx with the grid spacings
+%         params.NyNx with the grid dimensions
 % Cnm     VECTORIZED scalar function handle to the covariance function
 %         with one two-vector input such that cov(x_t,y_s)=Cnm(t-s) is the
 %         covariance function of a 2-dimensional stationary Gaussian field
@@ -21,6 +21,12 @@ function varargout=sgp(params,Cnm)
 % SEE ALSO:
 %
 % STATIONARY_GAUSSIAN_PROCESS2
+%
+% REFERENCE:
+%
+% Kroese, D. P. & Botev, Z. I. (2015). Spatial Process Simulation.
+% In Stochastic Geometry, Spatial Statistics and Random Fields,
+% doi: 10.1007/978-3-319-10064-7_12 (pp. 369-404)
 %
 % EXAMPLES:
 %
@@ -36,7 +42,7 @@ function varargout=sgp(params,Cnm)
 % sgp(params,rho2)
 % t=title(sprintf('%s^2 %g, %s %g, %s %g','\sigma',th0(1),'\nu',th0(2),'\rho',th0(3))); movev(t,-m/30)
 %
-%% Compare blurred simulation versus circulant-embedding simulation    
+% % Compare blurred simulation versus circulant-embedding simulation    
 % figure(3)
 % ah=krijetem(subnum(2,2));
 % [Hx1,th0,params1,k,Hk1,Sb1]=simulosl; axes(ah(1)); imagesc(v2s(Hx1));
@@ -44,18 +50,15 @@ function varargout=sgp(params,Cnm)
 % params2=params1; params2.blurs=Inf;
 % [Hx2,th0,params2,k,Hk2]=simulosl(th0,params2); axes(ah(2)); imagesc(v2s(Hx2));
 % title(sprintf('blurs %i',params2.blurs))
-%% These needs to absolutely agree
+% % These needs to absolutely agree
 % axes(ah(3)); imagesc(v2s(log10(abs(Hk1).^2)));
-%% axes(ah(3)); imagesc(v2s(log10(Sb1)));
+% % axes(ah(3)); imagesc(v2s(log10(Sb1)));
 % axes(ah(4)); imagesc(v2s(log10(abs(Hk2).^2)));
 %
 % Written by Arthur Guillaumin, 10/27/2017
 % Last modified by fjsimons-at-alum.mit.edu, 02/28/2022
+% Last modified by olwalbert-at-princeton.edu, 11/02/2026
 
-%% Reference:
-% Kroese, D. P. & Botev, Z. I. (2015). Spatial Process Simulation.
-% In Stochastic Geometry, Spatial Statistics and Random Fields
-% DOI: 10.1007/978-3-319-10064-7_12 (pp. 369-404)
 
 % disp(upper(mfilename))
 
@@ -63,19 +66,19 @@ function varargout=sgp(params,Cnm)
 %          (note that size of the covariance matrix is MNxMN)
 M=params.NyNx(1);
 N=params.NyNx(2);
-
 % Create grid for spatial field in samples
 tx=[0:N-1]; 
 ty=[0:M-1];
 % Initialize auxiliary matrices
 [Rows,Cols]=deal(zeros(M,N));
-
+  
 % Sample covariance function at grid points
 [TX,TY]=meshgrid(tx,ty);
 % Remember that the function handle takes into account the sampling step
+% Switched back-- keep track of handle provided to maternosy in simulosl instead
 Rows=reshape(Cnm([ TX(:) TY(:)]),size(TX));
 Cols=reshape(Cnm([-TX(:) TY(:)]),size(TX));
-
+  
 % Create the first row of the block circulant matrix with circular blocks
 % and store it as a matrix suitable for FFT2
 BlkCirc_row=[Rows              Cols(:,end:-1:2);
@@ -88,9 +91,12 @@ else
   lam(lam(:)<0)=0; 
   lam=sqrt(lam);
 end
+
 % Generate field with covariance given by block circular matrix
 F=fft2(lam.*complex(randn(2*M-1,2*N-1),randn(2*M-1,2*N-1)));
 % Extract subblock with desired covariance
+M=params.NyNx(1);
+N=params.NyNx(2);
 F=F(1:M,1:N); 
 % Two independent fields with desired covariance
 f1=real(F); 
@@ -111,4 +117,3 @@ if nargout==0
   colormap bone
   axis image; xlabel('x'); ylabel('y'); longticks(gca); shrink(gca,1.1,1.1)
 end
-
