@@ -592,8 +592,9 @@ elseif strcmp(Hk,'demo1')
     pt.taper=Tx;
     % Make the estimate and request covariance using the sampling method
     % Don't redo if you had it
-    fname=fullfile(getenv('IFILES'),'HASHES',sprintf('%s-%s',upper(mfilename),hash(Hx,'SHA-1')));
+    fname=fullfile(getenv('IFILES'),'HASHES',sprintf('%s-%s',upper(mfilename),hash(Hx,'SHA-1')))
     if ~exist(sprintf('%s.mat',fname),'file')
+    keyboard
         % You could give it something close either in thini or aguess if you've run it before
         % but this doesn't always actually make it easier
         thini=[];
