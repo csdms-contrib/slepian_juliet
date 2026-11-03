@@ -125,7 +125,7 @@ function varargout=mleosl(Hx,thini,params,algo,bounds,aguess,ifinv,xver,cm)
 % Tested on 8.3.0.532 (R2014a) and 9.0.0.341360 (R2016a)
 %
 % Last modified by fjsimons-at-alum.mit.edu, 07/10/2025
-% Last modified by olwalbert-at-princeton.edu, 07/10/2025
+% Last modified by olwalbert-at-princeton.edu, 06/08/2026
 
 if ~isstr(Hx)
   defval('algo','unc')
@@ -237,6 +237,29 @@ if ~isstr(Hx)
       % plot(ktrm,b(1)+b(2)*ktrm)
       defval('aguess',[s2guess nuguess rhoguess]);
   else
+      if numel(params.taper)>1 & any(params.taper(:)<1)
+        % We decided not to place NaN's within Hx when data is missing and
+        % handle this as 0's in the taper instead. We take this into account in
+        % the initialization: 
+        nantpr=params.taper;
+        try
+          nantpr=double(nantpr);
+          nantpr(params.taper==0)=NaN;
+        catch
+          try
+            nantpr(params.taper==0)=NaN;
+          catch
+            keyboard
+          end
+        end
+        try
+          defval('aguess',[nanvar(Hx.*nantpr(:)) 2.0 sqrt(prod(dydx.*NyNx))/pi/2/10]);
+        end
+      else
+        nantpr=1;
+      end
+      % Even if the condition above was true but something failed we can assign
+      % aguess as if we had a unit taper and see if it is good enough
       defval('aguess',[nanvar(Hx) 2.0 sqrt(prod(dydx.*NyNx))/pi/2/10]);
   end
 
@@ -282,11 +305,12 @@ if ~isstr(Hx)
   knz=(~~k);
 
   % Always scale the data sets but don't forget to reapply at the very end
+ % shat=nanstd(Hx(:,1).*nantpr(:));
   shat=nanstd(Hx(:,1));
   % Scale the data; don't reorder the next three lines!
-  Hx(:,1)=Hx(:,1)/shat;
+  Hx(:,1)=Hx(:,1)./shat;
   % Rescale the initial value so the output applies to both THHAT and THINI
-  thini(1)=thini(1)*scl(1)/shat^2;
+  thini(1)=thini(1).*scl(1)/shat^2;
   % And with these new scalings you have no more business for the first scale
   % though for the derived quantity you need to retain them
   sclh=[shat^2 scl(2:3)];
@@ -300,12 +324,17 @@ if ~isstr(Hx)
     matsclInf=matslice(matscl,[1 0 1]);
   end
 
-  % Always demean the data sets - think about deplaning as well?
+  % Always demean the data sets - think about detrending to a higher degree via
+  % procosl later
   if size(Tx)==1
     Hx(:,1)=Hx(:,1)-nanmean(Hx(:,1));
   else
     Hxt=v2s(Hx(:,1),params);
-    Hxt(~Tx)=deal(NaN);
+    if any(any(~Tx))
+      Hxt(~Tx)=deal(NaN);
+    else
+      Hxt=Hx;
+    end
     Hx(:,1)=Hx(:,1)-nanmean(Hxt(:));
   end
 
@@ -325,6 +354,8 @@ if ~isstr(Hx)
   % [ off|iter|iter-detailed|notify|notify-detailed|final|final-detailed ] 
   % Should probably make the tolerances relative to the number of k
   % points? Or watch at least how these gradients size to the scaled lik 
+           % OLW - increase the tolerances when running asymptotics studies:
+		   %'TolFun',1e-6,'TolX',1e-6,'MaxIter',NN,...
   options=optimset('GradObj','off','Display','off',...
 		   'TolFun',1e-11,'TolX',1e-11,'MaxIter',NN,...
 		   'LargeScale','off');
@@ -411,9 +442,16 @@ if ~isstr(Hx)
       % See M. K. Stein p. 173 when differentiability parameter maxes out
       % Also check for when this crucial parameter hits the lower bound.
       % Hitting the bounds for a parameter is relative, say within 10%.
-      thhat(2)=bounds{6}(2); nwh=4; nwi=0; hitit=thhat(2)/10;
-      while [bounds{6}(2)-thhat(2)<hitit ...
-             || thhat(2)-bounds{5}(2)<hitit] ...
+
+     % Implement relative constraints on both lower and upper bounds on nu, rho
+      thhat(3)=bounds{6}(3)./scl(3); 
+      thhat(2)=bounds{6}(2)./scl(2); 
+      nwh=20; nwi=0; 
+      hitit=0.1;
+      while [   abs((bounds{6}(2)-thhat(2).*scl(2))./(thhat(2).*scl(2)))<hitit ...
+             || abs((thhat(2).*scl(2)-bounds{5}(2))./(thhat(2).*scl(2)))<hitit ...
+             || abs((bounds{6}(3)-thhat(3).*scl(3))./(thhat(3).*scl(3)))<hitit ...
+             || abs((thhat(3).*scl(3)-bounds{5}(3))./(thhat(3).*scl(3)))<hitit] ...
              && nwi<nwh
 	  nwi=nwi+1;
 	  thisthini=thini;
@@ -488,7 +526,8 @@ if ~isstr(Hx)
           end
           % And the others, switching the relationship between sigma^2 and rho
           thini(1)=thini(1)*rand;
-          thini(3)=thini(3)/rand;
+        %  thini(3)=thini(3)/rand;
+          thini(3)=thini(3)*rand;
       end
       % You've left the loop, so you've used the last thini
       thini=thisthini;
@@ -644,7 +683,11 @@ if ~isstr(Hx)
   % (3) diagonals method (slow, ultimately)
   % (0) don't even do it
   defval('cm',0);
-  covFJF=covthosl(sclh.*thhat,params,cm,ifinv);
+  try
+    covFJF=covthosl(sclh.*thhat,params,cm,ifinv);
+  catch
+    keyboard
+  end
   % This should ensure that COVFJF is a 3x3 whether we inverted for all
   % parameters or not; only needed for display purposes later
   covFJF=matslice(covFJF,ifinv,-1);
@@ -804,14 +847,13 @@ elseif strcmp(Hx,'demo1')
     % Simulate data from the same lithosphere, watch the blurring
     [Hx,th0,p,k,Hk]=simulosl(th0,params,xver);
 
-    if strcmp(p.mask,'cosine')
-        Tx=gettaper(p,'cosine',0.1);
-        p.taper=Tx;
+    if isfield('p','mask') & strcmp(p.mask,'cosine')
+      Tx=gettaper(p,'cosine',0.1);
+      p.taper=Tx;
     end
 
     % Check the dimensions of space and spectrum are right
     difer(length(Hx)-length(k(:)),[],[],NaN)
-
     % If we are working within either the squared exponential case or a fixed nu
     % case, we will use the provided 'aguess' within our batch calculuations;
     % otherwise, we will take the provided 'th0' as 'aguess'. 
@@ -913,12 +955,21 @@ elseif strcmp(Hx,'demo2')
 
   % The number of parameters to solve for
   np=3;
-
   % Looks like more trimming is needed for 'con' rather than 'unc'
   trims=100;
   % Load everything you know about this simulation
+  % Note for the future: we really need to incorporate my changes to the os<*>
+  % files (so that the taper is added to the HASH and so we can automatically
+  % load it here. Currently, the taper does not load and the covariance
+  % calculated within MLEPLOS is not for the correct grid. We can get around
+  % this by calling MLEOSL('demo2',date,p) where p possesses a field for the
+  % taper if that is in the existing workspace, then we must enter the if 
+  % exist... below) AND updated mleplos so it won't overwrite the taper;
+  % an afternoon of work. 
   [th0,thhats,p,covX,covavhs,thpix,~,~,~,~,momx,covXpix,covF0]=osload(datum,trims);
-
+  if exist('params')
+    p=params;
+  end
   defval('xver',0)
 
   if xver==1
@@ -932,7 +983,6 @@ elseif strcmp(Hx,'demo2')
   fig2print(gcf,'landscape')
   clf
 
-  % You will also get a second plot
   % We feed it various things and it calculates a bunch more
   [ah,ha,yl,xl,tl,ps,ms,o1,o2,ep,ec,axlm,covth,ttt]=...
       mleplos(thhats,th0,covF0,covavhs,covXpix,[],[],p,...
@@ -970,9 +1020,7 @@ elseif strcmp(Hx,'demo2')
       thcont=[axlm(1,:);...
               axlm(2,:).*10^round(log10(th0(2)));...
               axlm(3,:).*10^round(log10(th0(3)))];
-
-      % FJS avoid cutoffs when contours extend too far
-      
+      if thcont(1)<0; thcont(1)=0.1; end
       % Set the covariance matrix from which the number of standard deviations
       % out from the mean observation is calculated for contour placement
       covcont=cobs; %covth;
@@ -992,12 +1040,14 @@ elseif strcmp(Hx,'demo2')
           %closeto=mobs;
           fname=fullfile(getenv('IFILES'),'HASHES',...
                          sprintf('MLEOSL-%s',hash([struct2array(orderfields(p)) closeto P thcont(:)'],'SHA-1')));
-          if ~exist(sprintf('s.mat',fname),'file')
+%%%                         hash([struct2array(orderfields(p)) closeto],'SHA-1'));
+          if ~exist(sprintf('%s.mat',fname),'file')
               % Fish for a data vector whose parameter estimates are within P% relative
               % distance of a certain target (this will take a few iterations)
               thhat=NaN; scl=NaN;
               while any(abs(thhat.*scl-closeto)./closeto>P/100) | isnan(thhat)
                   % Simulate from the mean observation
+                %  p.blurs=Inf; Hx=simulosl(mobs,p);
                   p.blurs=Inf; Hx=simulosl(closeto,p);
                   % Calculate the MLE for the data vector - no more gratuitous output
                   [thhat,~,lpars,scl,~,~,Hk]=mleosl(Hx,[],p,[],[],[],[],0);
@@ -1020,7 +1070,7 @@ elseif strcmp(Hx,'demo2')
           % end
           %
           % However, instead of hoping to densify accordingly, it is much more
-          % efficient to calculate LOGLIOSL along the ellipses themselves, which 
+          % efficient to calculate LOGLIOSL along the ellipses themselves, which
           % means we won't be using MLELCONTOSL after all
           % Lell=nan(3,numel(ep(1).XData));
           % for jnd=1:numel(ep(1).XData)
@@ -1037,7 +1087,7 @@ elseif strcmp(Hx,'demo2')
           % Find the most common loglikelihood on each cross-plot ellipse, rounded
           % to some decimal place
           % Lmost=mode(round(Lell,1)');
-          % Doesn't look great, but neither do these 
+          % Doesn't look great, but neither do these
           %Lmost=mean(Lell');
           %Lmost=median(Lell');
 
@@ -1089,12 +1139,12 @@ elseif strcmp(Hx,'demo2')
       delete(ms)
       % Remove the other annotations
       delete(ttt)
-      delete(ep)
-      delete(ec)
+     % delete(ep)
+     % delete(ec)
 
       % Just reusing scl isn't good enough, now it's consistent with MLEPLOS axes
       sclth0=10.^round(log10(abs(th0)));
-      
+
       % Prepare to plot the loglihood contours on the existing axes
       % Find the pairwise combinations for the cross-plot convention: s2-nu,
       % s2-rho, nu-rho
@@ -1105,7 +1155,6 @@ elseif strcmp(Hx,'demo2')
           xi=pcomb(ind,1); yi=pcomb(ind,2);
           axes(ah(ind))
           hold on
-          % CONTOUR or CONTOURF
           [cont,ch(ind)]=contourf(xcon{ind}/sclth0(xi),ycon{ind}/sclth0(yi),...
                                   Lgrid(:,:,ind),Lcon(ind,:));
           % This doesn't seem to do much now
@@ -1117,10 +1166,10 @@ elseif strcmp(Hx,'demo2')
           % set(ch(ind),'EdgeColor',grey(3),'LineStyle','-');
           cmap=flipud(gray(10));
           % Cut off the last bit
-          cmap(end,:)=[1 1 1];
+          cmap(end,:)=[1 1 1]; 
           colormap(cmap)
           bottom(ch(ind),ah(ind))
-          % Make open the axes a smidgen?
+          % Maybe open the axes a smidgen?
           box on
           dd(ind)=plot(thcont(xi,1)*[1 1]/scl(xi),ylim,'k');
           ff(ind)=plot(thcont(xi,2)*[1 1]/scl(xi),ylim,'k');
@@ -1145,10 +1194,18 @@ elseif strcmp(Hx,'demo4')
   % Load everything you know about this simulation
   % Looks like more trimming is needed for 'con' rather than 'unc'
   trims=100;
-  [th0,thhats,params,covX,~,pix,~,~,obscov,sclcovX,~,covXpix]=osload(datum,trims);
+  [th0,thhats,p,covX,~,pix,~,~,obscov,sclcovX,~,covXpix]=osload(datum,trims);
+  if exist('params')
+    p=params;
+  end
+  if isinf(p.blurs)
+    p.blurs=-1;
+  end
+  covth=covthosl(th0,p,1,[1 1 1]);
+  sclcovth=covth./[diag(sqrt(covth))*diag(sqrt(covth))'];
 
   % Make the plot
-  ah=covplos(2,sclcovX,obscov,params,thhats,[],[],'ver',ifinv);
+  ah=covplos(2,sclcovth,obscov,p,thhats,[],[],'ver',ifinv);
 
   % Print the figure!
   disp(' ')
@@ -1167,23 +1224,24 @@ elseif strcmp(Hx,'demo5')
   % Simulate data, watch the blurring, verify CHOLCHECK inside
   [Hx,th0,p,k,Hk]=simulosl(th0,params,1);
   
+  % Initialize, take default from inside MLEOSL for now
+  thini=[];
+
   % Perform the optimization, whatever the quality of the result
-  [thhat,covFHh,lpars,scl,thini,p,Hks,k]=mleosl(Hx,[],p);
+  [thhat,covFHh,lpars,scl,thini,p,Hks,k]=mleosl(Hx,thini,p);
   matscl=[scl(:)*scl(:)'];
 
   % We're going to taper just for what follows
   if isinf(p.blurs)
-      Tx=gettaper(p,'cosine',0.1);
-      % This gets passed to LOGLIOSL and to MATERNOSP etc
-      p.taper=Tx;
-      % Replicating the treatment applied to Hk in SIMULOSL
-      Hx=Tx(:).*Hx(:,1);
-      Hx=Hx-mean(Hx);
-      Hk=tospec(Hx,p)/(2*pi);
-      if size(Tx)~=1
-          Hk=Hk/sqrt(sum(Tx(:).^2))*sqrt(prod(p.NyNx));
-      end
-      % Note we won't look at the solution, but we use the taper for the residual
+    Tx=gettaper(p,'cosine',0.1);
+    % Replicating the treatment applied to Hk in SIMULOSL
+    Hx=Tx(:).*Hx(:,1); Hx=Hx-mean(Hx);
+    p.taper=Tx;
+    Hk=tospec(Hx,p)/(2*pi);
+    if size(Tx)~=1
+        Hk=Hk./sqrt(sum(Tx(:).^2)).*sqrt(prod(p.NyNx));
+    end
+    % Note we won't look at the solution, but we use the taper for the residual
   end
 
   if any(isnan(k(:))); return; end
@@ -1222,16 +1280,20 @@ elseif strcmp(Hx,'demo5')
   clf
   ah=krijetem(subnum(2,3)); delete(ah(4:6)); ah=ah(1:3);
 
-  % Time to rerun LOGLIOS one last time at the solution
-  sclh=scl; sclh(1)=1;
-  % We had this already, just making sure it checks out if we hadn't changed it
-  [L,~,~,momx]=logliosl(k,sclh.*thhat,p,Hks,1);
-  diferm(L,lpars{1})
-  
+  if ~isinf(p.blurs)
+      % Time to rerun LOGLIOS one last time at the solution
+      sclh=scl; sclh(1)=1;
+      % We had this already, just making sure it checks out if we hadn't changed it
+      [L,~,~,momx]=logliosl(k,sclh.*thhat,p,Hks,1);
+      diferm(L,lpars{1})
+  end
+
   % Makes an attractive plot that can be used as a judgment for fit
   [cb,xl,t,tt]=mlechiplos(4,Hk,thhat,scl,p,ah,0,th0,covFHh{3});
 
   disp('FJS here fits also MLECHIPSDOSL')
+  disp('FJS here fits the MLELCONTOSL')
+
   % Print the figure!
   disp(' ')
   figna=figdisp(figna,[],[],1)
