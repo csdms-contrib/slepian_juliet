@@ -4,23 +4,28 @@ function eggers2
 % Makes a FIGURE the energy spectral density, the spatial autocovariance and
 % simulated fields from isotropic Matern processes. The main routines being
 % tested are MATERNOS, MATERNOSY, and SIMULOSL.
+% Wavenumber and lag-distance at 25%, 50%, and 75% of the modeled spectral 
+% density and spatial covariance are calculated with MATERNPRC and MATERNPRCY
 %
 % Tested on 8.3.0.532 (R2014a) and 8.5.0.197613 (R2015a)
 % and 9.0.0.341360 (R2016a) - mileage does vary
 % Last modified by fjsimons-at-alum.mit.edu, 06/23/2018
-% Last modified by olwalbert-at-princeton.edu, 12/09/2025
+% Last modified by olwalbert-at-princeton.edu, 01/16/2026
 
-% Option for loglog sdf
+% Option for log-log sdf axes
 llsdf=1;
  
 % Metric conversion
 mfromkm=1000;
 % Variance of the "topography" [m^2]
 S2=[1^2    2^2    3^2]*mfromkm^2;
+S2=[1^2    1^2    1^2]*mfromkm^2;
 % Mean-squared differentiability
 NU=[0.5    1     2.0];
+NU=[0.5    1     1.5];
 % Correlation parameter [m]
 RH=[ 250   250    175]*mfromkm;
+RH=[ 250   250    250]*mfromkm;
 % The fluctuation scale [m^4]
 S0=S2.*pi.*RH.^2/4;
 
@@ -192,9 +197,28 @@ for ind=1:length(S2)
   pR(ind)=plot(pi*[1 1]*RH(ind)/mfromkm,newr2,'b');
   % At this point the limit of the simulation has been reached
   % pL(ind)=plot([1 1]*(Nx-1)*dx/mfromkm,newr,'k');
+  % Plot some (spatial) Matern percentages!
+  for ond=1:length(pers)
+    Yprc(ond)=maternprcy(th0,pers(ond),2,1);
+    hold on
+    ppr{ind}(ond)=plot([Yprc(ond) Yprc(ond)]./mfromkm,newr2,'k-');
+    % White vertical
+    %   pww{ind}(ond)=plot([exes(1) exes(1)],yreml(ond,:),'w-',...
+    %                      'linew',2);
+    %   % White vertical
+    %   pwx{ind}(ond)=plot([exes(2) exes(2)],yreml(ond,:),'w-',...
+    %                      'linew',1);
+    % Annotate the percentiles
+    yla=0.1-0.02+(ond-1)*0.2;
+    al(ond,ind)=text(xb,yla,...
+                     sprintf('%s_{%i} = %i km','r',...
+                             pers(ond),round(Yprc(ond)/mfromkm)));
+  end
   hold off
+  % This might still be nice to see:
   bb(1,ind)=text(xb,0.9,sprintf('%s = %i km',...
-                                '\pi\rho',round(RH(ind)*pi/mfromkm)));
+                                    '\pi\rho',round(RH(ind)*pi/mfromkm)),...
+                 'Color','b');
   
   if ind==1
     yl(2)=ylabel('correlation C(r)/\sigma^2','FontSize',9);
@@ -262,7 +286,7 @@ end
 longticks([ah(1:2*ncol) axx],1)
 longticks(ah([2*ncol+1:3*ncol]),0.75)
 set(aa,'HorizontalAlignment','l')
-set(al,'HorizontalAlignment','l','FontSize',9)
+set(al,'HorizontalAlignment','r','FontSize',9)
 set([tl xl yl],'FontSize',9)
 set(bb,'HorizontalAlignment','r','Color','b')
 set(hc(:,1),'color','b')
