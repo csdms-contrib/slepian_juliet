@@ -3,6 +3,9 @@ Maximum-likelihood analysis of univariate isotropic Matérn random fields
 as developed by:<br>
 Simons, Walbert, Guillaumin, Eggers, Lewis &amp; Olhede<br>
 Geophys. J. Int., 245(2), 1–24, 2026, <a href="http://dx.doi.org/10.1093/gji/ggag044">doi: 10.1093/gji/ggag044</a><br>
+and<br>
+Walbert, Simons, Guillaumin &amp; Olhede<br>
+Geophys. J. Int., 247(3), 1–38, 2026, <a href="http://dx.doi.org/10.1093/gji/ggag044">doi: 10.1093/gji/ggag425</a><br>
 which you may cite if you find any of these routines useful! 
 
 See also
@@ -14,6 +17,8 @@ where you will find much of what's here, but						    in ``python``.
 
 Supported by the National Aeronautics and Space Administration under grant NNX11AQ45G.\
 Supported by the National Science Foundation under grant <a href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=1550389">EAR-1550389</a>.
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4085254.svg)](https://doi.org/10.5281/zenodo.4085254)
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4085253.svg)](https://doi.org/10.5281/zenodo.4085253)
 
