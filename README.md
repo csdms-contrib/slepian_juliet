@@ -5,7 +5,7 @@ Simons, Walbert, Guillaumin, Eggers, Lewis &amp; Olhede<br>
 Geophys. J. Int., 245(2), 1–24, 2026, <a href="http://dx.doi.org/10.1093/gji/ggag044">doi: 10.1093/gji/ggag044</a><br>
 and<br>
 Walbert, Simons, Guillaumin &amp; Olhede<br>
-Geophys. J. Int., 247(3), 1–38, 2026, <a href="http://dx.doi.org/10.1093/gji/ggag044">doi: 10.1093/gji/ggag425</a><br>
+Geophys. J. Int., 247(3), 1–38, 2026, <a href="http://dx.doi.org/10.1093/gji/ggag425">doi: 10.1093/gji/ggag425</a><br>
 which you may cite if you find any of these routines useful! 
 
 See also
